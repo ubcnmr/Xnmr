@@ -373,33 +373,38 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     return; 
   } 
 
+
+
+
+
   gint update_paths( GtkWidget* widget, gpointer data ) 
   { 
 
     char s[ PATH_LENGTH ],s2[PATH_LENGTH]; 
     char old_exec[ PATH_LENGTH ], *lpath=NULL; 
-    static char norecur=0; 
+    //    static char norecur=0; 
     int result;
     char last_exec[ PATH_LENGTH ] = "";
+    
 
-
-    printf("in update_paths\n");
-    if (data != NULL){
+    //    printf("in update_paths\n");
+    /*    if (data != NULL){
       printf("in update_paths, with data not Null, must be focus out\n");
-    }
-    /* don't need norecur here.  These boxes don't get an event on a set text...  */
+      } */
+
+    /* don't need norecur here.  These boxes don't get an event on a set text...  
     if (norecur==1) {
       printf("update_paths: coming through with norecur = 1\n");
       norecur=0; // entries don't seem to need this...
       return FALSE; 
-      }
+      } */
     
 
     // if its the same as what it should be, don't worry about it.
     if ( widget == prog_text_box ){
       strncpy(last_exec,current_param_set->exec_path,PATH_LENGTH);
       if( strncmp(last_exec,gtk_entry_get_text(GTK_ENTRY(widget)),PATH_LENGTH) == 0) {
-	printf("same prog as last time\n");
+	//	printf("same prog as last time\n");
 	return FALSE;
        }
      }
@@ -411,7 +416,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       else lpath = s-1; // in case our save path has no / in it?
       
       if (strncmp(lpath+1,gtk_entry_get_text(GTK_ENTRY(widget)),PATH_LENGTH) == 0){
-	printf("same save as last time\n");
+	//	printf("same save as last time\n");
 	return FALSE;
       }
     }
@@ -425,10 +430,10 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       // put the old name back in.
 
       if (widget == prog_text_box){
-	norecur = 1;
+	//	norecur = 1;
 	//	printf("resetting the program\n");
 	gtk_entry_set_text(GTK_ENTRY(prog_text_box),last_exec);
-	norecur =0;
+	//	norecur = 0;
       }
       else{ // reset old save name.
 	//	norecur = 1;
@@ -452,7 +457,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     if( widget == prog_text_box ) { 
       //printf( "Previous pprog path: %s\n", old_exec ); 
       path_strcpy( current_param_set->exec_path, gtk_entry_get_text( GTK_ENTRY( prog_text_box) )); 
-      printf( "new pprog path: %s\n", current_param_set->exec_path); 
+      //      printf( "new pprog path: %s\n", current_param_set->exec_path); 
     } 
     else if( widget == save_text_box ) { 
       path_strcpy(s,gtk_entry_get_text(GTK_ENTRY ( save_text_box)));
@@ -466,27 +471,26 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	path_strcpy(s2,lpath+1);
 	result = set_cwd(s);
 	if (result != 0) {
-	  g_idle_add((GtkFunction)popup_msg_mutex_wrap,"Directory not found");
-	  // Changed here XXX
+	  popup_msg("Directory not found",TRUE);
 	  lpath = strrchr(current_param_set->save_path,'/');
-	  norecur = 1;
+	  //	  norecur = 1;
 	  gtk_entry_set_text(GTK_ENTRY(save_text_box),lpath+1);
-	  norecur = 0;
+	  //	  norecur = 0;
 	  return FALSE; 
 	}
 	path_strcpy(current_param_set->save_path,getcwd(s,PATH_LENGTH));
 	path_strcat(current_param_set->save_path,"/");
 	path_strcat(current_param_set->save_path,s2);
-	norecur = 1;
+	//	norecur = 1;
 	gtk_entry_set_text(GTK_ENTRY(save_text_box),s2);
-	norecur = 0;
+	//	norecur = 0;
 
       }
       else { // just a straightforward change of filename
 	lpath = strrchr(current_param_set->save_path,'/');
-	norecur = 1;
+	//	norecur = 1;
 	gtk_entry_set_text(GTK_ENTRY(save_text_box),s);
-	norecur = 0;
+	//	norecur = 0;
 	strncpy(lpath+1,s,PATH_LENGTH - strlen(current_param_set->save_path)-1);
       }
       update_param_win_title(&buffp[current]->param_set);
@@ -500,24 +504,27 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
      * the path box changes.  This includes when switching buffers, and we don't 
      * want to reload the parameters if this is the case 
       */
+
     
     if( strcmp( old_exec, current_param_set->exec_path) ) {       
-      
+
       path_strcpy ( s, current_param_set->exec_path); 
-      printf("trying to load param_file\n");
+      //      printf("trying to load param_file\n");
       if (load_param_file( s, current_param_set ) != -1 ){ // this if is new CM Aug 24, 2004
-	printf("back from load without -1\n");
+	//	printf("back from load without -1\n");
 	show_parameter_frame( current_param_set ); 
 
       // put the focus back on the program box...  gtk seems to crash if we try to focus out to a spin 
       // button that show_parameter_frame destroyed
 	gtk_widget_grab_focus(GTK_WIDGET(prog_text_box));
-	printf("moved focus\n");
 	// this unselects the text in the program box.
 	gtk_editable_select_region(GTK_EDITABLE(prog_text_box),0,0);
+	// and puts the cursor at the end.
+	gtk_editable_set_position(GTK_EDITABLE(prog_text_box),-1);
+
+
       }
     }
-    printf("returning false\n");
     return FALSE; 
   }
 
@@ -955,9 +962,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	if (buffp[current] == NULL) // if the buffer doesn't exist yet, delay the popup
 	  g_idle_add ((GtkFunction) popup_msg_mutex_wrap,"Can't find pulse program");
 	else
-	    	  g_idle_add ((GtkFunction) popup_msg_mutex_wrap,"Can't find pulse program");
-	// changed here XXX
-	  //	  popup_msg("Can't find pulse program",TRUE);
+	  popup_msg("Can't find pulse program",TRUE);
 	//	printf( "Can't open parameter file %s\n", fileN ); 
 	return -1; 
       } 
@@ -969,8 +974,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
   
     
     if (fs == NULL) {
-      g_idle_add((GtkFunction) popup_msg_mutex_wrap,"Can't find parameter file\n");
-      // changed here XXX
+       popup_msg("Can't find parameter file",TRUE);
       return -1;
     }
     //    printf("got param file on: %s\n",s);

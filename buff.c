@@ -50,6 +50,7 @@ reload wrapper                             (from end of acquisition)
 #include <stdio.h>
 #include <stdlib.h>
 #include <wordexp.h>
+#include <string.h>
 
 #include "buff.h"
 #include "xnmr.h"
@@ -59,6 +60,7 @@ reload wrapper                             (from end of acquisition)
 #include "p_signals.h"
 #include "param_utils.h"
 #include "nr.h"
+
 /*
  *  Global Variable for this modules
  */
@@ -91,8 +93,6 @@ char doing_s2n=0;
 char doing_int=0;
 GtkWidget *setsf1dialog;
 
-char stored_path[PATH_LENGTH]; // these two are for the save_as command
-dbuff *stored_buff=0; // they communicate info from check_overwrite to do_save_wrapper
  
 
 
@@ -3437,17 +3437,14 @@ gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs )
   if (path[strlen(path)-1] == '/') path[strlen(path)-1]=0;
   check_overwrite( buff, path );
   
-
+  gtk_widget_destroy(GTK_WIDGET(fs));
   return result;
 }
 
 gint check_overwrite( dbuff* buff, char* path )
 {
   GtkWidget *dialog;
-  GtkWidget *label;
-  GtkWidget *yes_b;
-  GtkWidget *no_b;
-  
+  int result;
   // if check_overwrite gets something with a trailing /, it should barf.
 
   if (path[strlen(path)-1] == '/'){
@@ -3461,73 +3458,29 @@ gint check_overwrite( dbuff* buff, char* path )
       popup_msg("check_overwrite can't mkdir?",TRUE);
       return 0 ;
     }
-    else // does exist...
-      {
-	// if it does exist, store the proposed filename in stored_path, 
-	// and store the buff in stored_buffer.
-    path_strcpy(stored_path,path);
-    stored_buff = buff;
-
-    dialog = gtk_dialog_new();
-    gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
-
-    label = gtk_label_new ("File Exists, overwrite? ");
-
-    yes_b = gtk_button_new_with_label("Yes");
-    no_b = gtk_button_new_with_label("No");
- 
-    g_signal_connect (G_OBJECT (yes_b), "clicked", G_CALLBACK (do_save_wrapper), dialog);
-    g_signal_connect_swapped (G_OBJECT (no_b), "clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT( dialog ) );
-
-    gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(dialog)->action_area ),yes_b,FALSE,TRUE,0);
-    gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(dialog)->action_area ),no_b,FALSE,TRUE,0);
-
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), label);
-
-    g_object_set_data( G_OBJECT( yes_b ), BUFF_KEY, buff );
-    g_object_set_data( G_OBJECT( yes_b ), PATH_KEY, path );
-
-    gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(buff->win.window));
-    gtk_window_set_position(GTK_WINDOW(dialog),GTK_WIN_POS_CENTER_ON_PARENT);
-
-
-    gtk_widget_show_all (dialog);
-
-      }
-  }
-  else
-    do_save( buff, path );
-
-    
+    else{ // does exist...
+     
+      dialog = gtk_message_dialog_new(GTK_WINDOW(buff->win.window),
+				      GTK_DIALOG_DESTROY_WITH_PARENT,
+				      GTK_MESSAGE_QUESTION,
+				      GTK_BUTTONS_YES_NO,
+				      "File %s already exists.  Overwrite?",path);
+      gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
+      
+      result = gtk_dialog_run(GTK_DIALOG(dialog));
+      if (result != GTK_RESPONSE_YES){
+	gtk_widget_destroy(dialog);
+	return 0;
+      }	
+      else gtk_widget_destroy(dialog);
+    }
+  } 
+  do_save( buff, path );
   
-  
-
   return 0;
 
 }
 
-gint do_save_wrapper( GtkWidget* widget, GtkWidget* dialog )
-
-{
-  gint result;
-
-  if( stored_buff == NULL ) {
-    printf( "do_save_wrapper can't retrieve buff\n" );
-    return -1;
-  }
-
- if( stored_path == NULL ) {
-    printf( "do_save_wrapper can't retrieve path\n" );
-    return -1;
-  }
-
- // printf("going through do_save_wrapper with path: %s\n",path);
-  result = do_save( stored_buff, stored_path );
-
-  gtk_widget_destroy( dialog );
-
-  return result;
-}
 
 gint do_save( dbuff* buff, char* path )
 {
@@ -3543,7 +3496,11 @@ gint do_save( dbuff* buff, char* path )
 
   //  printf( "creating parameter file: %s\n", fileN );
   fstream = fopen( fileN, "w" );
-  fprintf( fstream, "%s\n", buff->param_set.exec_path ); 
+
+  if (strlen(buff->param_set.exec_path) == 0)
+    fprintf(fstream,"none\n");
+  else
+    fprintf( fstream, "%s\n", buff->param_set.exec_path ); 
   //  printf("putting: %s as exec path\n",buff->param_set.exec_path);
   //  printf("in do_save, dwell is: %f\n",buff->param_set.dwell);
   fprintf( fstream, 
@@ -4633,7 +4590,7 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
   /* open up a window that we click ok in when we're done */
   base.dialog = gtk_message_dialog_new(GTK_WINDOW(panwindow),
 				  GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,
-					    GTK_BUTTONS_OK,"Hit ok when baseline points have been entered");
+					    GTK_BUTTONS_OK,"Hit ok when baseline points have been entered\n Points at the spectrum edges have been auto-selected");
   //  label = gtk_label_new ( "Hit ok when baseline points have been entered" );
   //  gtk_container_add(GTK_CONTAINER(GTK_DIALOG(base.dialog)->vbox),label);
 
@@ -6084,6 +6041,11 @@ void queue_expt(GtkAction *action, dbuff *buff){
   
   if (acq_in_progress != ACQ_RUNNING){
     popup_msg("Must be acquiring to queue",TRUE);
+    return;
+  }
+
+  if (get_ch1(buff) != get_ch1(buffp[upload_buff]) || get_ch2(buff) != get_ch2(buffp[upload_buff])){
+    popup_msg("Channel assignments of this buffer don't match current acquisition\n",TRUE);
     return;
   }
 

@@ -1585,37 +1585,41 @@ gint destroy_all(GtkWidget *widget, gpointer data)
 {
   // never use the widget...
   GtkWidget *dialog;
-  GtkWidget *label;
-  GtkWidget *yes_b;
-  GtkWidget *no_b;
+  int result;
   // this routine gets called if we do a file_exit, or if we kill the panel window
   //  printf("in destroy_all\n");
   
   if (acq_in_progress != ACQ_STOPPED){
     // need to build a "acq is running, are you sure you want to quit? box"
     
-    dialog = gtk_dialog_new();
+    /*    dialog = gtk_dialog_new();
     gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
+    */
+
+    if (queue.num_queued > 0) 
+      dialog = gtk_message_dialog_new(GTK_WINDOW(buffp[current]->win.window),
+				      GTK_DIALOG_DESTROY_WITH_PARENT,
+				      GTK_MESSAGE_WARNING,GTK_BUTTONS_NONE,
+				      "Acquisition is in progress, are you sure you want to quit?\nQueued experiments will be LOST!");
+    else
+      dialog = gtk_message_dialog_new(GTK_WINDOW(buffp[current]->win.window),
+				      GTK_DIALOG_DESTROY_WITH_PARENT,
+				      GTK_MESSAGE_WARNING,GTK_BUTTONS_NONE,
+				      "Acquisition is in progress, are you sure you want to quite?");
+    
+    gtk_dialog_add_buttons (GTK_DIALOG(dialog),
+			    "Yes (Quit and leave acq running)",GTK_RESPONSE_YES,
+			    "No (Don't quit)",GTK_RESPONSE_NO,NULL);
+
+
     gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
-
-    label = gtk_label_new ("Acquisition is in progress, are you sure you want to quit?");
-    
-    yes_b = gtk_button_new_with_label("Yes (Quit and leave Acq running)");
-    no_b = gtk_button_new_with_label("No (Don't quit)");
-    
-    g_signal_connect (G_OBJECT (yes_b), "clicked", G_CALLBACK (do_destroy_all), dialog);
-    g_signal_connect_swapped (G_OBJECT (no_b), "clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT( dialog ) );
-    
-    gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(dialog)->action_area ),yes_b,FALSE,TRUE,0);
-    gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(dialog)->action_area ),no_b,FALSE,TRUE,0);
-    
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), label);
-
-    gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(buffp[current]->win.window));
-    gtk_window_set_position(GTK_WINDOW(dialog),GTK_WIN_POS_CENTER_ON_PARENT);
-
-    gtk_widget_show_all (dialog);
-    return TRUE;
+    result = gtk_dialog_run(GTK_DIALOG(dialog));
+    if (result == GTK_RESPONSE_YES)
+      do_destroy_all();
+    else{
+      gtk_widget_destroy(dialog);
+      return TRUE;
+    }
   }
   do_destroy_all();
   return FALSE; // seems hardly necessary
@@ -1662,8 +1666,13 @@ gint popup_msg( char* msg ,char modal)
     dialog = gtk_message_dialog_new(GTK_WINDOW(buffp[current]->win.window),GTK_DIALOG_DESTROY_WITH_PARENT,
 				  GTK_MESSAGE_INFO,GTK_BUTTONS_CLOSE,msg);
     gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
-    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
+    g_signal_connect_swapped(dialog,"response",G_CALLBACK(gtk_widget_destroy),dialog);
+    gtk_widget_show_all(dialog);
+
+    /*    gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
+    */
   }
   else{
     dialog = gtk_dialog_new_with_buttons("Fit Results",GTK_WINDOW(panwindow),

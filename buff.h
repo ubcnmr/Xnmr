@@ -18,8 +18,8 @@
 #include "xnmr_types.h"
 
 #define MAX_BUFFERS 50
-#define BUFF_KEY "buffer key"
-#define PATH_KEY "path key"
+
+#define  BUFF_KEY "buffer key"
 
 // maximum number of peaks for fitting.
 #define MAX_FIT 20
@@ -173,7 +173,6 @@ gint do_load( dbuff* buff, char* path);
 gint do_load_wrapper( GtkWidget* widget, GtkFileSelection* fs );
 
 gint do_save( dbuff* buff, char* fileN );
-gint do_save_wrapper( GtkWidget* widget, GtkWidget* dialog );
 
 gint check_overwrite( dbuff* buff, char* path );
 gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs );
