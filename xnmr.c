@@ -1400,7 +1400,6 @@ gint phase_changed(GtkObject *widget,gpointer *data)
   float dp0,dp1;
   dbuff *buff;
   int sizex,sizey;
-  // int i;
   GdkRectangle rect;
 
   /* make sure buffer still exists and phase window is actually open */

@@ -1,3 +1,4 @@
+// seems like ct gets dummy scans too?
 // this will compile acq to not talk to any hardware:  
 // it will wait for interrupts !!!
 // it will also generate "simulated" data

@@ -4623,17 +4623,39 @@ void csort(float *points,int num){
   //    printf("%f\n",points[i]);
   
 }
+#define NUM_SPLINE 100
+static struct {
+  int redo_buff;
+  float *undo_buff;
+  int undo_num_points;
+  int num_spline_points;
+  int spline_current_buff;
+  GtkWidget *dialog;
+  float spline_points[NUM_SPLINE];
+  float yvals[NUM_SPLINE],y2vals[NUM_SPLINE];
+} base = {-1,NULL,0,0,-1,NULL};
   
 void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spline_points,
 		     float *y2vals, float *temp_data){
 
-  int i;
+  int i,j;
   float x,y;
+  int xvals[NUM_SPLINE];
 
-  for (i=0;i<num_spline_points;i++){
-    yvals[i]=buff->data[ 2*((int) (spline_points[i]*(buff->param_set.npts-1)+0.5) ) 
-		       +buff->disp.record*buff->param_set.npts*2];
+
+  for (i = 0 ; i < num_spline_points ; i++ ){
+    xvals[i] = ((int) (spline_points[i]*(buff->param_set.npts-1)+0.5) ) ;
+    if (xvals[i] < 2 || xvals[i]>buff->param_set.npts-3)
+      yvals[i]=buff->data[ 2*xvals[i]+buff->disp.record*buff->param_set.npts*2];
+    else{
+      yvals[i] = 0;
+      for (j=xvals[i]-2;j<xvals[i]+3;j++)
+	yvals[i] += buff->data[2*j+buff->disp.record*buff->param_set.npts*2];
+      yvals[i] /= 5.;
+    }
+    //	printf("%f %f\n",base.spline_points[i],yvals[i]);
   }
+
   spline(spline_points-1,yvals-1,num_spline_points,0.,0.,y2vals-1);
 
   for(i=0;i<buff->param_set.npts;i++){
@@ -4647,83 +4669,85 @@ void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spl
 
 }
 
-#define NUM_SPLINE 100
-static struct {
-  int redo_buff;
-  float *undo_buff;
-  int undo_num_points;
-  int num_spline_points;
-  int spline_current_buff;
-  GtkWidget *dialog;
-  float spline_points[NUM_SPLINE];
-  float yvals[NUM_SPLINE],y2vals[NUM_SPLINE];
-} base = {-1,NULL,0,0,-1,NULL};
 
 
 
 void pick_spline_points(GtkAction *action,dbuff *buff){
   int i;
   GtkWidget *label,*button;
-     if (buff->win.press_pend != 0){
-	popup_msg("There's already a press pending\n(maybe Expand or Offset?)",TRUE);
-	return;
-      }
 
-      if (buff->disp.dispstyle != SLICE_ROW){
-	popup_msg("Spline only works on rows for now",TRUE);
-	return;
-      }
+  if (base.spline_current_buff != -1) {
+    gdk_window_raise(base.dialog->window);
+    printf("already picking\n");
+    return;
+  }
+  if (buff->win.press_pend != 0){
+    popup_msg("There's already a press pending\n(maybe Expand or Offset?)",TRUE);
+    return;
+  }
 
+  if (buff->disp.dispstyle != SLICE_ROW){
+    popup_msg("Spline only works on rows for now",TRUE);
+    return;
+  }
+
+  if (base.num_spline_points == 0){ // then auto pick the beginning and the end
+    base.num_spline_points = 2;
+    base.spline_points[0]=2./(buff->param_set.npts-1);
+    base.spline_points[1]=(buff->param_set.npts-3.)/(buff->param_set.npts-1.);
+  }
       // first, want to draw in the old points.
       //      base.num_spline_points = 0;
 
-      for(i=0;i<base.num_spline_points;i++){
-	    draw_vertical(buff,&colours[BLUE],base.spline_points[i],-1);	    
-      }
+  for(i=0;i<base.num_spline_points;i++){
+    draw_vertical(buff,&colours[BLUE],base.spline_points[i],-1);	    
+  }
 
       
       
-      /* open up a window that we click ok in when we're done */
-      base.dialog = gtk_dialog_new();
-      //    gtk_window_set_modal( GTK_WINDOW( base.dialog ), TRUE );
-      label = gtk_label_new ( "Hit ok when baseline points have been entered" );
-      button = gtk_button_new_with_label("OK");
-      
-      /* catches the ok button */
-      g_signal_connect_swapped(G_OBJECT (button), "clicked", G_CALLBACK (baseline_spline), G_OBJECT( base.dialog ) );
-      
-      /* also need to catch when we get a close signal from the wm */
-      g_signal_connect(G_OBJECT (base.dialog),"delete_event",G_CALLBACK (baseline_spline),G_OBJECT( base.dialog ));
-      
-      gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(base.dialog)->action_area ),button,FALSE,FALSE,0);
-      gtk_container_set_border_width( GTK_CONTAINER(base.dialog), 5 );
-      gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(base.dialog)->vbox) ), label, FALSE, FALSE, 5 );
-      
-      gtk_window_set_transient_for(GTK_WINDOW(base.dialog),GTK_WINDOW(panwindow));
-      gtk_window_set_position(GTK_WINDOW(base.dialog),GTK_WIN_POS_CENTER_ON_PARENT);
-      
-      gtk_widget_show_all (base.dialog);
-      
-      base.spline_current_buff = buff->buffnum;
-      g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
-				      G_CALLBACK (press_in_win_event),
-				      buff);
-      // connect our event
-      g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
-                        G_CALLBACK( baseline_spline), buff);
-      buff->win.press_pend=1;
-      
+  /* open up a window that we click ok in when we're done */
+  base.dialog = gtk_dialog_new();
+  //    gtk_window_set_modal( GTK_WINDOW( base.dialog ), TRUE );
+  label = gtk_label_new ( "Hit ok when baseline points have been entered" );
+  button = gtk_button_new_with_label("OK");
   
-      //      printf("pick spline points\n");
- 
-
-
+  /* catches the ok button */
+  g_signal_connect_swapped(G_OBJECT (button), "clicked", G_CALLBACK (baseline_spline), G_OBJECT( base.dialog ) );
+  
+  /* also need to catch when we get a close signal from the wm */
+  g_signal_connect(G_OBJECT (base.dialog),"delete_event",G_CALLBACK (baseline_spline),G_OBJECT( base.dialog ));
+  
+  gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(base.dialog)->action_area ),button,FALSE,FALSE,0);
+  gtk_container_set_border_width( GTK_CONTAINER(base.dialog), 5 );
+  gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(base.dialog)->vbox) ), label, FALSE, FALSE, 5 );
+  
+  gtk_window_set_transient_for(GTK_WINDOW(base.dialog),GTK_WINDOW(panwindow));
+  gtk_window_set_position(GTK_WINDOW(base.dialog),GTK_WIN_POS_CENTER_ON_PARENT);
+  
+  gtk_widget_show_all (base.dialog);
+  
+  base.spline_current_buff = buff->buffnum;
+  g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+				  G_CALLBACK (press_in_win_event),
+				  buff);
+  // connect our event
+  g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+		    G_CALLBACK( baseline_spline), buff);
+  buff->win.press_pend=1;
+  
+  
+  //      printf("pick spline points\n");
+  
+  
+  
 }
 
 void do_spline(GtkAction *action, dbuff *buff){
   int i;
   float x,y;
   float *temp_data;
+  int xvals[NUM_SPLINE];
+
       if (buff->disp.dispstyle != SLICE_ROW){
 	popup_msg("Spline only works on rows for now",TRUE);
 	return;
@@ -4747,27 +4771,47 @@ void do_spline(GtkAction *action, dbuff *buff){
 	base.undo_buff[i] = buff->data[i];
       base.redo_buff = buff->buffnum;
       
+      /*
       // first need to build our array.
       for (i = 0 ; i < base.num_spline_points ; i++ ){
-	base.yvals[i]=buff->data[ 2*((int) (base.spline_points[i]*(buff->param_set.npts-1)+0.5) ) 
-			   +buff->disp.record*buff->param_set.npts*2];
+	xvals[i] = ((int) (base.spline_points[i]*(buff->param_set.npts-1)+0.5) ) ;
+	if (xvals[i] < 2 || xvals[i]>buff->param_set.npts-3)
+	  base.yvals[i]=buff->data[ 2*xyals[i]
+				    +buff->disp.record*buff->param_set.npts*2];
+	else{
+	  base.yvals[i] = 0;
+	  for (j=xvals[i]-2;j<xvals[i]+3;j++)
+	    base.yvals[i] += buff->data[2*j+buff->disp.record*buff->param_set.npts*2];
+	  base.yvals[i] /= 5.;
+	}
 	//	printf("%f %f\n",base.spline_points[i],yvals[i]);
       }
       spline(base.spline_points-1,base.yvals-1,base.num_spline_points,0.,0.,base.y2vals-1);
-      
+      */      
+
+      temp_data = g_malloc(2*8*buff->param_set.npts);
+      calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
+
+      // now apply to data.
+      for (i=0;i<buff->param_set.npts;i++){
+	buff->data[2*i+buff->disp.record*buff->param_set.npts*2] -= temp_data[2*i];
+      }
+
+
+
       /* now apply the spline to the data */
-      for(i=0;i<buff->param_set.npts;i++){
+      /*      for(i=0;i<buff->param_set.npts;i++){
 	x = ((float) i)/(buff->param_set.npts-1);
 	splint(base.spline_points-1,base.yvals-1,base.y2vals-1,base.num_spline_points,x,&y);
 	
 	  buff->data[2*i+buff->disp.record*buff->param_set.npts*2] -= y;
 	  //printf("%i %f\n",i, y);
-      }
+	  }*/
       //      printf("got all the points done, gonna redraw\n");
       // to do the imaginary part, play some tricks to generate it...
       // first, make sure npts is a power of 2.
       if  (log(buff->param_set.npts)/log(2.) == rint(log(buff->param_set.npts)/log(2.))){
-	temp_data = g_malloc(2*8*buff->param_set.npts);
+	//	temp_data = g_malloc(2*8*buff->param_set.npts);
 	for(i=0;i<buff->param_set.npts;i++){
 	  // copy data to temp buffer that's twice as long.
 	  temp_data[2*i]=buff->data[2*i+buff->disp.record*2*buff->param_set.npts];
@@ -4784,11 +4828,12 @@ void do_spline(GtkAction *action, dbuff *buff){
 	for(i=0;i<buff->param_set.npts*2;i++){
 	  buff->data[i+buff->disp.record*2*buff->param_set.npts]=temp_data[i]/buff->param_set.npts;
 	}
-	g_free(temp_data);
+	//	g_free(temp_data);
 
 	
       } // if not, give up on imag part...
       else printf("Fixing up the imaginary part failed - npts not a power of 2\n");
+      g_free(temp_data);
 
       draw_canvas(buff);
 }
@@ -4868,6 +4913,8 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 	  +buffp[base.spline_current_buff]->disp.xx1;
 
 	//	printf("got x val: %f\n",xval);
+
+	// if its near a boundary, forget it.
 
 	// check to see if this point already exists.  If so, erase it.	
 	for(i=0;i<base.num_spline_points;i++)
