@@ -49,8 +49,6 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data );
 
 GtkWidget* create_panels();
 
-void start_acq_wrapper( GtkWidget *widget, GtkWidget *dialog );
-void no_acq_wrapper( GtkWidget *widget, GtkWidget *dialog );
 void check_buff_size();
 
 

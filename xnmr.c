@@ -183,6 +183,9 @@ int main(int argc,char *argv[])
   GtkWidget *label;
   char title[UTIL_LEN],command[PATH_LENGTH];
   int width,height;
+  GtkTreeViewColumn *column;
+  GtkWidget *tree;
+  GtkCellRenderer *renderer;
 
   //  int timeout_tag;
   //  gpointer timeout_data;
@@ -360,14 +363,42 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),queue.label,FALSE,FALSE,0);
 
 
-  hbox = gtk_hbox_new(TRUE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),hbox,FALSE,FALSE,0);
+  queue.list =  gtk_list_store_new(N_COLUMNS,G_TYPE_INT,G_TYPE_STRING);
 
-  queue.combo = gtk_combo_box_new_text();
-  gtk_box_pack_start(GTK_BOX(hbox),queue.combo,FALSE,FALSE,0);
+  /* add data to list: */
+  /*
+  gtk_list_store_append(queue.list,&queue.iter);
+  gtk_list_store_set(queue.list,&queue.iter,BUFFER_COLUMN,12,
+		     FILE_COLUMN,"temp file name",-1);
+
+
+  gtk_list_store_append(queue.list,&queue.iter);
+  gtk_list_store_set(queue.list,&queue.iter,BUFFER_COLUMN,14,
+		     FILE_COLUMN,"temp file name2",-1);
+
+  gtk_list_store_append(queue.list,&queue.iter);
+  gtk_list_store_set(queue.list,&queue.iter,BUFFER_COLUMN,16,
+		     FILE_COLUMN,"temp file name3",-1);
+  */
+  tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(queue.list));
+
+  queue.select = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
+
   
+
+  renderer = gtk_cell_renderer_text_new();
+  column = gtk_tree_view_column_new_with_attributes("Buffer",renderer,"text",0,NULL);
+  gtk_tree_view_append_column(GTK_TREE_VIEW(tree),column);
+
+  renderer = gtk_cell_renderer_text_new();
+  column = gtk_tree_view_column_new_with_attributes("File Name",renderer,"text",1,NULL);
+  gtk_tree_view_append_column(GTK_TREE_VIEW(tree),column);
+
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),tree,FALSE,FALSE,2);
+
+
   button = gtk_button_new_with_label("Remove from Queue");
-  gtk_box_pack_start(GTK_BOX(hbox),button,FALSE,FALSE,0);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->action_area),button,FALSE,FALSE,0);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(remove_queue),NULL);
 
   button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);

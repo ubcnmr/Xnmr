@@ -72,14 +72,21 @@ typedef struct{
 } fitting_struct;
 
 
-#define MAX_QUEUE 25
 typedef struct{
-  GtkWidget *dialog,*combo,*label;
+  GtkWidget *dialog,*label;
+  GtkListStore *list;
+  GtkTreeIter iter;
+  GtkTreeSelection *select;
   int num_queued;
-  int index[MAX_QUEUE];
     } queue_struct;
 
 
+enum
+  {
+    BUFFER_COLUMN,
+    FILE_COLUMN,
+    N_COLUMNS,
+  };
 
 /* global variables */
 

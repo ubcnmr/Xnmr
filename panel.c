@@ -99,7 +99,7 @@ gint noacq_button_press(GtkWidget *widget, gpointer *data)
 
 gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 {
-  int was_in_progress,i;
+  int was_in_progress,i,valid;
   //  printf("in kill_button_clicked, acq_in_progress=%i\n",acq_in_progress);
 
   send_sig_acq( ACQ_KILL ); 
@@ -124,8 +124,18 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 
   // if there were experiments queued, kill them too.
   
-  for (i=0;i<queue.num_queued;i++)
-    gtk_combo_box_remove_text(GTK_COMBO_BOX(queue.combo),0);
+  for (i=0;i<queue.num_queued;i++){
+    valid =  gtk_tree_model_get_iter_first(GTK_TREE_MODEL(queue.list),&queue.iter);
+    if (valid == 1){
+      gtk_list_store_remove(queue.list,&queue.iter);
+      queue.num_queued -= 1;
+    }
+    else
+      printf("in kill, num_queued is messed up\n");
+    set_queue_label();
+  }
+
+
   queue.num_queued = 0;
 
   return 0;
@@ -148,7 +158,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 
   if (norecur == 1){
     norecur = 0;
-    //  printf("returning on norecur=1\n");
+    printf("start button: returning on norecur=1\n");
     return 0;
   }
 
@@ -227,32 +237,31 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       
       else { 
 	GtkWidget *dialog;
-	GtkWidget *label;
-	GtkWidget *yes_b;
-	GtkWidget *no_b;
+	int result;
 
-	dialog = gtk_dialog_new();
-	gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
-	
-	label = gtk_label_new ("File Exists, overwrite?");
-	
-	yes_b = gtk_button_new_with_label("Yes");
-	no_b = gtk_button_new_with_label("No");
-    
-	g_signal_connect (G_OBJECT (yes_b), "clicked", G_CALLBACK (start_acq_wrapper), dialog);
-	g_signal_connect (G_OBJECT (no_b), "clicked", G_CALLBACK (no_acq_wrapper), dialog );
+	dialog = gtk_message_dialog_new(GTK_WINDOW(buff->win.window),
+					GTK_DIALOG_DESTROY_WITH_PARENT,
+					GTK_MESSAGE_QUESTION,
+					GTK_BUTTONS_YES_NO,
+					"File %s already exists.  Overwrite?",buffp[current]->param_set.save_path);
+	gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
+      
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+	if (result != GTK_RESPONSE_YES){
+	  gtk_widget_destroy(dialog);
+	  acq_in_progress = ACQ_STOPPED;
+	  norecur = 1;
+	  gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), FALSE );
+	  return 0;
+	}	
+	else{
+	  check_buff_size();  
+	  send_sig_acq( ACQ_START );
+	  gtk_widget_destroy( dialog );
+	  return 0;
+	}
+      
 
-	gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(dialog)->action_area ),yes_b,FALSE,TRUE,0);
-	gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(dialog)->action_area ),no_b,FALSE,TRUE,0);
-
-	gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), label);
-
-	// place the window
-	gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(buff->win.window));
-	gtk_window_set_position(GTK_WINDOW(dialog),GTK_WIN_POS_CENTER_ON_PARENT);
-
-	gtk_widget_show_all (dialog);
-  
       }
     }
     // so to be in here at all means the button is coming down.
@@ -567,23 +576,6 @@ GtkWidget* create_panels()
   
 }
 
-void start_acq_wrapper( GtkWidget *widget, GtkWidget *dialog )
-{
-
-  check_buff_size();  
-  //  last_draw();
-  send_sig_acq( ACQ_START );
-  gtk_widget_destroy( dialog );
-  return;
-}
-
-void no_acq_wrapper( GtkWidget *widget, GtkWidget *dialog )
-{
-  acq_in_progress = ACQ_STOPPED;
-  gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), FALSE );
-  gtk_widget_destroy( dialog );
-  return;
-}
 
 
 

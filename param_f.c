@@ -68,26 +68,52 @@ gpointer *update_obj;
  */
 
 
-gint am_i_queued(){
-  int i;
-  for(i=0;i<queue.num_queued;i++)
-    if (queue.index[i] == current)
+gint am_i_queued(int test_bnum){
+  int bnum,valid;
+
+  valid =  gtk_tree_model_get_iter_first(GTK_TREE_MODEL(queue.list),&queue.iter);
+  while (valid){
+    gtk_tree_model_get(GTK_TREE_MODEL(queue.list),&queue.iter,
+		       BUFFER_COLUMN,&bnum,-1);
+    //    printf("am_i_queued: checking buffer: %i\n",bnum);
+    if (test_bnum == bnum){
+      //      printf("yes, I'm queued\n");
       return TRUE;
+    }
+    valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(queue.list),&queue.iter);
+  }
+
+  
   return FALSE;
 }
 
-gint allowed_to_change(){
-  if ((am_i_queued() == TRUE || (upload_buff == current && acq_in_progress !=ACQ_STOPPED))
+gint allowed_to_change(int test_bnum){
+
+  // short circuit
+  if (acq_in_progress == ACQ_STOPPED || from_make_active == 1) return TRUE;
+  if (upload_buff == test_bnum) return FALSE; // uploading to this buff
+  if (am_i_queued(test_bnum) == TRUE) return FALSE;
+  // if user tries to change one that's not acquiring or queued.
+  return TRUE;
+  /*
+  if ((am_i_queued(test_bnum) == TRUE || (upload_buff == test_bnum && acq_in_progress !=ACQ_STOPPED))
       && from_make_active == 0)
     return FALSE;
-  return TRUE;
+    return TRUE; */
 }
 
-gint allowed_to_change_repeat(){
-  if ((am_i_queued() == TRUE || (upload_buff == current && acq_in_progress == ACQ_RUNNING))
+gint allowed_to_change_repeat(int test_bnum){
+  if (acq_in_progress == ACQ_STOPPED || from_make_active == 1) return TRUE;
+
+  if (am_i_queued(test_bnum) == TRUE || (upload_buff == test_bnum && acq_in_progress == ACQ_RUNNING))
+    return FALSE;
+  return TRUE; 
+
+  /*
+  if ((am_i_queued(test_bnum) == TRUE || (upload_buff == test_bnum && acq_in_progress == ACQ_RUNNING))
       && from_make_active == 0)
     return FALSE;
-  return TRUE;
+    return TRUE; */
 }
 
 
@@ -114,7 +140,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 
 
     if (doing_2d_update == 0 && from_make_active == 0 ){ // ok, so we're not doing 2d update 
-      if(allowed_to_change_repeat() == FALSE){  
+      if(allowed_to_change_repeat(current) == FALSE){  
         //user punched a value 
 	//        printf("can't change value during acquistion\n");    
         switch(param->type) 
@@ -224,7 +250,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       } 
     */
 
-    if (allowed_to_change() == FALSE ){ 
+    if (allowed_to_change(current) == FALSE ){ 
       //      printf("Can't change params while in progress\n"); 
       //      norecur = 1; 
       gtk_entry_set_text(ent,n_param->t_val); 
@@ -422,7 +448,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     }
 
 
-    if (allowed_to_change() == FALSE){ 
+    if (allowed_to_change(current) == FALSE){ 
       //       printf("can't change value during acquistion\n"); 
        if (no_update_open == 0)
 	 popup_no_update("Can't change value in acquiring or queued window");  
@@ -542,7 +568,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       return;
     }
 
-    if (allowed_to_change() == FALSE && !(adj == GTK_ADJUSTMENT(npts_adj) && current == upload_buff)){  // npts should be allowed to change in the acq buff.
+    if (allowed_to_change(current) == FALSE && !(adj == GTK_ADJUSTMENT(npts_adj) && current == upload_buff)){  // npts should be allowed to change in the acq buff.
       // not allowed to change.  reset
       //      printf("in update_acqn, not allowing change\n");
       if (adj ==  GTK_ADJUSTMENT(acqs_adj)){
@@ -1568,7 +1594,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     if( *button < 0 ) 
       return; 
 
-    if (allowed_to_change() == FALSE){ 
+    if (allowed_to_change(current) == FALSE){ 
       if (no_update_open == 0)
 	popup_no_update("Can't open array window for acquiring or queued window"); 
      return; 

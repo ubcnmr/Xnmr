@@ -27,8 +27,8 @@
                   |
                   |
   file_save ->  check_overwrite      ->    do_save   (save menu item)
-                   \                     /
-		     -> do_save_wrapper /
+                                        
+		     
 
 file_open   -> do_load       (open menu item)
                                /
@@ -404,7 +404,10 @@ dbuff *create_buff(int num){
     old_update_open = no_update_open;
     no_update_open = 1;
     
+    //    printf("create_buff, about to show_parameter_frame\n");
     show_parameter_frame( &buff->param_set );
+    //    printf("create_buff, done show_parameter_frame\n");
+
     no_update_open = old_update_open;
 
     show_process_frame( buff->process_data );
@@ -1257,7 +1260,7 @@ void file_open(GtkAction *action,dbuff *buff)
 {
   GtkWidget *filew;
 
-  if (allowed_to_change() == FALSE){
+  if (allowed_to_change(buff->buffnum) == FALSE){
     popup_msg("Can't open while Acquisition is running\n",TRUE);
     return;
   }
@@ -1367,6 +1370,14 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
       popup_msg("Can't close Acquisition Buffer!!",TRUE);
       return TRUE; //not destroyed, but event handled
     }
+    if (am_i_queued(bnum)){
+      printf("can't close a queued buffer!!\n");
+      popup_msg("Can't close a Queued buffer!",TRUE);
+      return TRUE;
+    }
+       
+
+
   }
 
 
@@ -1447,7 +1458,7 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
     show_process_frame( buffp[ current ]->process_data );
 
-    if (buffp[current]->buffnum == upload_buff && acq_in_progress == ACQ_RUNNING)
+    if (current == upload_buff && acq_in_progress == ACQ_RUNNING)
       update_2d_buttons();
     else
       update_2d_buttons_from_buff( buffp[current] );
@@ -3441,6 +3452,11 @@ gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs )
   return result;
 }
 
+
+  
+
+
+
 gint check_overwrite( dbuff* buff, char* path )
 {
   GtkWidget *dialog;
@@ -3452,6 +3468,27 @@ gint check_overwrite( dbuff* buff, char* path )
     return 0;
   }
   //  printf("in check_overwrite got path: %s\n",path);
+
+
+  // first see if this name is queued
+  if (queue.num_queued > 0){
+    int valid,bnum;
+    valid =  gtk_tree_model_get_iter_first(GTK_TREE_MODEL(queue.list),&queue.iter);
+    while (valid){
+      gtk_tree_model_get(GTK_TREE_MODEL(queue.list),&queue.iter,
+			 BUFFER_COLUMN,&bnum,-1);
+      if (strncmp(path,buffp[bnum]->param_set.save_path,PATH_LENGTH) == 0){
+	popup_msg("This filename is queued.  Can't use it.\n",TRUE);
+	return 0;
+      }
+      valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(queue.list),&queue.iter);
+    }
+  }
+
+
+
+
+
 
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
     if( errno != EEXIST ) {
@@ -4456,7 +4493,7 @@ gint channel_button_change(GtkWidget *widget,dbuff *buff){
 
   //    printf("in channel_button_change, buffnum: %i, acq_in_progress %i\n",buff->buffnum,acq_in_progress);
 
-  if (allowed_to_change() == FALSE){    
+  if (allowed_to_change(buff->buffnum) == FALSE){    
     if ( no_update_open == 0)
       popup_no_update("Can't change channels in acquiring or queued window");
     if (widget == buff->win.but1a || widget == buff->win.but1b || widget == buff->win.but1c){
@@ -5031,6 +5068,10 @@ void add_sub_buttons(GtkWidget *widget,gpointer data){
     return;
   }
     
+  if (allowed_to_change(k) == FALSE){
+    popup_msg("Destination Buffer is Acquiring or Queued",TRUE);
+    return;
+  }
 
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record2));
@@ -5107,11 +5148,11 @@ if the number of records on the input records doesn't match for "each each", err
     return;
   }
 
-  // make sure dest buffer isn't busy acquiring.
-  if (dbnum == upload_buff && acq_in_progress != ACQ_STOPPED){
+  // make sure dest buffer isn't busy acquiring. - done above
+  /*  if (dbnum == upload_buff && acq_in_progress != ACQ_STOPPED){
     popup_msg("output buffer is busy acquiring",TRUE);
     return;
-  }
+    } */
 
 
 
@@ -5476,7 +5517,6 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
   if (widget == fit_data.start_clicking){
     
-    GtkWidget *label, *button;
 
       if (buffp[sbnum]->win.press_pend != 0){
 	popup_msg("There's already a press pending\n(maybe Expand or Offset?)",TRUE);
@@ -5490,14 +5530,23 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
       
       /* open up a window that we click ok in when we're done */
+
+      fit_data.add_dialog = gtk_message_dialog_new(GTK_WINDOW(panwindow),GTK_DIALOG_DESTROY_WITH_PARENT,
+						   GTK_MESSAGE_INFO,
+						   GTK_BUTTONS_OK,
+						   "Hit ok when finished adding components");
+      g_signal_connect_swapped(fit_data.add_dialog,"response",G_CALLBACK(fit_add_components),fit_data.add_dialog);
+      gtk_widget_show_all (fit_data.add_dialog);
+
+      /*
       fit_data.add_dialog = gtk_dialog_new();
       label = gtk_label_new ( "Hit ok when finished adding components" );
       button = gtk_button_new_with_label("OK");
       
-      /* catches the ok button */
+      // catches the ok button 
       g_signal_connect_swapped(G_OBJECT (button), "clicked", G_CALLBACK (fit_add_components), G_OBJECT( fit_data.add_dialog ) );
       
-      /* also need to catch when we get a close signal from the wm */
+      // also need to catch when we get a close signal from the wm 
       g_signal_connect(G_OBJECT (fit_data.add_dialog),"delete_event",G_CALLBACK (fit_add_components),G_OBJECT( fit_data.add_dialog ));
       
       gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(fit_data.add_dialog)->action_area ),button,FALSE,FALSE,0);
@@ -5507,7 +5556,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       gtk_window_set_transient_for(GTK_WINDOW(fit_data.add_dialog),GTK_WINDOW(panwindow));
       gtk_window_set_position(GTK_WINDOW(fit_data.add_dialog),GTK_WIN_POS_CENTER_ON_PARENT);
       gtk_widget_show_all (fit_data.add_dialog);
-      
+      */
       g_signal_handlers_block_by_func(G_OBJECT(buffp[sbnum]->win.canvas),
 				      G_CALLBACK (press_in_win_event),
 				      buffp[sbnum]);
@@ -5624,6 +5673,22 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       
       // that should do it, go do the fit.
       if ( widget == fit_data.run_fit || widget == fit_data.run_fit_range){ // only actually do the fit if we want it done.
+	// check to make sure the dest buffer isn't busy
+
+	if (allowed_to_change(dbnum) == FALSE &&  gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.store_fit)) == TRUE){
+	  popup_msg("Destination buffer is busy acquiring or queued",TRUE);
+	  goto get_out_of_fit;
+	}
+
+	if (dbnum == sbnum && gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record)) == 
+	    gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) -1 ){
+	  popup_msg("Can't replace data with fit.  Try Append in Destination record",TRUE);
+	  goto get_out_of_fit;
+	}
+
+
+
+
 	//set initial values to turn off regression diagnostic.
 	// if the add_components dialog is open, kill it.
 	if (fit_data.add_dialog != NULL)
@@ -5634,7 +5699,11 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	kind = 1;
 	ivset_(&kind,iv,&liv,&lv,v);
 	iv[13] = 1; //printf just covariance matrix.  0=neither, 2 is just diagnotic, 3 = both
+
+	cursor_busy(buffp[sbnum]);
+	
 	n2f_(&n,&p,x,&calc_spectrum_residuals,iv,&liv,&lv,v,ui,spect,&dummy);
+	cursor_normal(buffp[sbnum]);
 
 	for(i=0;i<p;i++) stddev[i] = 0.;
 	// check return value, see if the fit is good?
@@ -5704,7 +5773,9 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	   gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.store_fit)) == TRUE){
 	// only actually do the fit if we want it done.
 	
-	// make sure dest buffer isn't busy acquiring.
+
+	/*
+	// make sure dest buffer isn't busy acquiring. - done above now.
 	if (dbnum == upload_buff && acq_in_progress != ACQ_STOPPED){
 	  popup_msg("output buffer is busy acquiring",TRUE);
 	  goto dont_move_fit;
@@ -5713,7 +5784,8 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	    gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) -1 ){
 	  popup_msg("Can't replace data with fit.  Try Append in Destination record",TRUE);
 	  goto dont_move_fit;
-	}
+	  } */
+
 	// create a new buffer if we need to
 	if (dbnum == -1){
 	  my_current = current;
@@ -5786,7 +5858,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	gtk_widget_queue_draw_area(buffp[sbnum]->win.canvas,1,1,buffp[sbnum]->win.sizex,buffp[sbnum]->win.sizey);
       }
 
-
+  get_out_of_fit:
       
       free(v);
       free(iv);
@@ -6020,13 +6092,9 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
 
 void queue_expt(GtkAction *action, dbuff *buff){
   char path[PATH_LENGTH];
-  int i;
+  int valid,bnum;
   printf("in queue_expt\n");
 
-  if (queue.num_queued >= MAX_QUEUE){
-    popup_msg("Queue is full",TRUE);
-    return;
-  }
 
   /* in here we:  make sure acq is running.
      if its nosave, popup a warning.
@@ -6060,7 +6128,6 @@ void queue_expt(GtkAction *action, dbuff *buff){
     popup_msg("Invalid filename",TRUE);
     return;
   }
-  //  printf("in check_overwrite got path: %s\n",path);
 
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
     if( errno != EEXIST ) {
@@ -6078,17 +6145,30 @@ void queue_expt(GtkAction *action, dbuff *buff){
   }
 
 
-  // ok, so it doesn't exist now, need to make sure we're not going to do it in an already
-  // queue'd experiment
+  // check channels are the same as in acq buff.XXXX
 
-  for (i=0;i<queue.num_queued;i++)
-    if (strncmp(path,buffp[queue.index[i]]->param_set.save_path,PATH_LENGTH) == 0){
-      popup_msg("Save file name matches one already queued.  Pick another",TRUE);
+  // ok, so it doesn't exist now, need to make sure we're not going to do it in an already
+  // queue'd experiment and our file name doesn't exist.
+  //  gtk_tree_selection_get_selected(queue.select,&queue.list,&queue.iter);
+
+
+  valid =  gtk_tree_model_get_iter_first(GTK_TREE_MODEL(queue.list),&queue.iter);
+  while (valid){
+    gtk_tree_model_get(GTK_TREE_MODEL(queue.list),&queue.iter,
+		       BUFFER_COLUMN,&bnum,-1);
+    printf("buffer: %i\n",bnum);
+    if (buff->buffnum == bnum){
+      popup_msg("This experiment already in the queue",TRUE);
       return;
     }
+    if (strncmp(path,buffp[bnum]->param_set.save_path,PATH_LENGTH) == 0){
+      popup_msg("Save file name matches one already queued.  Pick another",TRUE);
+      return;
+    }      
+    valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(queue.list),&queue.iter);
+  }
 
 
-  // check channels are the same as in acq buff.XXXX
 
   // also want to add label to say how many expts in queue.
 
@@ -6097,11 +6177,6 @@ void queue_expt(GtkAction *action, dbuff *buff){
     popup_msg("Warning, currently acquisition is set to save to acq_temp!!",TRUE);
 
 
-  for (i=0;i<queue.num_queued;i++)
-    if (queue.index[i] == buff->buffnum){
-      popup_msg("This experiment already in the queue",TRUE);
-      return;
-    }
 
   if (upload_buff == buff->buffnum){
     popup_msg("This experiment is the current acq buff",TRUE);
@@ -6113,11 +6188,12 @@ void queue_expt(GtkAction *action, dbuff *buff){
 
   snprintf(path,PATH_LENGTH,"buff: %i - %s",buff->buffnum,buff->param_set.save_path);
   
-  gtk_combo_box_append_text(GTK_COMBO_BOX(queue.combo),path);
-  
-  gtk_combo_box_set_active(GTK_COMBO_BOX(queue.combo),queue.num_queued);
-  queue.index[queue.num_queued] = buff->buffnum;
+  gtk_list_store_append(queue.list,&queue.iter);
+  gtk_list_store_set(queue.list,&queue.iter,BUFFER_COLUMN,buff->buffnum,
+		     FILE_COLUMN,buff->param_set.save_path,-1);
+
   queue.num_queued += 1;
+
   set_queue_label();
 
   snprintf(path,PATH_LENGTH,"Buffer %i with save path:\n %s\n added to queue",
@@ -6130,27 +6206,36 @@ void queue_expt(GtkAction *action, dbuff *buff){
 void queue_window(GtkAction *action, dbuff *buff){
  printf("in queue_window\n");
 
- gtk_widget_show_all(queue.dialog);
 
+ gtk_widget_show_all(queue.dialog);
+ gdk_window_raise(queue.dialog->window);
+ 
 }
 
 void remove_queue (GtkWidget *widget,gpointer dum){
-  int i,j;
-
+  int bnum;
+  GtkTreeModel *model;
   // remove the current experiment from the queue
-  if (queue.num_queued >0){
-    i = gtk_combo_box_get_active(GTK_COMBO_BOX(queue.combo));
-    gtk_combo_box_remove_text(GTK_COMBO_BOX(queue.combo),i);
 
-    for (j=i;j<queue.num_queued-1;j++)
-      queue.index[j]=queue.index[j+1];
+  if ( gtk_tree_selection_get_selected(queue.select,&model,&queue.iter)){
+    if ((void *)model == (void *)queue.list)
+      printf("in remove, model= list!\n");
+    else
+      printf("in remove, model != list\n");
+
+    gtk_tree_model_get(model,&queue.iter,BUFFER_COLUMN,&bnum,-1);
+    gtk_list_store_remove(queue.list,&queue.iter);
     queue.num_queued -= 1;
-    set_queue_label();
+    printf("selected buffer %i\n",bnum);
   }
-  else printf("in remove_queue, but none queued\n");
+  else {
+    printf("in remove queue, but nothing selected\n");
+  }
+
+  printf("%i experiments left in queue\n",queue.num_queued);
 
 
-
+  // now remove the one we selected
 
 
   return;
@@ -6160,6 +6245,9 @@ void set_queue_label(){
 
   char s[UTIL_LEN];
 
-  snprintf(s,UTIL_LEN,"%i Experiments in Queue",queue.num_queued);
+  if (queue.num_queued == 1)
+    snprintf(s,UTIL_LEN,"1 Experiment in Queue");
+  else
+    snprintf(s,UTIL_LEN,"%i Experiments in Queue",queue.num_queued);
   gtk_label_set_text(GTK_LABEL(queue.label),s);
 }
