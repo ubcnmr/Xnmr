@@ -1415,7 +1415,6 @@ gint phase_changed(GtkObject *widget,gpointer *data)
     phase_data.last_phase1=lp1;
     if (phase_data.pivot == 0.) phase_changed(GTK_OBJECT(phase0_ad),NULL);
     gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),lp0);
-    printf("set_value of phase0\n");
   }
   else /* is a phase 0 adjust */
     {
