@@ -102,7 +102,7 @@ gint allowed_to_change(int test_bnum){
     return TRUE; */
 }
 
-gint allowed_to_change_repeat(int test_bnum){
+gint allowed_to_change_repeat(int test_bnum){ 
   if (acq_in_progress == ACQ_STOPPED || from_make_active == 1) return TRUE;
 
   if (am_i_queued(test_bnum) == TRUE || (upload_buff == test_bnum && acq_in_progress == ACQ_RUNNING))
@@ -590,7 +590,8 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       return;
     }
 
-    if (allowed_to_change(current) == FALSE && !(adj == GTK_ADJUSTMENT(npts_adj) && current == upload_buff)){  // npts should be allowed to change in the acq buff.
+    //    if (allowed_to_change(current) == FALSE && !(adj == GTK_ADJUSTMENT(npts_adj) && current == upload_buff)){  // npts should be allowed to change in the acq buff.
+    if (allowed_to_change(current) == FALSE && adj != GTK_ADJUSTMENT(npts_adj)){ // npts should be allowed anytime, but not acq_npts below
       // not allowed to change.  reset
       //      printf("in update_acqn, not allowing change\n");
       if (adj ==  GTK_ADJUSTMENT(acqs_adj)){
@@ -660,11 +661,14 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     } 
     else if (adj== GTK_ADJUSTMENT( npts_adj)){ 
       if (adj->value != current_param_set->npts){ 
-
         buff_resize(buffp[current],adj->value,buffp[current]->npts2); 
-        buffp[current]->acq_npts = adj->value;  /* always set this here, if we're doing a 
-  					       zero fill, the zf routine will restore it  */
+	if (allowed_to_change(current) == TRUE){
+	  //	  printf("resetting acq_npts in buff %i",current);
+	  buffp[current]->acq_npts = adj->value;  /* always set this here, if we're doing a 
+						       zero fill, the zf routine will restore it  */
+	}
         draw_canvas(buffp[current]);   
+	//	printf(" resized to %f\n",adj->value);
       } 
     } 
 	   

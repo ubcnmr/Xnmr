@@ -380,6 +380,10 @@ gint do_zero_fill(GtkWidget * widget,double *val)
   cursor_busy(buff);
   //let's try  something else
   buff_resize(buff,new_npts,buff->npts2);
+
+  // ok, if we're here because the user pressed a button or we're actively running, then
+  // change the npts.  
+  // The other possibility is from an automatic upload_and_process while we're not focussed on the current buff.
   if (widget !=NULL || upload_buff == current) update_npts(new_npts); 
 
 
@@ -387,6 +391,8 @@ gint do_zero_fill(GtkWidget * widget,double *val)
   // zero out the new stuff, but don't trust the new_npts
 
   new_npts = buff->param_set.npts;
+
+  // reset this since the update_npts call may have messed it up.
   buff->acq_npts=acq_points;
   /* shouldn't have to do this anymore as buff resize zeros stuff out by itself
   for(j=0;j<buff->npts2;j++)
