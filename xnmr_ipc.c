@@ -43,6 +43,8 @@ volatile char redraw=0;
 char connected=FALSE; //for buff.c - clone_from_acq
 struct timeval last_time, current_time;
 
+
+
 void do_destroy_all_mutex_wrap(){
   //  printf("in do_destroy_all_mutex_wrap\n");
   gdk_threads_enter();
@@ -447,14 +449,14 @@ gint upload_and_draw_canvas_with_process_mutex_wrap( dbuff *buff ){
 }
 
 gint upload_and_draw_canvas_with_process( dbuff *buff )
-
 {
 
   if( redraw == 1 ) {
     set_acqn_labels();
     if (upload_buff ==current) update_2d_buttons();
     upload_data( buff );
-    update_sw_dwell();
+    // I think this was leftover from Nicolet
+    //    update_sw_dwell(); 
     process_data (NULL,NULL);
     draw_canvas( buff );
     redraw = 0;
@@ -462,7 +464,6 @@ gint upload_and_draw_canvas_with_process( dbuff *buff )
   }
   return FALSE;
 }
-
 
 gint upload_and_draw_canvas_mutex_wrap( dbuff *buff ){
   gint retval;
@@ -479,7 +480,8 @@ gint upload_and_draw_canvas( dbuff *buff )
     set_acqn_labels(); 
     if (upload_buff == current) update_2d_buttons();
     upload_data( buff );
-    update_sw_dwell();
+    // I think this was leftover from Nicolet
+    //    update_sw_dwell();
     //    printf("last: %ld\n",data_shm->last_acqn);
     draw_canvas( buff );
     redraw = 0;
@@ -631,6 +633,8 @@ void acq_signal_handler()
     case PPO_ERROR:
       g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Pulse Program No PPO error" );
       break;
+    case PERMISSION_ERROR:
+      g_idle_add( (GtkFunction) popup_msg_mutex_wrap, "Acq failed on iopl\nprobably doesn't have root permissions");
 
     default:
       break;
@@ -725,6 +729,7 @@ void acq_signal_handler()
     case P_PROGRAM_INTERNAL_TIMEOUT:
     case P_PROGRAM_ACQ_TIMEOUT:
     case ACQ_FILE_ERROR:
+    case PERMISSION_ERROR:
       result = acq_in_progress;
       acq_in_progress = ACQ_STOPPED;
       redraw = 0;  //CM dec 2, 2001 - hopefully this will fix the "failure to draw after stop with
@@ -746,7 +751,7 @@ void acq_signal_handler()
 	    g_idle_add( (GtkFunction) idle_button_up, start_button_nosave );
 	    //	    printf("calling idle_button up for acq nosave\n");
 	  }
-	  data_shm->mode = NO_MODE;
+	  //	  data_shm->mode = NO_MODE; // do this when the button comes up
 
 	  // if there's experiments in the queue, deal with them in the main thread.
 	  if (queue.num_queued > 0) // the low is to ensure that we're last (after the button up)
@@ -755,11 +760,11 @@ void acq_signal_handler()
 	  break;
 	case ACQ_REPEATING:
 	  g_idle_add( (GtkFunction) idle_button_up, repeat_button );
-	  data_shm->mode = NO_MODE;
+	  //	  data_shm->mode = NO_MODE;
 	  break;
 	case ACQ_REPEATING_AND_PROCESSING:
 	  g_idle_add( (GtkFunction) idle_button_up, repeat_p_button );
-	  data_shm->mode = NO_MODE;
+	  //	  data_shm->mode = NO_MODE;
 	  break;
 	default:
 	  break;
@@ -767,7 +772,8 @@ void acq_signal_handler()
       return;
       break;
     case NO_SIGNAL:
-      printf("xnmr_ipc: got NO_SIGNAL\n");
+      // this happens (I think) if we get queued by acq a second time before we're done with the first.
+      //      printf("xnmr_ipc: got NO_SIGNAL\n");
       return;
       break;
     default:

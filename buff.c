@@ -65,6 +65,8 @@ reload wrapper                             (from end of acquisition)
  *  Global Variable for this modules
  */
 
+
+
 extern char no_acq;
 extern char connected; //from xnmr_ipc.c
 extern struct parameter_button_t param_button[ MAX_PARAMETERS ];
@@ -72,6 +74,7 @@ extern GtkObject *acqs_2d_adj;
 extern char no_update_open;
 extern struct popup_data_t popup_data; // needed to see if array is open 
 GdkPoint dpoints[MAX_DATA_NPTS]; // point list for drawing spectra
+
 
 volatile extern char redraw; 
 
@@ -100,11 +103,19 @@ GtkWidget *setsf1dialog;
 /*need a pivot point on phase change */
 /* need to be able to  to bigger and smaller first order phases 
    (ie + and - buttons that increase the scale by 360 deg */
-
+/*
 gint window_focus(GtkWidget *widget,GdkEventExpose *event,dbuff *buff){
-  printf("got event for buff %i\n",buff->buffnum);
+  printf("got event for buff %i ",buff->buffnum);
+    if ( ((GdkEventVisibility *) event)->state ==GDK_VISIBILITY_UNOBSCURED)
+    printf("says its unobscured\n");
+  else
+  printf("is obscured\n"); 
   return FALSE;
 }
+*/
+
+
+
 
 
 dbuff *create_buff(int num){
@@ -137,7 +148,7 @@ dbuff *create_buff(int num){
     { "Integrate",NULL,"Integrate",NULL,"Start integrate",G_CALLBACK(integrate)},
     { "IntegrateOld",NULL,"_Integrate old",NULL,"Use old integrate values",G_CALLBACK(integrateold)},
     { "Clone",NULL,"_Clone from acq buff","<control>C","Clone current from acq",G_CALLBACK(clone_from_acq)},
-    { "Setsf",NULL,"Set s_f",NULL,"Set spectrometer frequency",G_CALLBACK(set_sf1)},
+    { "Setsf",NULL,"Set sf",NULL,"Set spectrometer frequency",G_CALLBACK(set_sf1)},
     { "RMS", NULL,"_RMS",NULL,"Calculate RMS of Entire spectrum",G_CALLBACK(calc_rms)},
     { "AddSubtract",NULL,"_Add & Subtract",NULL,"Add and subtract records",G_CALLBACK(add_subtract)},
     { "Fitting",NULL,"_Fitting",NULL,"Fit spectra to Gaussians and Lorentzians",G_CALLBACK(fitting)},
@@ -495,7 +506,6 @@ dbuff *create_buff(int num){
 		       G_CALLBACK(destroy_buff),buff);
 
 
-    //    g_signal_connect(G_OBJECT(window),"show",G_CALLBACK(window_focus),buff);
 
     set_window_title(buff);
 
@@ -751,6 +761,7 @@ dbuff *create_buff(int num){
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but2c),TRUE);
     }
 
+
     g_signal_connect(G_OBJECT( buff->win.but1a ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
     g_signal_connect(G_OBJECT( buff->win.but1b ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
     g_signal_connect(G_OBJECT( buff->win.but1c ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
@@ -791,23 +802,19 @@ dbuff *create_buff(int num){
     
     add_sub.index[inum] = num;
     
-
     return buff;
     
   }
   else return NULL;
 }
 
-
 gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff)
 {
-  // nearly right, except that expose events happen all the time from acq.
   /*
-  printf("in expose with buff: %i, current is %i\n",buff->buffnum,current);
-  if (buff->buffnum != current)
+  printf("got expose event for buff %i, dont_raise says %i, current is %i\n",buff->buffnum,doing_upload_dont_raise,current);  if (buff->buffnum != current  && doing_upload_dont_raise != buff->buffnum)
     if (gtk_window_has_toplevel_focus(GTK_WINDOW(buff->win.window))) {
+      printf("raising %i, current is %i\n",buff->buffnum,current);
       make_active(buff);
-      printf("raising %i\n",buff->buffnum);
     }
   */
 
@@ -818,8 +825,6 @@ gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff)
 		    event->area.x, event->area.y,
 		    event->area.width, event->area.height); 
   // do this later when we're finished to avoid looping
-
-
 
 return FALSE; 
 }
@@ -1303,6 +1308,9 @@ void file_open(GtkAction *action,dbuff *buff)
     popup_msg("Can't open while Acquisition is running\n",TRUE);
     return;
   }
+
+  CHECK_ACTIVE(buff);
+
   //  filew = gtk_file_selection_new ("Load");
   filew = gtk_file_chooser_dialog_new("Open File",NULL,
 				     GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
@@ -1314,16 +1322,16 @@ void file_open(GtkAction *action,dbuff *buff)
 
   if (gtk_dialog_run(GTK_DIALOG(filew)) == -GTK_RESPONSE_ACCEPT) {
     char *filename;
-    printf("back from file_open dialog\n");
+    //    printf("back from file_open dialog\n");
     filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filew));
-    printf("got filename: %s\n",filename);
+    //    printf("got filename: %s\n",filename);
     
     
     if (buff != NULL){
       
       // here we need to strip out a potential trailing /
       if (filename[strlen(filename)-1] == '/' ) filename[strlen(filename)-1] = 0;
-      printf("path is: %s\n",filename);
+      //      printf("path is: %s\n",filename);
       
       do_load( buff, filename);
     }
@@ -1535,6 +1543,7 @@ void file_close(GtkAction *action,dbuff *buff)
 void file_save(GtkAction *action,dbuff *buff)
 {
 
+  CHECK_ACTIVE(buff);
   printf("in file_save, using path: %s\n",buff->param_set.save_path);
   if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == '/'){
     popup_msg("Invalid file name",TRUE);
@@ -1554,6 +1563,8 @@ void file_save_as(GtkAction *action, dbuff *buff)
 {
   GtkWidget *filew;
   char path[PATH_LENGTH];
+
+  CHECK_ACTIVE(buff);
 
   /*  unfinished.  The chooser_dialog doesn't work well enough yet.
   filew = gtk_file_chooser_dialog_new("Open File",NULL,
@@ -1604,7 +1615,6 @@ void file_new(GtkAction *action,dbuff *buff)
   if (num_buffs<MAX_BUFFERS){
     for(i=0;i<MAX_BUFFERS;i++)
       if (buffp[i] == NULL){
-	printf("using buff #%i\n",i);
 	buffp[i]=create_buff(i);
 	last_current = current; 
 	current = i;
@@ -1641,111 +1651,116 @@ static struct {
 
 void store_scales(GtkAction *action,dbuff *buff)
 {
-    scales.xx1=buff->disp.xx1;
-    scales.xx2=buff->disp.xx2;
-    scales.yy1=buff->disp.yy1;
-    scales.yy2=buff->disp.yy2;
-    scales.yscale=buff->disp.yscale;
-    scales.yoffset=buff->disp.yoffset;
+  CHECK_ACTIVE(buff);
+  scales.xx1=buff->disp.xx1;
+  scales.xx2=buff->disp.xx2;
+  scales.yy1=buff->disp.yy1;
+  scales.yy2=buff->disp.yy2;
+  scales.yscale=buff->disp.yscale;
+  scales.yoffset=buff->disp.yoffset;
 }
 void apply_scales(GtkAction *action,dbuff *buff)
 {
-    if (buff->scales_dialog != NULL){
-      popup_msg("Can't apply while scales dialog open",TRUE);
-      return;
-    }
-    unauto(buff); // turns off auto scaling if it was on.
-    buff->disp.xx1=scales.xx1;
-    buff->disp.xx2=scales.xx2;
-    buff->disp.yy1=scales.yy1;
-    buff->disp.yy2=scales.yy2;
-    buff->disp.yscale=scales.yscale;
-    buff->disp.yoffset=scales.yoffset;
-    draw_canvas(buff);
+  CHECK_ACTIVE(buff);
+
+  if (buff->scales_dialog != NULL){
+    popup_msg("Can't apply while scales dialog open",TRUE);
+    return;
+  }
+  unauto(buff); // turns off auto scaling if it was on.
+  buff->disp.xx1=scales.xx1;
+  buff->disp.xx2=scales.xx2;
+  buff->disp.yy1=scales.yy1;
+  buff->disp.yy2=scales.yy2;
+  buff->disp.yscale=scales.yscale;
+  buff->disp.yoffset=scales.yoffset;
+  draw_canvas(buff);
 }
-void user_scales(GtkAction *action,dbuff *buff)
-{
- GtkWidget *inputbox;
- GtkAdjustment *spinner_adj1,*spinner_adj2,*spinner_adj3,*spinner_adj4;
- GtkWidget *table;
- GtkWidget *label1;
- GtkWidget *label2;
- GtkWidget *label3;
- GtkWidget *label4;
- GtkWidget *entry1;
- GtkWidget *entry2;
- GtkWidget *entry3;
- GtkWidget *entry4;
- GtkWidget *OK_button;
- GtkWidget *Update;
+void user_scales(GtkAction *action,dbuff *buff){
+  GtkWidget *inputbox;
+  GtkAdjustment *spinner_adj1,*spinner_adj2,*spinner_adj3,*spinner_adj4;
+  GtkWidget *table;
+  GtkWidget *label1;
+  GtkWidget *label2;
+  GtkWidget *label3;
+  GtkWidget *label4;
+  GtkWidget *entry1;
+  GtkWidget *entry2;
+  GtkWidget *entry3;
+  GtkWidget *entry4;
+  GtkWidget *OK_button;
+  GtkWidget *Update;
   
- char temps[PATH_LENGTH];
-    if ( buff->scales_dialog != NULL){  //this buff already has a scale dialog
-      popup_msg("scales dialog already open for this buffer\n",TRUE);
-      return ;
-    }
+  char temps[PATH_LENGTH];
+  CHECK_ACTIVE(buff);
   
-    unauto(buff); // turns off auto scaling if it was on.
+  if ( buff->scales_dialog != NULL){  //this buff already has a scale dialog
+    popup_msg("scales dialog already open for this buffer\n",TRUE);
+    return ;
+  }
+  
+  unauto(buff); // turns off auto scaling if it was on.
+  
+  inputbox = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-    inputbox = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    OK_button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
-    Update= gtk_button_new_with_label("Update Scales");
-    //    printf("%i\n",(int)buff->disp.xx1);
-
-    spinner_adj1 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx1, 0.0, 1.0, .02, 0.1, 0.1);
-    spinner_adj2 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx2, 0.0, 1.0, .02, 0.1, 0.1);
-    spinner_adj3 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.yy1, 0.0, 1.0, .02, 0.1, 0.1);
-    spinner_adj4 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.yy2, 0.0, 1.0, .02, 0.1, 0.1);
-
-    entry1 = gtk_spin_button_new (spinner_adj1, 10.0, 5);
-    entry2 = gtk_spin_button_new (spinner_adj2, 10.0, 5);
-    entry3 = gtk_spin_button_new (spinner_adj3, 10.0, 5);
-    entry4 = gtk_spin_button_new (spinner_adj4, 10.0, 5);
-
-    label1 = gtk_label_new("f1min:");
-    label2 = gtk_label_new("f1max");
-    label3 = gtk_label_new("f2min");
-    label4 = gtk_label_new("f2max");
-
-    table = gtk_table_new(2, 5, FALSE);   
-    gtk_table_attach(GTK_TABLE(table), label1, 0, 1, 0, 1, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), label2, 0, 1, 1, 2, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), label3, 0, 1, 2, 3, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), label4, 0, 1, 3, 4, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), entry1, 1, 2, 0, 1, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), entry2, 1, 2, 1, 2, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), entry3, 1, 2, 2, 3, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), entry4, 1, 2, 3, 4, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), OK_button,0, 1, 4, 5, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-    gtk_table_attach(GTK_TABLE(table), Update,   1, 2, 4, 5, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
-
-    g_signal_connect(G_OBJECT(OK_button), "clicked", G_CALLBACK (do_wrapup_user_scales),  buff);
-    g_signal_connect(G_OBJECT(Update),    "clicked", G_CALLBACK (do_update_scales), buff );
-    g_signal_connect(G_OBJECT(inputbox), "destroy", G_CALLBACK (do_wrapup_user_scales),buff ); // delete_event doesn't actually give back the data...
-
-
-
-    //  if the user changes the scales with expand or auto or something, our update scales button won't do what we want.
-    // should really just store the entry widgets (into the buff struct ick!) and grab values from them
-    // when we do_updates_scales
-    g_signal_connect(G_OBJECT(entry1),"changed", G_CALLBACK(do_user_scales), &buff->disp.xx1);
-    g_signal_connect(G_OBJECT(entry2),"changed", G_CALLBACK(do_user_scales), &buff->disp.xx2);
-    g_signal_connect(G_OBJECT(entry3),"changed", G_CALLBACK(do_user_scales), &buff->disp.yy1);
-    g_signal_connect(G_OBJECT(entry4),"changed", G_CALLBACK(do_user_scales), &buff->disp.yy2);
-
-    gtk_container_add(GTK_CONTAINER(inputbox), table);
-    //    gtk_container_border_width (GTK_CONTAINER (inputbox), 5);
-    gtk_window_set_default_size (GTK_WINDOW(inputbox), 300, 100);
-    sprintf(temps,"User Defined Scales, buffer: %i",buff->buffnum);
-    gtk_window_set_title(GTK_WINDOW (inputbox),temps);
-
-    // place the window
-    gtk_window_set_transient_for(GTK_WINDOW(inputbox),GTK_WINDOW(panwindow));
-    gtk_window_set_position(GTK_WINDOW(inputbox),GTK_WIN_POS_CENTER_ON_PARENT);
-
-    gtk_widget_show_all(inputbox);
-    buff->scales_dialog = inputbox;
-
+  OK_button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
+  Update= gtk_button_new_with_label("Update Scales");
+  //    printf("%i\n",(int)buff->disp.xx1);
+  
+  spinner_adj1 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx1, 0.0, 1.0, .02, 0.1, 0.1);
+  spinner_adj2 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx2, 0.0, 1.0, .02, 0.1, 0.1);
+  spinner_adj3 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.yy1, 0.0, 1.0, .02, 0.1, 0.1);
+  spinner_adj4 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.yy2, 0.0, 1.0, .02, 0.1, 0.1);
+  
+  entry1 = gtk_spin_button_new (spinner_adj1, 10.0, 5);
+  entry2 = gtk_spin_button_new (spinner_adj2, 10.0, 5);
+  entry3 = gtk_spin_button_new (spinner_adj3, 10.0, 5);
+  entry4 = gtk_spin_button_new (spinner_adj4, 10.0, 5);
+  
+  label1 = gtk_label_new("f1min:");
+  label2 = gtk_label_new("f1max");
+  label3 = gtk_label_new("f2min");
+  label4 = gtk_label_new("f2max");
+  
+  table = gtk_table_new(2, 5, FALSE);   
+  gtk_table_attach(GTK_TABLE(table), label1, 0, 1, 0, 1, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), label2, 0, 1, 1, 2, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), label3, 0, 1, 2, 3, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), label4, 0, 1, 3, 4, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), entry1, 1, 2, 0, 1, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), entry2, 1, 2, 1, 2, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), entry3, 1, 2, 2, 3, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), entry4, 1, 2, 3, 4, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), OK_button,0, 1, 4, 5, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  gtk_table_attach(GTK_TABLE(table), Update,   1, 2, 4, 5, GTK_EXPAND | GTK_SHRINK | GTK_FILL, GTK_EXPAND | GTK_SHRINK | GTK_FILL, 0, 0);
+  
+  g_signal_connect(G_OBJECT(OK_button), "clicked", G_CALLBACK (do_wrapup_user_scales),  buff);
+  g_signal_connect(G_OBJECT(Update),    "clicked", G_CALLBACK (do_update_scales), buff );
+  g_signal_connect(G_OBJECT(inputbox), "destroy", G_CALLBACK (do_wrapup_user_scales),buff ); // delete_event doesn't actually give back the data...
+  
+  
+  
+  //  if the user changes the scales with expand or auto or something, our update scales button won't do what we want.
+  // should really just store the entry widgets (into the buff struct ick!) and grab values from them
+  // when we do_updates_scales
+  g_signal_connect(G_OBJECT(entry1),"changed", G_CALLBACK(do_user_scales), &buff->disp.xx1);
+  g_signal_connect(G_OBJECT(entry2),"changed", G_CALLBACK(do_user_scales), &buff->disp.xx2);
+  g_signal_connect(G_OBJECT(entry3),"changed", G_CALLBACK(do_user_scales), &buff->disp.yy1);
+  g_signal_connect(G_OBJECT(entry4),"changed", G_CALLBACK(do_user_scales), &buff->disp.yy2);
+  
+  gtk_container_add(GTK_CONTAINER(inputbox), table);
+  //    gtk_container_border_width (GTK_CONTAINER (inputbox), 5);
+  gtk_window_set_default_size (GTK_WINDOW(inputbox), 300, 100);
+  sprintf(temps,"User Scales for buffer %i",buff->buffnum);
+  gtk_window_set_title(GTK_WINDOW (inputbox),temps);
+  
+  // place the window
+  gtk_window_set_transient_for(GTK_WINDOW(inputbox),GTK_WINDOW(panwindow));
+  gtk_window_set_position(GTK_WINDOW(inputbox),GTK_WIN_POS_CENTER_ON_PARENT);
+  
+  gtk_widget_show_all(inputbox);
+  buff->scales_dialog = inputbox;
+ 
 }
 
 gint do_user_scales(GtkWidget *widget, float *range)
@@ -1786,24 +1801,28 @@ gint do_wrapup_user_scales(GtkWidget *widget, dbuff *buff)
 // void toggle_disp(dbuff *buff,int action,GtkWidget *widget)
 void toggle_real(GtkAction *action,dbuff *buff)
 {
+  CHECK_ACTIVE(buff);
   if(buff->disp.real)  buff->disp.real=0;
   else buff->disp.real=1; 
   draw_canvas(buff);
 }
 void toggle_imag(GtkAction *action,dbuff *buff)
 {
+  CHECK_ACTIVE(buff);
   if(buff->disp.imag)  buff->disp.imag=0;
   else buff->disp.imag=1; 
   draw_canvas(buff);
 }
 void toggle_base(GtkAction *action,dbuff *buff)
 {
+  CHECK_ACTIVE(buff);
   if(buff->disp.base)  buff->disp.base=0;
   else buff->disp.base=1; 
   draw_canvas(buff);
 }
 void toggle_mag(GtkAction *action,dbuff *buff)
 {
+  CHECK_ACTIVE(buff);
   if(buff->disp.mag)  buff->disp.mag=0;
   else buff->disp.mag=1; 
   draw_canvas(buff);
@@ -1814,6 +1833,8 @@ void toggle_mag(GtkAction *action,dbuff *buff)
 
 gint full_routine(GtkWidget *widget,dbuff *buff)
 {
+  CHECK_ACTIVE(buff);
+
   if (buff->scales_dialog != NULL){
     popup_msg("Can't 'full' while scales dialog open",TRUE);
     return TRUE;
@@ -1857,6 +1878,7 @@ void s2ndelete(dbuff *buff,GtkWidget *widget){
 void signal2noise(GtkAction *action,dbuff *buff)
 {
   
+  CHECK_ACTIVE(buff);
 
   if (buff->win.press_pend > 0){
     popup_msg("Can't start signal to noise while press pending",TRUE);
@@ -2012,6 +2034,7 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 void signal2noiseold(GtkAction *action, dbuff *buff)
 {
+  CHECK_ACTIVE(buff);
   if (peak == -1) {
     popup_msg("No old s2n values to use",TRUE);
     return;
@@ -2039,7 +2062,7 @@ void int_delete(dbuff *buff,GtkWidget *widget){
 void integrate(GtkAction *action, dbuff *buff)
 {
   
-
+  CHECK_ACTIVE(buff);
   if (buff->win.press_pend > 0){
     popup_msg("Can't start integrate while press pending",TRUE);
     return;
@@ -2088,12 +2111,11 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  char fileN[PATH_LENGTH]; 
  FILE *fstream=NULL;
  char string[UTIL_LEN],arr_name[PARAM_NAME_LEN];
- int count,i,j,arr_num_for_int,arr_type;
+ int count,i,j,arr_num_for_int,arr_type=3;
  float integral,f1,f2;
  int export = 1;
 
  arr_num_for_int=0;
- arr_type=3;
  //set up integration export file
 
  if (pt1 > buff->param_set.npts || pt2 > buff->param_set.npts) return; 
@@ -2176,13 +2198,16 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
        fprintf(fstream,"%f %f\n",
 	       buff->param_set.parameter[arr_num_for_int].f_val_2d[j],integral);
      }                                                             //if arrayed over float
-     if (arr_type==2){
+     else if (arr_type==2){
        fprintf(fstream,"%i %f\n",
 	       buff->param_set.parameter[arr_num_for_int].i_val_2d[j],integral);
-     }                                                           //if arrayed over integer
-   }  
+     }    
+     else if (arr_type ==3){
+       fprintf(fstream,"%i %f\n",j,integral);
+     }//if arrayed over integer
+   }
    if (j==buff->disp.record){
-     snprintf(string,UTIL_LEN,"Integral = %g",integral);
+     snprintf(string,UTIL_LEN,"Integral = %g\npoints: %i-%i",integral,MIN(pt1,pt2),MAX(pt1,pt2));
      popup_msg(string,TRUE);
    }
    
@@ -2234,7 +2259,7 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 void integrateold(GtkAction *action, dbuff *buff)
 {
-
+  CHECK_ACTIVE(buff);
   if (i_pt1 == -1) {
     popup_msg("No old bounds to use",TRUE);
     return;
@@ -2277,6 +2302,7 @@ gint expand_routine(GtkWidget *widget,dbuff *buff)
     norecur = 0;
     return TRUE;
   }
+  CHECK_ACTIVE(buff);
 
   if (buff->scales_dialog != NULL){
     popup_msg("Can't expand while scales dialog open",TRUE);
@@ -2434,6 +2460,7 @@ gint expandf_routine(GtkWidget *widget,dbuff *buff)
     norecur = 0;
     return TRUE;
   }
+  CHECK_ACTIVE(buff);
 
   if (buff->scales_dialog != NULL){
     popup_msg("Can't expand while scales dialog open",TRUE);
@@ -2511,30 +2538,33 @@ expandf_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 gint Bbutton_routine(GtkWidget *widget,dbuff *buff)
 {
   /*  if(!buff->win.press_pend){ */
-    buff->disp.yscale *=4;
-    unauto(buff); 
-    buff->disp.yoffset /=4;
-    draw_canvas(buff);
-    /*  } */
+  CHECK_ACTIVE(buff);
+  buff->disp.yscale *=4;
+  unauto(buff); 
+  buff->disp.yoffset /=4;
+  draw_canvas(buff);
+  /*  } */
     return 0;
 }
 gint bbutton_routine(GtkWidget *widget,dbuff *buff)
 {
 /*  if(!buff->win.press_pend){ */
-    buff->disp.yscale *=1.25;
-    unauto(buff); 
-    buff->disp.yoffset /=1.25; 
-    draw_canvas(buff);
-    /*  } */
+  CHECK_ACTIVE(buff);
+  buff->disp.yscale *=1.25;
+  unauto(buff); 
+  buff->disp.yoffset /=1.25; 
+  draw_canvas(buff);
+  /*  } */
     return 0;
 }
 gint Sbutton_routine(GtkWidget *widget,dbuff *buff)
 {
   /*   if(!buff->win.press_pend){ */
-    buff->disp.yscale /=4;
-    unauto(buff); 
-    buff->disp.yoffset *=2; 
-    draw_canvas(buff);
+  CHECK_ACTIVE(buff);
+  buff->disp.yscale /=4;
+  unauto(buff); 
+  buff->disp.yoffset *=2; 
+  draw_canvas(buff);
     /*  }*/
 
     return 0;
@@ -2543,11 +2573,12 @@ gint Sbutton_routine(GtkWidget *widget,dbuff *buff)
 gint sbutton_routine(GtkWidget *widget,dbuff *buff)
 {
   /*   if(!buff->win.press_pend){*/
-    buff->disp.yscale /=1.25;
-    unauto(buff); 
-    buff->disp.yoffset *= 1.25;
-    draw_canvas(buff);
-    /*  } */
+  CHECK_ACTIVE(buff);
+  buff->disp.yscale /=1.25;
+  unauto(buff); 
+  buff->disp.yoffset *= 1.25;
+  draw_canvas(buff);
+  /*  } */
 
     return 0;
 }
@@ -2555,6 +2586,8 @@ gint sbutton_routine(GtkWidget *widget,dbuff *buff)
 gint autocheck_routine(GtkWidget *widget,dbuff *buff)
 {
   //printf("autocheck routine\n");
+  CHECK_ACTIVE(buff);
+
   if (GTK_TOGGLE_BUTTON(widget)->active) draw_canvas(buff);
   return 0;
 }
@@ -2716,6 +2749,8 @@ gint do_auto2(dbuff *buff)
 
 gint auto_routine(GtkWidget *widget,dbuff *buff)
 { 
+  CHECK_ACTIVE(buff);
+
   if (buff->disp.dispstyle ==SLICE_ROW)
     do_auto(buff);
   if (buff->disp.dispstyle ==SLICE_COL)
@@ -2727,6 +2762,7 @@ gint auto_routine(GtkWidget *widget,dbuff *buff)
 
 gint offset_routine(GtkWidget *widget,dbuff *buff)
 {
+  CHECK_ACTIVE(buff);
   //printf("offset routine\n");
   if (buff->win.press_pend==0 &&GTK_TOGGLE_BUTTON(widget)->active
  && (buff->disp.dispstyle==SLICE_ROW ||buff->disp.dispstyle==SLICE_COL)){
@@ -3043,10 +3079,12 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
   static int norecur = 0;
   char title[UTIL_LEN];
 
+
   if (norecur == 1) {
     norecur=0;
     return TRUE;
   }
+  CHECK_ACTIVE(buff);
 
   if(buff->win.press_pend >0){
     norecur=1;
@@ -3100,6 +3138,7 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
 
 gint plus_button(GtkWidget *widget,dbuff *buff){
 char title[UTIL_LEN];
+  CHECK_ACTIVE(buff);
 
   if(buff->disp.dispstyle ==SLICE_ROW)
     if (buff->disp.record < buff->npts2-(buff->is_hyper+1)) {
@@ -3121,6 +3160,8 @@ char title[UTIL_LEN];
 
 gint minus_button(GtkWidget *widget,dbuff *buff){
 char title[UTIL_LEN];
+  CHECK_ACTIVE(buff);
+
   if(buff->disp.dispstyle ==SLICE_ROW)
     if (buff->disp.record > buff->is_hyper) {
       buff->disp.record -= (1+buff->is_hyper);
@@ -3141,6 +3182,7 @@ char title[UTIL_LEN];
 
 gint row_col_routine(GtkWidget *widget,dbuff *buff){
 
+  CHECK_ACTIVE(buff);
 
   if (buff->win.press_pend >0 || phase_data.is_open == 1) return TRUE;
 
@@ -3172,6 +3214,7 @@ gint slice_2D_routine(GtkWidget *widget,dbuff *buff){
 
  
 //printf("slice routine\n");
+  CHECK_ACTIVE(buff);
  
  if(buff->disp.dispstyle==RASTER){
    /* if its a raster, check to see if we should do row or col */
@@ -3476,7 +3519,6 @@ gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs )
 {
   char path[PATH_LENGTH];
   dbuff* buff;
-  gint result;
 
   path_strcpy(path,gtk_file_selection_get_filename ( fs ));
   buff = (dbuff*) g_object_get_data( G_OBJECT( fs ), BUFF_KEY );
@@ -3495,7 +3537,7 @@ gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs )
   else printf("not saving\n");
   
   gtk_widget_destroy(GTK_WIDGET(fs));
-  return result;
+  return TRUE ;// handled
 }
 
 
@@ -3744,7 +3786,9 @@ void file_export(GtkAction *action,dbuff *buff)
   double dwell2,sw2;
   char fileN[PATH_LENGTH];
   FILE *fstream;
-  
+
+  CHECK_ACTIVE(buff);
+
   // first juggle the filename
 
   if (strcmp(buff->path_for_reload,"") == 0){
@@ -3917,6 +3961,7 @@ void file_append(GtkAction *action, dbuff *buff)
   unsigned long local_ct;
 
   //  printf("in file_append\n");
+  CHECK_ACTIVE(buff);
 
   if (buff->npts2 != 1){
     popup_msg("Can't append a 2d data set",TRUE);
@@ -4126,8 +4171,11 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
 {
 
   char s[PATH_LENGTH],my_string[PATH_LENGTH];
+
   // gets an action of 0 if user pulls it from a menu, gets an action of 1 if its called on startup.
   // used to.  Now action == buff if its called on startup.
+
+  if ((void *)action != (void *) buff) CHECK_ACTIVE(buff);
 
 
   //  if (buff->buffnum == upload_buff && action == 0 && no_acq == FALSE ) return; // if user pulled it down from the acq buffer
@@ -4191,7 +4239,7 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   load_p_string( data_shm->parameters, data_shm->num_acqs_2d, &buff->param_set );
   
 
-  printf("in clone_from_acq, about to upload and then draw\n");
+  //  printf("in clone_from_acq, about to upload and then draw\n");
   upload_data(buff); 
   
 
@@ -4331,7 +4379,7 @@ void set_sf1(GtkAction *action,dbuff *buff)
 {
 
   GtkWidget * setsf1label;
-
+  CHECK_ACTIVE(buff);
   if (buff->win.press_pend > 0){
     popup_msg("Can't start set_sf1 while press pending",TRUE);
     return;
@@ -4387,6 +4435,7 @@ void set_sf1(GtkAction *action,dbuff *buff)
 
 
 void reset_dsp_and_synth(GtkAction *action,dbuff *buff){
+  CHECK_ACTIVE(buff);
 
   if (no_acq != FALSE)
     popup_msg("Can't reset dsp and synth in noacq mode",TRUE);
@@ -4405,7 +4454,7 @@ void calc_rms(GtkAction *action,dbuff *buff)
 
   float sum=0,sum2=0,avg,avgi,rms,rmsi,sumi=0,sum2i=0;
   char out_string[UTIL_LEN];
-
+  CHECK_ACTIVE(buff);
  for (j = 0; j<buff->npts2;j+=buff->is_hyper+1){      //do each slice and output all to screen
    sum=0.;
    sum2=0.;
@@ -4446,6 +4495,7 @@ void calc_rms(GtkAction *action,dbuff *buff)
 }
 
 void set_ch1(dbuff *buff,char ch1){
+  
   if (ch1 == 'A') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but1a),TRUE);
   else if (ch1 == 'B') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but1b),TRUE);
   else if (ch1 == 'C') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but1c),TRUE);
@@ -4522,10 +4572,11 @@ void check_for_overrun_timeout(gpointer data){
 gint channel_button_change(GtkWidget *widget,dbuff *buff){
 
   static char norecur = 0;
+  CHECK_ACTIVE(buff);
 
 
   if (!GTK_TOGGLE_BUTTON (widget)->active) {
-    printf("channel button not active\n");
+    //    printf("channel button not active\n");
     return TRUE;
   }
 
@@ -4641,6 +4692,7 @@ void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spl
 void pick_spline_points(GtkAction *action,dbuff *buff){
   int i;
 
+  CHECK_ACTIVE(buff);
   if (base.spline_current_buff != -1) {
     gdk_window_raise(base.dialog->window);
     printf("already picking\n");
@@ -4702,112 +4754,115 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
 void do_spline(GtkAction *action, dbuff *buff){
   int i;
   float *temp_data;
+  CHECK_ACTIVE(buff);
+  
+  if (buff->disp.dispstyle != SLICE_ROW){
+    popup_msg("Spline only works on rows for now",TRUE);
+    return;
+  }
+  
+  
+  if (base.num_spline_points < 3){
+    popup_msg("Need at least 3 points for spline",TRUE);
+    return;
+  }
+  
+  // set up for undo.
+  
+  if (buff->param_set.npts != base.undo_num_points){
+    if (base.undo_buff != NULL) 
+      g_free(base.undo_buff);
+    base.undo_buff = g_malloc(buff->param_set.npts*8);
+    base.undo_num_points = buff->param_set.npts;
+  }
+  for(i=0;i<base.undo_num_points*2;i++)
+    base.undo_buff[i] = buff->data[i];
+  base.redo_buff = buff->buffnum;
+  
+  
+  temp_data = g_malloc(2*8*buff->param_set.npts);
+  calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
+  
+  // now apply to data.
+  for (i=0;i<buff->param_set.npts;i++){
+    buff->data[2*i+buff->disp.record*buff->param_set.npts*2] -= temp_data[2*i];
+  }
 
-      if (buff->disp.dispstyle != SLICE_ROW){
-	popup_msg("Spline only works on rows for now",TRUE);
-	return;
-      }
-
-
-      if (base.num_spline_points < 3){
-	popup_msg("Need at least 3 points for spline",TRUE);
-	return;
-      }
-      
-      	// set up for undo.
-
-      if (buff->param_set.npts != base.undo_num_points){
-	if (base.undo_buff != NULL) 
-	  g_free(base.undo_buff);
-	base.undo_buff = g_malloc(buff->param_set.npts*8);
-	base.undo_num_points = buff->param_set.npts;
-      }
-      for(i=0;i<base.undo_num_points*2;i++)
-	base.undo_buff[i] = buff->data[i];
-      base.redo_buff = buff->buffnum;
-      
-
-      temp_data = g_malloc(2*8*buff->param_set.npts);
-      calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
-
-      // now apply to data.
-      for (i=0;i<buff->param_set.npts;i++){
-	buff->data[2*i+buff->disp.record*buff->param_set.npts*2] -= temp_data[2*i];
-      }
-
-
-
-      // to do the imaginary part, play some tricks to generate it...
-      // first, make sure npts is a power of 2.
-      if  (log(buff->param_set.npts)/log(2.) == rint(log(buff->param_set.npts)/log(2.))){
-	for(i=0;i<buff->param_set.npts;i++){
-	  // copy data to temp buffer that's twice as long.
-	  temp_data[2*i]=buff->data[2*i+buff->disp.record*2*buff->param_set.npts];
-	  temp_data[2*i+1]=0.;
-	  temp_data[2*i+buff->param_set.npts*2]=0.;
-	  temp_data[2*i+1+buff->param_set.npts*2]=0.;
-	}
-	four1(temp_data-1,buff->param_set.npts*2,1);
-	for(i=0;i<buff->param_set.npts*2;i++){
-	  temp_data[i+buff->param_set.npts*2]=0; // set the second half to 0
-	}
-	// and do the reverse ft.
-	four1(temp_data-1,buff->param_set.npts*2,-1);
-	for(i=0;i<buff->param_set.npts*2;i++){
-	  buff->data[i+buff->disp.record*2*buff->param_set.npts]=temp_data[i]/buff->param_set.npts;
-	}
-	//	g_free(temp_data);
-
-	
-      } // if not, give up on imag part...
-      else printf("Fixing up the imaginary part failed - npts not a power of 2\n");
-      g_free(temp_data);
-
-      draw_canvas(buff);
+  
+  
+  // to do the imaginary part, play some tricks to generate it...
+  // first, make sure npts is a power of 2.
+  if  (log(buff->param_set.npts)/log(2.) == rint(log(buff->param_set.npts)/log(2.))){
+    for(i=0;i<buff->param_set.npts;i++){
+      // copy data to temp buffer that's twice as long.
+      temp_data[2*i]=buff->data[2*i+buff->disp.record*2*buff->param_set.npts];
+      temp_data[2*i+1]=0.;
+      temp_data[2*i+buff->param_set.npts*2]=0.;
+      temp_data[2*i+1+buff->param_set.npts*2]=0.;
+    }
+    four1(temp_data-1,buff->param_set.npts*2,1);
+    for(i=0;i<buff->param_set.npts*2;i++){
+      temp_data[i+buff->param_set.npts*2]=0; // set the second half to 0
+    }
+    // and do the reverse ft.
+    four1(temp_data-1,buff->param_set.npts*2,-1);
+    for(i=0;i<buff->param_set.npts*2;i++){
+      buff->data[i+buff->disp.record*2*buff->param_set.npts]=temp_data[i]/buff->param_set.npts;
+    }
+    //	g_free(temp_data);
+    
+    
+  } // if not, give up on imag part...
+  else printf("Fixing up the imaginary part failed - npts not a power of 2\n");
+  g_free(temp_data);
+  
+  draw_canvas(buff);
 }
 
 void show_spline_fit(GtkAction *action, dbuff *buff){
   float *temp_data;
       //      printf("show_spline_fit\n");
-      
-      if (buff->disp.dispstyle != SLICE_ROW){
-	popup_msg("Spline only works on rows for now",TRUE);
-	return;
-      }
-      if (base.num_spline_points < 3){
-	popup_msg("Need at least 3 points for spline",TRUE);
-	return;
-      }
-
-
-      temp_data = g_malloc(8*buff->param_set.npts);
-      calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
-      
-      draw_row_trace(buff, 0.,0.,temp_data,buff->param_set.npts, &colours[BLUE],0);
-      gtk_widget_queue_draw_area(buff->win.canvas,1,1,buff->win.sizex,buff->win.sizey);
-      
-      g_free(temp_data);
-      
+  CHECK_ACTIVE(buff);
+  if (buff->disp.dispstyle != SLICE_ROW){
+    popup_msg("Spline only works on rows for now",TRUE);
+    return;
+  }
+  if (base.num_spline_points < 3){
+    popup_msg("Need at least 3 points for spline",TRUE);
+    return;
+  }
+  
+  
+  temp_data = g_malloc(8*buff->param_set.npts);
+  calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
+  
+  draw_row_trace(buff, 0.,0.,temp_data,buff->param_set.npts, &colours[BLUE],0);
+  gtk_widget_queue_draw_area(buff->win.canvas,1,1,buff->win.sizex,buff->win.sizey);
+  
+  g_free(temp_data);
+  
 }
 void clear_spline(GtkAction *action, dbuff *buff){
-
-      base.num_spline_points = 0;
+  CHECK_ACTIVE(buff);
+  base.num_spline_points = 0;
 }
 
 
 void undo_spline(GtkAction *action, dbuff *buff){
   int i;
-      if ( base.redo_buff == buff->buffnum && base.undo_buff != NULL && 
-	   base.undo_num_points == buff->param_set.npts){
-	// we're good to go.
-	for(i=0;i<base.undo_num_points*2;i++)
-	  buff->data[i] = base.undo_buff[i];
-	draw_canvas(buff);
-      }
-      else{
-	popup_msg("undo spline not available",TRUE);
-	return;
-      }
+  CHECK_ACTIVE(buff);
+
+  if ( base.redo_buff == buff->buffnum && base.undo_buff != NULL && 
+       base.undo_num_points == buff->param_set.npts){
+    // we're good to go.
+    for(i=0;i<base.undo_num_points*2;i++)
+      buff->data[i] = base.undo_buff[i];
+    draw_canvas(buff);
+  }
+  else{
+    popup_msg("undo spline not available",TRUE);
+    return;
+  }
 }
 
 void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
@@ -4940,7 +4995,7 @@ void add_subtract(GtkAction *action, dbuff *buff){
   // need to maintain lists of buffers -
   // should probably do it at buffer creation and kill time.
 
-  
+  CHECK_ACTIVE(buff);
 
 
   if (add_sub.shown == 0){
@@ -5499,6 +5554,7 @@ gint hide_add_sub(GtkWidget *widget,gpointer data){
 
 void fitting(GtkAction *action,dbuff *buff){
 
+  CHECK_ACTIVE(buff);
     // default is current buffer and record
     gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.s_buff),buff->buffnum);
     gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.s_record),buff->disp.record);
@@ -5531,12 +5587,13 @@ void n2f_(int *n,int *p,float *x,void (*calc_spectrum_residuals),int *iv,int *li
      int *ui,float *ur,void (*dummy));
 void  ivset_(int *kind,int *iv, int *liv,int *lv,float *v);
 
+#define OUT_STRING_MAX 5000
 void fitting_buttons(GtkWidget *widget, gpointer data ){
 
   int sbnum,dbnum,i,j,my_current,kind;
   float stddev[MAX_FIT*4],chi2;
-  char out_string[500];
-  int out_len=0,max_len=500;
+  char out_string[OUT_STRING_MAX];
+  int out_len=0,max_len=OUT_STRING_MAX;
   int i1,i2;
 
   if (widget  == fit_data.close){ //close button
@@ -5778,7 +5835,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	     || gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE){
 
 	    if (out_len < max_len)
-	      out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f +/- %-8.2f % 8g +/- %-8g",i,
+	      out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f +/- %-8.2f % 8g +/- %-8g",i+1,
 				  x[pnum],stddev[pnum],x[pnum+1]*fit_data.amp_scale,stddev[pnum+1]*fit_data.amp_scale) ;
 	    pnum+=2;
 	    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE && out_len < max_len){
@@ -6143,8 +6200,8 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
 void queue_expt(GtkAction *action, dbuff *buff){
   char path[PATH_LENGTH];
   int valid,bnum;
-  printf("in queue_expt\n");
-
+  //  printf("in queue_expt\n");
+  CHECK_ACTIVE(buff);
 
   /* in here we:  make sure acq is running.
      if its nosave, popup a warning.
@@ -6256,8 +6313,8 @@ void queue_expt(GtkAction *action, dbuff *buff){
 }
 void queue_window(GtkAction *action, dbuff *buff){
   GtkTreeModel *model;
- printf("in queue_window\n");
-
+  // printf("in queue_window\n");
+  CHECK_ACTIVE(buff);
 
  gtk_widget_show_all(queue.dialog);
  gdk_window_raise(queue.dialog->window);

@@ -1141,12 +1141,23 @@ void open_phase(GtkAction *action, dbuff *buff)
 {
   int buffnum,i;
   float old_low,old_up;
+  char temps[UTIL_LEN];
+
+  CHECK_ACTIVE(buff);
+
   buffnum=buff->buffnum;
   if (phase_data.is_open==1 || buff->win.press_pend >0 || 
       (buff->disp.dispstyle != SLICE_ROW && buff->disp.dispstyle !=SLICE_COL ))
       return;
+  
   /* if its a column, has to be hyper */
-  if(buff->disp.dispstyle ==SLICE_COL && !buff->is_hyper) return;
+  if(buff->disp.dispstyle ==SLICE_COL && !buff->is_hyper){
+    popup_msg("can't phase a column unless its hypercomplex",TRUE);
+    return;
+  }
+
+  sprintf(temps,"Phasing for buffer %i",buff->buffnum);
+  gtk_window_set_title(GTK_WINDOW (phase_dialog),temps);
 
   buff->win.press_pend =1;
   g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),

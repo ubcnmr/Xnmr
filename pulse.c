@@ -691,8 +691,11 @@ int is_a_float_device(int device_id)
    //   printf("event_no: %i time: %lf \n",prog_shm->no_events,time);
    counts = (long long int) ( ( time *  CLOCK_SPEED ) -  0.5 ); 
 
+
+
    if( time <= 0 || counts <0 ) {
-      printf("event: time < 0, ignored\n");
+     if (time < 0)
+       printf("event: time < 0, ignored\n");
      return 0; 
    }
 

@@ -287,10 +287,10 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       send_params(); 
    return FALSE;   
   } 
-
+/*
   void update_sw_dwell(){ 
-    /* there is a potentially subtle problem here, that when  
-       we open a new buffer...  */
+    // there is a potentially subtle problem here, that when  
+     //  we open a new buffer...  
 
     if( current_param_set != acq_param_set ) { 
       //    printf("not updating sw/dwell\n"); 
@@ -301,11 +301,12 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     if (GTK_ADJUSTMENT(sw_adj)->value !=current_param_set->sw){
       gtk_adjustment_set_value( GTK_ADJUSTMENT( sw_adj ), current_param_set->sw); 
 
-      /* only need to do one of these because they will take care of each other 
-	 gtk_adjustment_set_value( GTK_ADJUSTMENT( dwell_adj ), current_param_set->dwell);  */
+      // only need to do one of these because they will take care of each other 
+      // gtk_adjustment_set_value( GTK_ADJUSTMENT( dwell_adj ), current_param_set->dwell);  
     }
   }
 
+*/
 
   void update_npts(int npts){ 
     /* this routine isn't a callback - the callback for the npts 
@@ -424,7 +425,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     char last_exec[ PATH_LENGTH ] = "";
     
 
-    printf("in update_paths\n");
+    //    printf("in update_paths\n");
     /*    if (data != NULL){
       printf("in update_paths, with data not Null, must be focus out\n");
       } */
@@ -594,31 +595,31 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       //      printf("in update_acqn, not allowing change\n");
       if (adj ==  GTK_ADJUSTMENT(acqs_adj)){
 	norecur = 1;
-	printf("update acqn: num_acqs\n");
+	//	printf("update acqn: num_acqs\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_adj),current_param_set->num_acqs);
 	//	norecur = 0;
       }
       else if (adj ==  GTK_ADJUSTMENT(npts_adj)){
 	norecur = 1;
-	printf("update acqn: npts\n");
+	//	printf("update acqn: npts\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(npts_adj),current_param_set->npts);
 	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(acqs_2d_adj)){
 	norecur = 1;
-	printf("update aqcn: acqs_2d\n");
+	//	printf("update aqcn: acqs_2d\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_2d_adj),current_param_set->num_acqs_2d);
 	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(dwell_adj)){
 	norecur = 1;
-	printf("update aqcn: dwell\n");
+	//	printf("update aqcn: dwell\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(dwell_adj),current_param_set->dwell);
 	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(sw_adj)){
 	norecur = 1;
-	printf("update aqcn: sw_adj\n");
+	//	printf("update aqcn: sw_adj\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(sw_adj),current_param_set->sw);
 	//	norecur = 0;
       }

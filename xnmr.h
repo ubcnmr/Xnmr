@@ -70,6 +70,8 @@ void draw_vertical(dbuff *buff,GdkColor  *col, float xvalf,int xvali);
 #define BLACK NUM_COLOURS+3
 // WHITE is (NUM_COLOURS-1)/2
 
+#define CHECK_ACTIVE( var )   if (var->buffnum != current) make_active(var)
+
 #endif
 
 

@@ -102,7 +102,7 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
   int was_in_progress,i,valid,count;
   //  printf("in kill_button_clicked, acq_in_progress=%i\n",acq_in_progress);
 
-  printf("in kill clicked, setting not green\nin progress: %i, mode: %i\n",acq_in_progress,data_shm->mode);
+  //  printf("in kill clicked, setting not green\nin progress: %i, mode: %i\n",acq_in_progress,data_shm->mode);
   gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
 
   send_sig_acq( ACQ_KILL ); 
@@ -117,11 +117,11 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 
   if (was_in_progress == ACQ_RUNNING) {
     if (data_shm->mode == NORMAL_MODE){
-      printf("toggling start_button\n");
+      //      printf("toggling start_button (save)\n");
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), FALSE );
     }
     else{
-      printf("toggling start_button_nosave\n");
+      //      printf("toggling start_button_nosave\n");
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button_nosave ), FALSE );
     }
   }      
@@ -146,10 +146,9 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
   printf("killed: %i experiments from the queue\n",count);
   set_queue_label();
   
-
-
   queue.num_queued = 0;
 
+  data_shm->mode = NO_MODE;
   return 0;
 }
 
@@ -164,7 +163,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
   char s[PATH_LENGTH];
   static char norecur=0;
 
-    printf("coming into start_button, norecur is: %i\n",norecur);
+  //    printf("coming into start_button, norecur is: %i\n",norecur);
   
   
   buff = buffp[ current ];
@@ -199,11 +198,11 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       }
 
       if (widget == start_button ){
-	printf("setting mode: NORMAL_MODE\n");
+	//	printf("setting mode: NORMAL_MODE\n");
 	data_shm->mode = NORMAL_MODE;
       }
       else {
-	printf("setting mode NOSAVE\n");
+	//	printf("setting mode NOSAVE\n");
 	data_shm->mode = NORMAL_MODE_NOSAVE;
       }
 
@@ -300,10 +299,10 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
     }
       
     else {
-      printf("setting style nocolor\n");
+      //      printf("setting style nocolor\n");
 
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
-
+      data_shm->mode = NO_MODE;
       //      printf("inactive and not running (normal stop?\n");
       /* this is raise of the button was not triggered by the user, 
 	 but by a call to gtk_toggle_button_set_active from idle_button_up*/
@@ -372,7 +371,7 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
     //printf( "repeat button lifted\n" );
 
     /* If control reaches here, the toggle button is up */
-    if( acq_in_progress == ACQ_REPEATING ) {  //a genuine stop
+    if( acq_in_progress == ACQ_REPEATING ) {  //a genuine stop from the user
       //printf( "Sending stop signal to ACQ\n" );
       // put the button back down though, it will come up on its own at end of scan
       norecur = 1;
@@ -380,7 +379,8 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
       send_sig_acq( ACQ_STOP );
     }
       
-    else {
+    else {// it actually comes up here.
+      data_shm->mode = NO_MODE;
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
 
     }
@@ -448,7 +448,8 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
       send_sig_acq( ACQ_STOP );
     }
       
-    else {
+    else { // button legitimately coming up.
+      data_shm->mode = NO_MODE;
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
     }
   }

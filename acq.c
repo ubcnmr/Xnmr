@@ -288,7 +288,7 @@ void ui_signal_handler()
     ph_clear_EPP_port(); // stop the hardware immediately, if its allocated
     // printf("cleared EPP port\n");
     data_shm->ui_sig_acq_meaning = NO_SIGNAL; 
-    data_shm->mode = NO_MODE; // xnmr_ipc does the rest of these.
+    //    data_shm->mode = NO_MODE; // xnmr_ipc does the rest of these.
     done = KILL_DONE;
 
     // if run() is sleeping, waiting for pulse program, wake it up.
@@ -710,6 +710,8 @@ int run()
   //  printf("just called iopl\n");
   if (i != 0 ){
     perror("error on iopl");
+    send_sig_ui(PERMISSION_ERROR);
+    return 0;
   }
 #else
   int_fd=zeros[0];
