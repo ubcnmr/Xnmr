@@ -74,7 +74,7 @@ typedef struct{
 
 #define MAX_QUEUE 25
 typedef struct{
-  GtkWidget *dialog,*combo;
+  GtkWidget *dialog,*combo,*label;
   int num_queued;
   int index[MAX_QUEUE];
     } queue_struct;
@@ -244,6 +244,7 @@ void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz
 void queue_expt(GtkAction *action, dbuff *buff);
 void queue_window(GtkAction *action, dbuff *buff);
 void remove_queue(GtkWidget *widget, gpointer dum);
+void set_queue_label();
 #endif
 
 

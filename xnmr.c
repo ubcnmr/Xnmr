@@ -348,7 +348,6 @@ int main(int argc,char *argv[])
   }
 
   /* build the queue window */
-  printf("mark 5\n");
 
   queue.dialog = gtk_dialog_new();
   gtk_window_set_transient_for(GTK_WINDOW(queue.dialog),GTK_WINDOW(panwindow));
@@ -356,8 +355,9 @@ int main(int argc,char *argv[])
   gtk_window_set_title(GTK_WINDOW(queue.dialog),"Queueing");
 
 
-  label=gtk_label_new("Experiments in Queue");
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),label,FALSE,FALSE,0);
+  queue.num_queued = 0;
+  queue.label=gtk_label_new("0 Experiments in Queue");
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),queue.label,FALSE,FALSE,0);
 
 
   hbox = gtk_hbox_new(TRUE,2);
@@ -377,12 +377,8 @@ int main(int argc,char *argv[])
 
   g_signal_connect_swapped( G_OBJECT (queue.dialog), "delete_event", G_CALLBACK( gtk_widget_hide ), queue.dialog);
 
-  queue.num_queued = 0;
 
 
-
-
-  printf("mark 4\n");
 
 
 
@@ -491,7 +487,6 @@ int main(int argc,char *argv[])
 
 
   // now the multiplier line:
-  printf("mark 3\n");
 
   hbox = gtk_hbox_new(TRUE,2);
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),hbox,FALSE,FALSE,0);
@@ -619,7 +614,6 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
 
-  printf("mark 2\n");
 
   // next line:
 
@@ -698,7 +692,6 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
 
 
-  printf("mark 1\n");
 
 
   gtk_widget_show_all(GTK_WIDGET(GTK_DIALOG(fit_data.dialog)->vbox));
@@ -770,10 +763,8 @@ int main(int argc,char *argv[])
 
 
 
-  printf("before create buff\n");
 
   buffp[0]=create_buff(0);
-  printf("after create buff\n");
 
 
   gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff1),0);

@@ -493,7 +493,7 @@ gint idle_button_up( GtkWidget *button )
 
 {
   gdk_threads_enter();
-  printf( "in_idle_button_up\n" );
+  printf( "in idle_button_up\n" );
   gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( button ), FALSE );
   gdk_threads_leave();
   return FALSE;
@@ -510,16 +510,23 @@ gint idle_queue( GtkWidget *button )
     printf("in idle_queue, but none in queue!\n");
   }
   else{
+
     gtk_combo_box_remove_text(GTK_COMBO_BOX(queue.combo),0);
 
     queue.num_queued -= 1;
-    for (i=0;i<queue.num_queued;i++)
-      queue.index[i]=queue.index[i+1];
-
     make_active(buffp[queue.index[0]]);
+
+    set_queue_label();
+    printf("num left in queue: %i\n",queue.num_queued);
+    for (i=0;i<queue.num_queued;i++){
+      printf("shifting buff: %i to queue spot: %i\n",queue.index[i+1],i);
+      queue.index[i]=queue.index[i+1];
+    }
+
+
+
+
     
-    
-    //  printf( "in_idle_button_down\n" );
     gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), TRUE );
   }
   gdk_threads_leave();
@@ -567,6 +574,9 @@ void acq_signal_handler()
 
   switch( sig )
     {
+    case  PPROG_ALREADY_RUNNING:
+      g_idle_add( (GtkFunction) popup_msg_mutex_wrap,"Acq says it was already running.  This should never happen.  You'll probably have to quit Xnmr, kill acq if it is still running and restart.");
+      break;
     case ACQ_ERROR:
       g_idle_add( (GtkFunction) popup_msg_mutex_wrap,"Acq wasn't able to create the file");
       break;
@@ -697,6 +707,7 @@ void acq_signal_handler()
 	break;//carl added
       }
     case ACQ_ERROR:
+    case PPROG_ALREADY_RUNNING:
     case P_PROGRAM_ERROR:  //moved these below so if exit with error, we don't bother to upload
     case TTC_ERROR:
     case DSP_FILE_ERROR:
@@ -736,8 +747,8 @@ void acq_signal_handler()
 	  data_shm->mode = NO_MODE;
 
 	  // if there's experiments in the queue, deal with them in the main thread.
-	  if (queue.num_queued > 0)
-	    g_idle_add( (GtkFunction) idle_queue,NULL);
+	  if (queue.num_queued > 0) // the low is to ensure that we're last (after the button up)
+	    g_idle_add_full(G_PRIORITY_LOW, (GtkFunction) idle_queue,NULL,NULL);
 	  
 	  break;
 	case ACQ_REPEATING:

@@ -269,8 +269,10 @@ void ui_signal_handler()
     data_shm->ui_sig_acq_meaning = NO_SIGNAL;
     if( running == 0) 
       run();
-    else
+    else{
       printf( "acq: can't start, already running\n" );
+      send_sig_ui( PPROG_ALREADY_RUNNING);
+    }    
     break;
 
   case ACQ_STOP:
@@ -1141,7 +1143,7 @@ else{
 	    i = pulse_hardware_start(0);
 #else
 	    i=0;
-	    printf("didn't start pulse programmer\n");
+	    //	    printf("didn't start pulse programmer\n");
 #endif
 	    
 	    
@@ -1802,9 +1804,13 @@ else{
 
   //send ACQ_DONE to ui
   
+  /* setting running off should be done before we tell Xnmr for a kind of subtle reason.
+     If we don't have real time scheduling, and there are experiments queued, we can get restarted 
+     before we finish out this call, but the restart will fail since this still says running.
+  */
+  running = 0;
   if( done >= 0 )
     send_sig_ui( ACQ_DONE );
-  running = 0;
   return 0;
 
 }

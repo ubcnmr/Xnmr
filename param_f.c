@@ -174,23 +174,34 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
   } 
 
 
-  gint update_t_param( GtkEntry* ent, parameter_t* param ) 
+  gint update_t_param(GtkEntry* ent , parameter_t *event, parameter_t *param) 
   { 
     double temp; 
     char tempstr[UTIL_LEN];
     parameter_t *n_param=NULL;
-    int i;
-    static char norecur=0;
-
-    //    printf("in update_t_param\n");
-    if(norecur == 1){
+    //    int i;
+    //    static char norecur=0;
+    
+    /* don't need no recur here, same as update_paths.  we only grab 'activate' and 'focus_out'    
+       simply setting the value doesn't invoke the callback
+      if(norecur == 1){
       norecur = 0;
       printf("update_t_param: doing norecur\n");
       return FALSE; 
+      } */
+
+    if (param == NULL) {
+      //      printf("got param == null, must be a direct activate callback\n");
+      n_param = event;
+    }
+    else {
+      //      printf("got a param, is a focus out\n");
+      n_param = param;
     }
 
+
     // focus out doesn't seem to give the right param data back...
-    for (i=0;i<current_param_set->num_parameters;i++){
+    /*    for (i=0;i<current_param_set->num_parameters;i++){
       if (ent  == (GtkEntry *)param_button[i].ent ){
 	n_param = &current_param_set->parameter[i];
 	i = current_param_set->num_parameters+1;
@@ -199,24 +210,25 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     if (n_param == NULL){
       printf("couldn't find the paramter!!!\n");
       return FALSE;
-    }
+      }*/
+    //    printf("param is %0x, should be:c %0x\n",param,n_param);
+
 
     if ( strncmp(n_param->t_val,gtk_entry_get_text(ent),PARAM_T_VAL_LEN)==0){
       //      printf("t_param, got same value...\n"); // happens on focus loss with no change
       return FALSE;
     }
-
-    // why bother...
-    /*    if (n_param != param){
+    /*
+    if (n_param != param){
       printf("update_t_param: different param from ent passed in\n");
-      } */
-
+      } 
+    */
 
     if (allowed_to_change() == FALSE ){ 
       //      printf("Can't change params while in progress\n"); 
-      norecur = 1; 
+      //      norecur = 1; 
       gtk_entry_set_text(ent,n_param->t_val); 
-      norecur = 0;
+      //      norecur = 0;
       if (no_update_open == 0)
 	popup_no_update("Can't change parameter value in acquiring or queued window");
       return FALSE; 
@@ -227,13 +239,15 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       case 't': 
 	strncpy(tempstr,gtk_entry_get_text(ent),UTIL_LEN);
 	if (isdigit((int)tempstr[0])){
+	  //	  printf("first char is a digit, reformatting\n");
 	  sscanf(tempstr,"%lf",&temp); 
 	  snprintf(tempstr,UTIL_LEN,"%.7f",temp); 
 	}
         strncpy(n_param->t_val,tempstr,PARAM_T_VAL_LEN); 
-        norecur=1; 
+	//        norecur=1; 
         gtk_entry_set_text(ent,tempstr); 
-	norecur = 0;
+	//	printf("storing %s\n",tempstr);
+	//	norecur = 0;
         break; 
       
       default: 
@@ -369,22 +383,24 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     char last_exec[ PATH_LENGTH ] = "";
 
 
- 
-
+    printf("in update_paths\n");
+    if (data != NULL){
+      printf("in update_paths, with data not Null, must be focus out\n");
+    }
+    /* don't need norecur here.  These boxes don't get an event on a set text...  */
     if (norecur==1) {
       printf("update_paths: coming through with norecur = 1\n");
       norecur=0; // entries don't seem to need this...
       return FALSE; 
-    }
-
-   
+      }
+    
 
     // if its the same as what it should be, don't worry about it.
     if ( widget == prog_text_box ){
       strncpy(last_exec,current_param_set->exec_path,PATH_LENGTH);
       if( strncmp(last_exec,gtk_entry_get_text(GTK_ENTRY(widget)),PATH_LENGTH) == 0) {
-	//	printf("same prog as last time\n");
-	 return FALSE;
+	printf("same prog as last time\n");
+	return FALSE;
        }
      }
     else if (widget == save_text_box){
@@ -395,14 +411,14 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       else lpath = s-1; // in case our save path has no / in it?
       
       if (strncmp(lpath+1,gtk_entry_get_text(GTK_ENTRY(widget)),PATH_LENGTH) == 0){
-	//	 printf("same save as last time\n");
-	 return FALSE;
+	printf("same save as last time\n");
+	return FALSE;
       }
     }
 
 
     if (allowed_to_change() == FALSE){ 
-       printf("can't change value during acquistion\n"); 
+      //       printf("can't change value during acquistion\n"); 
        if (no_update_open == 0)
 	 popup_no_update("Can't change value in acquiring or queued window");  
 
@@ -410,18 +426,21 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 
       if (widget == prog_text_box){
 	norecur = 1;
+	//	printf("resetting the program\n");
 	gtk_entry_set_text(GTK_ENTRY(prog_text_box),last_exec);
 	norecur =0;
       }
       else{ // reset old save name.
+	//	norecur = 1;
+	//	printf("resetting the save name\n");
 	gtk_entry_set_text( GTK_ENTRY( save_text_box ), lpath +1  ); 
-
+	//	norecur = 0;
       }
 
 
 
       return FALSE; 
-    } 
+    }
 
     //Save the old path for comparison 
 
@@ -433,7 +452,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     if( widget == prog_text_box ) { 
       //printf( "Previous pprog path: %s\n", old_exec ); 
       path_strcpy( current_param_set->exec_path, gtk_entry_get_text( GTK_ENTRY( prog_text_box) )); 
-      //printf( "new pprog path: %s\n", current_param_set->exec_path); 
+      printf( "new pprog path: %s\n", current_param_set->exec_path); 
     } 
     else if( widget == save_text_box ) { 
       path_strcpy(s,gtk_entry_get_text(GTK_ENTRY ( save_text_box)));
@@ -447,7 +466,8 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	path_strcpy(s2,lpath+1);
 	result = set_cwd(s);
 	if (result != 0) {
-	  popup_msg("Directory not found",TRUE);
+	  g_idle_add((GtkFunction)popup_msg_mutex_wrap,"Directory not found");
+	  // Changed here XXX
 	  lpath = strrchr(current_param_set->save_path,'/');
 	  norecur = 1;
 	  gtk_entry_set_text(GTK_ENTRY(save_text_box),lpath+1);
@@ -484,19 +504,22 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     if( strcmp( old_exec, current_param_set->exec_path) ) {       
       
       path_strcpy ( s, current_param_set->exec_path); 
-      if (load_param_file( s, current_param_set ) != -1 ){ // this if is new CM XXX Aug 24, 2004
+      printf("trying to load param_file\n");
+      if (load_param_file( s, current_param_set ) != -1 ){ // this if is new CM Aug 24, 2004
+	printf("back from load without -1\n");
 	show_parameter_frame( current_param_set ); 
 
       // put the focus back on the program box...  gtk seems to crash if we try to focus out to a spin 
       // button that show_parameter_frame destroyed
 	gtk_widget_grab_focus(GTK_WIDGET(prog_text_box));
+	printf("moved focus\n");
 	// this unselects the text in the program box.
 	gtk_editable_select_region(GTK_EDITABLE(prog_text_box),0,0);
       }
-    } 
-
-    return FALSE; 
     }
+    printf("returning false\n");
+    return FALSE; 
+  }
 
   void update_acqn( GtkAdjustment* adj, gpointer data ) 
        /* callback routine to update the numbers of scans, and also sw and  
@@ -506,7 +529,6 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     static char norecur = 0;
     //need this to prevent infinte looping in here? 
 
-
     if (norecur == 1){
       printf("update_acqn, got norecur\n");
       norecur = 0;
@@ -515,37 +537,42 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 
     if (allowed_to_change() == FALSE && !(adj == GTK_ADJUSTMENT(npts_adj) && current == upload_buff)){  // npts should be allowed to change in the acq buff.
       // not allowed to change.  reset
-      //    printf("in update_acqn, seems to be current\n");
+      //      printf("in update_acqn, not allowing change\n");
       if (adj ==  GTK_ADJUSTMENT(acqs_adj)){
 	norecur = 1;
+	printf("update acqn: num_acqs\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_adj),current_param_set->num_acqs);
-	norecur = 0;
+	//	norecur = 0;
       }
-      if (adj ==  GTK_ADJUSTMENT(npts_adj)){
+      else if (adj ==  GTK_ADJUSTMENT(npts_adj)){
 	norecur = 1;
+	printf("update acqn: npts\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(npts_adj),current_param_set->npts);
-	norecur = 0;
+	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(acqs_2d_adj)){
 	norecur = 1;
+	printf("update aqcn: acqs_2d\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_2d_adj),current_param_set->num_acqs_2d);
-	norecur = 0;
+	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(dwell_adj)){
 	norecur = 1;
+	printf("update aqcn: dwell\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(dwell_adj),current_param_set->dwell);
-	norecur = 0;
+	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(sw_adj)){
 	norecur = 1;
+	printf("update aqcn: sw_adj\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(sw_adj),current_param_set->sw);
-	norecur = 0;
+	//	norecur = 0;
       }
       else{
-	printf("in update_acqn with unknow widget...\n");
+	printf("in update_acqn with unknown widget...\n");
       }
       if (no_update_open == 0)
-	popup_no_update("Can't change parameter valus in acquiring or queued window");  
+	popup_no_update("Can't change parameter value in acquiring or queued window");  
       return;
     }
 
@@ -928,7 +955,9 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	if (buffp[current] == NULL) // if the buffer doesn't exist yet, delay the popup
 	  g_idle_add ((GtkFunction) popup_msg_mutex_wrap,"Can't find pulse program");
 	else
-	  popup_msg("Can't find pulse program",TRUE);
+	    	  g_idle_add ((GtkFunction) popup_msg_mutex_wrap,"Can't find pulse program");
+	// changed here XXX
+	  //	  popup_msg("Can't find pulse program",TRUE);
 	//	printf( "Can't open parameter file %s\n", fileN ); 
 	return -1; 
       } 
@@ -940,7 +969,8 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
   
     
     if (fs == NULL) {
-      popup_msg("Can't find parameter file\n",TRUE);
+      g_idle_add((GtkFunction) popup_msg_mutex_wrap,"Can't find parameter file\n");
+      // changed here XXX
       return -1;
     }
     //    printf("got param file on: %s\n",s);
@@ -1269,13 +1299,15 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	  gtk_entry_set_max_length(GTK_ENTRY(param_button[i].ent),PARAM_T_VAL_LEN);
       
 	  gtk_entry_set_text( GTK_ENTRY( param_button[i].ent ), param_set->parameter[i].t_val ); 
-	  g_signal_connect (G_OBJECT (param_button[i].ent), "activate", G_CALLBACK (update_t_param), &param_set->parameter[i] ); 
-	  g_signal_connect (G_OBJECT (param_button[i].ent), "focus_out_event", G_CALLBACK (update_t_param), &param_set->parameter[i] ); 
+
+	  g_signal_connect(G_OBJECT (param_button[i].ent), "activate", G_CALLBACK (update_t_param), &param_set->parameter[i] ); 
+	  g_signal_connect(G_OBJECT (param_button[i].ent), "focus_out_event", G_CALLBACK (update_t_param), &param_set->parameter[i] ); 
+
 	  param_button[i].label = gtk_label_new( s ); 
 	  gtk_table_attach_defaults(GTK_TABLE(param_table),param_button[i].label,(i%3)*2, (i%3)*2+1, (i/3)+3, (i/3)+4 ); 
 	  gtk_table_attach_defaults(GTK_TABLE(param_table),param_button[i].ent,(i%3)*2+1, (i%3)*2+2, (i/3)+3, (i/3)+4 ); 
 	  g_signal_connect( G_OBJECT( param_button[i].ent), "button_press_event", G_CALLBACK( param_spin_pressed ), (gpointer) i );  
-	  update_t_param( GTK_ENTRY( param_button[i].ent ), &param_set->parameter[i]  ); 
+	  update_t_param( GTK_ENTRY( param_button[i].ent ), &param_set->parameter[i] ,NULL ); 
 	  gtk_widget_show( param_button[i].ent ); 
 	  gtk_widget_show( param_button[i].label ); 
 	  break; 

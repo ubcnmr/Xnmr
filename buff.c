@@ -145,8 +145,8 @@ dbuff *create_buff(int num){
     { "dospline",NULL,"Do Spline",NULL,"Apply spline fit to data",G_CALLBACK(do_spline)},
     { "undospline",NULL,"Undo Spline",NULL,"Undo the last spline",G_CALLBACK(undo_spline)},
     { "clearspline",NULL,"Clear Spline Points",NULL,"Clear the spline points",G_CALLBACK(clear_spline)},
-    {"queueexpt",NULL,"Queue Experiment",NULL,"Queue this experiment",G_CALLBACK(queue_expt)},
-    {"queuewindow",NULL,"Queue Window",NULL,"Display the queue window",G_CALLBACK(queue_window)}
+    {"queueexpt",NULL,"Queue _Experiment",NULL,"Queue this experiment",G_CALLBACK(queue_expt)},
+    {"queuewindow",NULL,"Queue _Window",NULL,"Display the queue window",G_CALLBACK(queue_window)}
     };
 
  static const char *ui_description =
@@ -403,7 +403,7 @@ dbuff *create_buff(int num){
     // this has to do with the box that pops up to say you can't update parameters during acquisition.
     old_update_open = no_update_open;
     no_update_open = 1;
-
+    
     show_parameter_frame( &buff->param_set );
     no_update_open = old_update_open;
 
@@ -495,7 +495,7 @@ dbuff *create_buff(int num){
     gtk_container_add(GTK_CONTAINER (window), main_vbox);
     
      sprintf(sparestring,"%iMenuActions",num);
-     printf("action group name: %s\n",sparestring);
+     //     printf("action group name: %s\n",sparestring);
      action_group = gtk_action_group_new(sparestring);
      gtk_action_group_add_actions(action_group,entries,G_N_ELEMENTS(entries),buff);
 
@@ -2227,7 +2227,7 @@ gint expand_routine(GtkWidget *widget,dbuff *buff)
     popup_msg("Can't expand while scales dialog open",TRUE);
     norecur = 1;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE);
-    norecur = 0;
+    //    norecur = 0;
     return TRUE;
   }
 
@@ -2384,7 +2384,7 @@ gint expandf_routine(GtkWidget *widget,dbuff *buff)
     popup_msg("Can't expand while scales dialog open",TRUE);
     norecur = 1;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE);
-    norecur = 0;
+    //    norecur = 0;
     return TRUE;
   }
 
@@ -2742,31 +2742,20 @@ gint offset_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 void make_active(dbuff *buff){
 
-  int temp_current;
-    printf("trying to raise\n");
-    // if acq is in progress, change the order
-  // I think this is to avoid "changing parameter during acquisition errors
-    temp_current = current;
+    last_current = current;
     current = buff->buffnum;
 
-    if (allowed_to_change() == FALSE){
-      printf("in make active, setting from make_active = 1\n");
-      from_make_active = 1;
-      show_parameter_frame( &buff->param_set );
-      show_process_frame( buff->process_data );
-      last_current = temp_current;
-      show_active_border(); 
-      gdk_window_raise(buff->win.window->window);
+    //    printf("setting from_make_active\n");
+    from_make_active = 1;
+    show_parameter_frame( &buff->param_set );
+    show_process_frame( buff->process_data );
+    show_active_border(); 
+    gdk_window_raise(buff->win.window->window);
+    if (upload_buff == current)
       update_2d_buttons();
-      from_make_active = 0;
-    }else{
-      last_current = temp_current;
-      show_active_border(); 
-      gdk_window_raise(buff->win.window->window);
-      show_parameter_frame( &buff->param_set );
-      show_process_frame( buff->process_data );
-      update_2d_buttons_from_buff( buff );
-    }
+    else
+      update_2d_buttons_from_buff(buff);
+    from_make_active = 0;
 }
 
 
@@ -6137,7 +6126,10 @@ void queue_expt(GtkAction *action, dbuff *buff){
     }
 
 
-  // check channels are the same as in acq buff.
+  // check channels are the same as in acq buff.XXXX
+
+  // also want to add label to say how many expts in queue.
+
 
   if (data_shm->mode != NORMAL_MODE)
     popup_msg("Warning, currently acquisition is set to save to acq_temp!!",TRUE);
@@ -6149,7 +6141,7 @@ void queue_expt(GtkAction *action, dbuff *buff){
       return;
     }
 
-  if (upload_buff == current){
+  if (upload_buff == buff->buffnum){
     popup_msg("This experiment is the current acq buff",TRUE);
     return;
   }
@@ -6157,13 +6149,15 @@ void queue_expt(GtkAction *action, dbuff *buff){
 
   // print buff num and file name into combo box
 
-  snprintf(path,PATH_LENGTH,"%i - %s",buff->buffnum,buff->param_set.save_path);
+  snprintf(path,PATH_LENGTH,"buff: %i - %s",buff->buffnum,buff->param_set.save_path);
   
   gtk_combo_box_append_text(GTK_COMBO_BOX(queue.combo),path);
   
   gtk_combo_box_set_active(GTK_COMBO_BOX(queue.combo),queue.num_queued);
   queue.index[queue.num_queued] = buff->buffnum;
   queue.num_queued += 1;
+  set_queue_label();
+
   snprintf(path,PATH_LENGTH,"Buffer %i with save path:\n %s\n added to queue",
 	   buff->buffnum,buff->param_set.save_path);
 
@@ -6179,17 +6173,31 @@ void queue_window(GtkAction *action, dbuff *buff){
 }
 
 void remove_queue (GtkWidget *widget,gpointer dum){
-  int i;
+  int i,j;
 
   // remove the current experiment from the queue
   if (queue.num_queued >0){
     i = gtk_combo_box_get_active(GTK_COMBO_BOX(queue.combo));
     gtk_combo_box_remove_text(GTK_COMBO_BOX(queue.combo),i);
+
+    for (j=i;j<queue.num_queued-1;j++)
+      queue.index[j]=queue.index[j+1];
+    queue.num_queued -= 1;
+    set_queue_label();
   }
   else printf("in remove_queue, but none queued\n");
 
 
 
 
+
   return;
+}
+
+void set_queue_label(){
+
+  char s[UTIL_LEN];
+
+  snprintf(s,UTIL_LEN,"%i Experiments in Queue",queue.num_queued);
+  gtk_label_set_text(GTK_LABEL(queue.label),s);
 }
