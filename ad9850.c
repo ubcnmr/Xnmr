@@ -15,7 +15,6 @@
 #define SPP_CTRL 0x02
 #define EPP_ADDR 0x03
 #define EPP_DATA 0x04
-#define BASE 0x378
 
 
 #define TWOTHIRTYTWO 4294967296.
@@ -30,25 +29,29 @@ void toggle_wwclk();
 
 static unsigned char control;
 unsigned int t=10;
-int have_port = 0;
+static int have_port = 0;
+static int port;
+
 
 int close_port_ad9850(){
   int i;
   if (have_port == 1)
-    i = ioperm(BASE,8,0);
+    i = ioperm(port,8,0);
+    
   return 0;
 }
 
 
-int init_port_ad9850(){
+int init_port_ad9850(int new_port){
   int i;
   if (have_port == 0){
-    i = ioperm(BASE,8,1);
+    i = ioperm(port,8,1);
     if (i<0){
-      printf("Can't get permission to access ad9850 port: %o\n",BASE);
+      printf("Can't get permission to access ad9850 port: %o\n",port);
       return -1;
-    }
+      }
     have_port = 1;
+    port = new_port;
   }
   else printf("init_port_ad9850: already have port\n");
   return 0;
@@ -57,15 +60,15 @@ int init_port_ad9850(){
 int reset_ad9850(){
 
   //  printf("in reset_ad9850\n");
-  outb(0,BASE);  // set port data values to all 0
+  outb(0,port);  // set port data values to all 0
   control = nRRESET+nFFQUD+nSTROBE;
-  outb(control,BASE+SPP_CTRL); // set all the control port to 0 as well
+  outb(control,port+SPP_CTRL); // set all the control port to 0 as well
   toggle_strobe();
   // these 3 are hardware inverted.
   // now do a reset
   control = control ^ nRRESET;
   //  printf("to do reset, control = %i\n",(int) control);
-  outb(control,BASE+SPP_CTRL); // set all the control port to 0 as well
+  outb(control,port+SPP_CTRL); // set all the control port to 0 as well
 
   // now toggle the strobe
   toggle_strobe();
@@ -106,7 +109,7 @@ int setup_ad9850()
 
   // read in the status register and see if its there on the "check" line:
 
-  status=inb(BASE+SPP_STAT);
+  status=inb(port+SPP_STAT);
   //  printf("status: %i\n",status&255);
   // the check line is bit 3 and should now be high 
 
@@ -118,13 +121,13 @@ int setup_ad9850()
 
   control = control ^ nRRESET;
   //  printf("un resetting: control = %i\n",(int) control);
-  outb(control,BASE+SPP_CTRL); // set all the control port to 0 as well
+  outb(control,port+SPP_CTRL); // set all the control port to 0 as well
   toggle_strobe();
 
   // ok, so now the reset bit on the output should be set low, and this should be latched 
   // read in the status register and see if its there on the "check" line:
 
-  status=inb(BASE+SPP_STAT);
+  status=inb(port+SPP_STAT);
   //  printf("status: %i\n",status&255);
 
   // the check line is bit 3 and should now be low
@@ -139,7 +142,7 @@ int setup_ad9850()
   an2 = bb[3]+256*bb[2]+bb[1]*256*256+bb[0]*256*256*256;
 
 
-  outb(0,BASE); // top five bits are phase
+  outb(0,port); // top five bits are phase
   toggle_strobe();
 
   toggle_wwclk();
@@ -147,7 +150,7 @@ int setup_ad9850()
 
   for(i=0;i<4;i++){
     //    printf("byte: %x\n",bb[i]);
-    outb(bb[i],BASE);
+    outb(bb[i],port);
     toggle_strobe();
     toggle_wwclk();
   }
@@ -155,10 +158,10 @@ int setup_ad9850()
 
   // toggles the FFQUD which should set it going.
   control = control ^ nFFQUD;
-  outb(control,BASE+SPP_CTRL);
+  outb(control,port+SPP_CTRL);
   toggle_strobe();
   control = control ^ nFFQUD;
-  outb(control,BASE+SPP_CTRL);
+  outb(control,port+SPP_CTRL);
   toggle_strobe();
 
   //  printf("done, just toggled the FFQUD line\n");
@@ -175,21 +178,21 @@ void toggle_strobe(){
   for (i=0;i<5000;i++);
   control = control ^ nSTROBE;
   //  printf("to toggle strobe, control = %i\n",(int) control);
-  outb(control,BASE+SPP_CTRL); // set all the control port to 0 as well
+  outb(control,port+SPP_CTRL); // set all the control port to 0 as well
 
   control = control ^ nSTROBE;
   //  printf("to toggle strobe, control = %i\n",(int) control);
-  outb(control,BASE+SPP_CTRL); // set all the control port to 0 as well
+  outb(control,port+SPP_CTRL); // set all the control port to 0 as well
 }
 
 void toggle_wwclk(){
 
   control = control ^ WWCLK;
-  outb(control,BASE+SPP_CTRL);
+  outb(control,port+SPP_CTRL);
   toggle_strobe();
 
   control = control ^ WWCLK;
-  outb(control,BASE+SPP_CTRL);
+  outb(control,port+SPP_CTRL);
   toggle_strobe();
 }
 

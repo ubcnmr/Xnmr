@@ -103,7 +103,7 @@ int ph_clear_EPP_port()
 
 int init_pulse_hardware( int port )
 {
-  int i;
+  //  int i;
 
   //check to see if port is already open
 
@@ -111,14 +111,14 @@ int init_pulse_hardware( int port )
     return -1;
  
   ph_base = port;
-
+  //  printf("set pulse_prog port to: 0x%x\n",ph_base);
   
-  i = ioperm( ph_base, 8, 1 );
+  /*  i = ioperm( ph_base, 8, 1 );
 
   if( i<0 ) {
     printf( "Can't get permission to access the port 0x%x\n", ph_base );
     return -1;
-  }
+    } */
 
   return ph_clear_EPP_port();
 
@@ -129,22 +129,24 @@ int pulse_hardware_send( struct prog_shm_t* program )
   int chip = 0;
   int event = 0;
   //    unsigned int data;
-   unsigned long *lp;
-  int byte_count=0;
+  //   unsigned long *lp;
+  static  unsigned char chip_buffer[MAX_EVENTS];
+  unsigned long *cbl,*pbl;
 
 #ifdef TIMING
+  int byte_count=0;
   int overhead=0;
   struct timeval start_time,end_time;
   struct timezone tz;
   float d_time;
+  gettimeofday(&start_time,&tz);
+
 #endif
 
 
+      cbl = (unsigned long *) &chip_buffer[0];
       
  
-#ifdef TIMING
-     gettimeofday(&start_time,&tz);
-#endif
   //write to Pulse hardware control port
 
   for( chip=0; chip<NUM_CHIPS; chip++ ) {
@@ -160,51 +162,65 @@ int pulse_hardware_send( struct prog_shm_t* program )
       outb( chip_addr[chip], ph_base + EPP_ADDR );
       
       //Here we write the data four bytes at a time using 32bit EPP transfers
-      
+      /*
       if( chip < 4 ) {
 	for( event=0; event< program->no_events; event+=4 ) {
-	  /*	  data = program->prog_image[event][chip] + 
-	    ( program->prog_image[event+1][chip] << 8) +
-	    ( program->prog_image[event+2][chip] << 16) +
-	    ( program->prog_image[event+3][chip] << 24);
-	    outl( data, ph_base + EPP_DATA );  */
+	  //	     data = program->prog_image[event][chip] + 
+	  //	    ( program->prog_image[event+1][chip] << 8) +
+	  // ( program->prog_image[event+2][chip] << 16) +
+	  // ( program->prog_image[event+3][chip] << 24);
+	  //  outl( data, ph_base + EPP_DATA );  
 	  lp = (unsigned long *) &program->prog_image[chip][event];
 	  outl (*lp, ph_base+EPP_DATA);
+#ifdef TIMING
 	  byte_count+=4;
+#endif
 	}
       }
       
       else {
 	for( event=0; event< program->no_events; event+=4 ) {
-	  /*	  data = program->prog_image[event][chip] + 
-	    ( program->prog_image[event+1][chip] << 8) +
-	    ( program->prog_image[event+2][chip] << 16) +
-	    ( program->prog_image[event+3][chip] << 24);
-	    outl( ~data, ph_base + EPP_DATA );  */
+	  //	  data = program->prog_image[event][chip] + 
+	  //	    ( program->prog_image[event+1][chip] << 8) +
+	  //	    ( program->prog_image[event+2][chip] << 16) +
+	  // ( program->prog_image[event+3][chip] << 24);
+	  //  outl( ~data, ph_base + EPP_DATA );  
 	  lp = (unsigned long *) &program->prog_image[chip][event];
 	  outl (~(*lp), ph_base+EPP_DATA);
+#ifdef TIMING
 	  byte_count+=4;
+#endif
 	}
 	
       }
-      
+      */
       //This is the code for 8 bit EPP transfers
       
-      /*************
-		    if( chip < 4 ) {
-		    for( event=0; event< program->no_events; event+=1 ) {
-		    outb( program->prog_image[event][chip], ph_base + EPP_DATA ); 
-		    }
-		    }
+
+					  
+      if( chip < 4 ) {
+	//	for( event=0; event< program->no_events; event+=1 ) {
+	//	  outb( program->prog_image[chip][event], ph_base + EPP_DATA ); 
+	//	}
+	outsb(ph_base+EPP_DATA,&program->prog_image[chip][0],program->no_events);
+#ifdef TIMING
+	byte_count += program->no_events;
+#endif
+      }
+      
+      else {
+	pbl = (unsigned long *) &program->prog_image[chip][0];
+	for( event=0; event< program->no_events; event+=4 ) {
+	  cbl[event/4] = ~pbl[event/4];
+	  //	  outb( ~program->prog_image[chip][event], ph_base + EPP_DATA ); 
+	}
+	outsb(ph_base+EPP_DATA,chip_buffer,program->no_events);
+#ifdef TIMING
+	byte_count += program->no_events;
+#endif
+      }
 		    
-		    else {
-		    for( event=0; event< program->no_events; event+=1 ) {
-		    outb( ~program->prog_image[event][chip], ph_base + EPP_DATA ); 
-		    }
-		    
-		    }
-		    
-      ***********/
+		    //      ***********/
     } // closes the dirty check
   } // loop through chips.
 
@@ -343,7 +359,7 @@ int pulse_hardware_start(int start_address)
 
 int free_pulse_hardware()
 {
-  int result;
+  //  int result;
 
   if( ph_base == -1 ) {
     //printf( "no need to free pulse hardware\n" );
@@ -357,9 +373,9 @@ int free_pulse_hardware()
 
   outb(0x00,ph_base+SPP_CTRL);  // set reset to low, disable interrupt reporting
   outb (0x04,ph_base+SPP_CTRL); // set reset high, leave interrupts disabled
-  result = ioperm( ph_base, 8, 0 );
+  //  result = ioperm( ph_base, 8, 0 );
   ph_base = -1;
-  return result;
+  return 0;
 }
 
 

@@ -3,6 +3,9 @@
 // Initialization code borrowed from Carl Michal and Craig Peacock 
 // modified for inclusion into Xnmr by  Carl Michal
 
+// outb should maybe be outb_p
+
+
 #include <sys/perm.h>
 #include <sys/io.h>
 #include <stdio.h>
@@ -22,18 +25,19 @@ int initialize_dsp_epp(int p)
 // Must be called before any epp related functions
 { 
   static char got_perm=0;
-  int i;
+  //  int i;
   unsigned char b;
 
   // get permission to use the EPP port
   if (got_perm != 1 ){
     port=p;
-    i = ioperm(port, 8, 1);
+    printf("adepp, setting port to: 0x%x\n",port);
+    /*    i = ioperm(port, 8, 1);
     if(i != 0)
       { 
 	printf("Can't get permission to access the port 0x%x\n", port);
 	return -1;
-      }
+	}*/
   }
   got_perm = 1;
   if (port != p ){
@@ -203,10 +207,12 @@ int read_fifo_epp(int npts,int *data)
   if ((data[0] == data[1]) && (data[0] == last_word)){
     // need to start over
     istart = 0;
-    //      printf("apparently fifo was empty\n");
+    //    printf("apparently fifo was empty\n");
   }
-  else
+  else{
     istart = 2;
+    //    printf("fifo was not empty\n");
+  }
   
 
   for(i=istart;i<npts*2;i++){
@@ -265,10 +271,10 @@ unsigned char read_full()
 }
 
 void dsp_close_port_epp(){
-int result;
+  //int result;
 
-result = ioperm(port,8,0);
+//result = ioperm(port,8,0);
 port=0;
-
 }
+
 

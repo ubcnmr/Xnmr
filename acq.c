@@ -6,6 +6,14 @@
 #define NO_PORT_INTERRUPT
 #define NO_RT_SCHED
 
+
+
+// we should read the first two of these out of /proc/pci
+
+#define PULSE_PORT 0xb000
+#define DSP_PORT 0xb400
+#define AD9850_PORT 0x378
+
 //#define MAX_ZERO_REDOS 20
 #define MAX_ZERO_REDOS 0
 // disable max_zero_redos while auto phase sync feature removed (July 11, 2002 CM)
@@ -62,7 +70,7 @@
 #include <string.h>
 #include <glib.h>
 #include <syslog.h> // for system logger.
-
+#include <sys/io.h>
 #include "shm_data.h"
 #include "shm_prog.h"          //indirectly dependant on h_config.h
 #include "p_signals.h"
@@ -300,7 +308,7 @@ int init_signals()
   signal( SIGTERM, shut_down );
 
   sigemptyset( &sigset );
-  sa1.sa_handler = (__sighandler_t)  ui_signal_handler;
+  sa1.sa_handler = ui_signal_handler;
   sa1.sa_mask = sigset;
   sa1.sa_flags = SA_NOMASK; //This allows the signal handler to be interrupted by itself  
   sa1.sa_restorer = NULL;
@@ -443,6 +451,7 @@ int accumulate_data( int* buffer )
 {
   int i;
 
+
   if (data_shm->npts > MAX_DATA_POINTS){
     printf("acq: accumulate_data, npts > MAX_DATA_POINTS, should NEVER HAPPEN\n");
     data_shm->npts = MAX_DATA_POINTS;
@@ -561,7 +570,7 @@ int run()
 {
   int buffer[ MAX_DATA_POINTS*2 ];
   int i;
-  //int j;
+  //  int j;
   pid_t pid;
   struct msgbuf message;
   struct itimerval time, old;
@@ -679,9 +688,18 @@ int run()
   // open the parallel port interrupt device:
 #ifndef NO_PORT_INTERRUPT
   int_fd = open( "/dev/PP_irq0", O_RDONLY );
-#else
-  int_fd = zeros[0]; // just to not get compile time warnings of unused varialbes
 #endif
+
+#ifndef NOHARDWARE
+  i = iopl(3);
+  //  printf("just called iopl\n");
+  if (i != 0 ){
+    perror("error on iopl");
+  }
+#else
+  int_fd=zeros[0];
+#endif
+
   /*
     
 // first the old way with text freq
@@ -756,7 +774,7 @@ else{
   }
 
 #ifndef NOHARDWARE
-  i = setup_dsp( sweep,0x228,freq ,dgain, dsp_ph, force_setup);
+  i = setup_dsp( sweep,DSP_PORT,freq ,dgain, dsp_ph, force_setup);
 #else
   i = 0;
 #endif
@@ -789,7 +807,7 @@ else{
 
   if (done == NOT_DONE){
 #ifndef NOHARDWARE
-    i = init_pulse_hardware( 0x278 );
+    i = init_pulse_hardware( PULSE_PORT );
 #else
     printf("would have init_pulse_hardware\n");
     i = 0;
@@ -836,7 +854,7 @@ else{
       time.it_value.tv_sec = 5;
       time.it_value.tv_usec = 0;
       //      printf("about to call signal for SIGALRM\n");
-      signal( SIGALRM, (__sighandler_t )pprog_ready_timeout ); 
+      signal( SIGALRM, pprog_ready_timeout ); 
       setitimer( ITIMER_REAL, &time, &old );
       
       //      printf("starting to wait for pprog in pre-calc, done = %i\n",done);
@@ -936,7 +954,7 @@ else{
 	  time.it_value.tv_sec = 5;
 	  time.it_value.tv_usec = 0;
 	  //	printf("about to call signal for SIGALRM\n");
-	  signal( SIGALRM,(__sighandler_t ) pprog_ready_timeout ); 
+	  signal( SIGALRM, pprog_ready_timeout ); 
 	  setitimer( ITIMER_REAL, &time, &old );
 	  
 	  
@@ -1103,7 +1121,7 @@ else{
 	    
 	    if (redo_zeros > 0 )  { 
 	      reset_ad9850();
-	      i = setup_dsp( sweep,0x228,freq ,dgain, dsp_ph, 1); //force_setup = 1
+	      i = setup_dsp( sweep,DSP_PORT,freq ,dgain, dsp_ph, 1); //force_setup = 1
 	      setup_ad9850(); // this should do the resync of the AD9850 with AD6620
 	    }
 	    
@@ -1162,7 +1180,6 @@ else{
 	    */
 	    
 	    i = read_fifo(data_shm->npts,buffer,STANDARD_MODE);
-	    
 	    /*
 	      gettimeofday(&end_time,&tz);
 	      
@@ -1327,7 +1344,7 @@ else{
 	    time.it_value.tv_sec = 5;
 	    time.it_value.tv_usec = 0;
 	    //	printf("about to call signal for SIGALRM\n");
-	    signal( SIGALRM, (__sighandler_t )pprog_ready_timeout ); 
+	    signal( SIGALRM, pprog_ready_timeout ); 
 	    setitimer( ITIMER_REAL, &time, &old );
 	  }
 	
@@ -1718,7 +1735,7 @@ else{
 	  }
 
 	}  //End of 2d while loop - noisy style
-	printf("out of 2d loop\n");
+	//	printf("out of 2d loop\n");
 	
 	
       } // end noisy
@@ -1820,6 +1837,7 @@ void shut_down()
   //printf( "removing message queue\n" );
 
   msgctl( msgq_id, IPC_RMID, NULL );
+  iopl(0);
 
   printf( "acq main terminated\n" );
   exit(1);
@@ -1916,7 +1934,7 @@ int main(){
 
   data_shm->reset_dsp_and_synth = 1; // so that first time we try to do an acquisition, it will happen.
 #ifndef NOHARDWARE
-  init_port_ad9850();
+  init_port_ad9850(AD9850_PORT);
 #endif
   init_sched();
   openlog("Xnmr acq",0,LOG_USER); //for system logging of all zeros events.
