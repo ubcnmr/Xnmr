@@ -8,7 +8,7 @@
 #CC = icc
 #CFLAGS =   -g -O2 -ffloat-store -Wall  `gtk-config --cflags` 
 #CFLAGS =   -O3 -fomit-frame-pointer -Wall  `gtk-config --cflags` 
-CFLAGS =    -g -march=pentium4 -fomit-frame-pointer -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
+CFLAGS =    -O3 -march=pentium3 -fomit-frame-pointer -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 #CFLAGS =    -O3 -axP -ipo  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 
 all: Xnmr acq libxnmr.so Xnmr_preproc
