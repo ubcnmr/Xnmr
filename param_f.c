@@ -533,7 +533,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 	strncpy(lpath+1,s,PATH_LENGTH - strlen(current_param_set->save_path)-1);
       }
       update_param_win_title(&buffp[current]->param_set);
-      printf( "update_paths: new save path: %s\n", current_param_set->save_path); 
+      //      printf( "update_paths: new save path: %s\n", current_param_set->save_path); 
     }
      
     /* 

@@ -2046,7 +2046,7 @@ void signal2noiseold(GtkAction *action, dbuff *buff)
 
 
 void int_delete(dbuff *buff,GtkWidget *widget){
-  printf("in int_delete\n");
+  //  printf("in int_delete\n");
   buff->win.press_pend = 0;
   doing_int = 0;
   g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
@@ -2188,7 +2188,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
    // printf("style: %i record: %i record2: %i\n", buff->disp.dispstyle, buff->disp.record, buff->disp.record2);
    
    //   integral *=  fabs(f1-f2) /  count;
-   integral *= 2./sqrt(buff->param_set.npts);
+   //   integral *= 2./sqrt(buff->param_set.npts);
    
    printf("%f\n",integral);  //print to screen
    
@@ -2207,7 +2207,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
      }//if arrayed over integer
    }
    if (j==buff->disp.record){
-     snprintf(string,UTIL_LEN,"Integral = %g\npoints: %i-%i",integral,MIN(pt1,pt2),MAX(pt1,pt2));
+     snprintf(string,UTIL_LEN,"Integral = %g\n%i points, from %i to %i",integral,abs(pt2-pt1)+1,MIN(pt1,pt2),MAX(pt1,pt2));
      popup_msg(string,TRUE);
    }
    
@@ -5508,10 +5508,10 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[fit_data.num_components-1]),width);
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[fit_data.num_components-1]),width);
       
-      // and then the amplitude.  The integral is height * width(in points)/sqrt(npts)*2
+      // and then the amplitude.  The integral is height * width(in points)
       // give it an extra * 1.5 for good luck.
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.amplitude[fit_data.num_components-1]),
-				2.*1.5*max*(x_right-x_left)/sqrt(buffp[sbnum]->param_set.npts));
+				1.5*max*(x_right-x_left));
     }
     else popup_msg("Can only add points on a row",TRUE);
 
@@ -6056,7 +6056,8 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
 
   // then ft
   ur[0] /= 2;
-  scale = sqrt((float) npts);
+  //  scale = sqrt((float) npts);
+  scale = npts/2.0;
   four1(ur-1,npts,-1);
   for(i=0;i<npts;i++){
     spare=ur[i]/scale;
@@ -6243,7 +6244,7 @@ void queue_expt(GtkAction *action, dbuff *buff){
     }
     else{
       popup_msg("File Exists - pick a new name",TRUE);
-      printf("claim that %s exists\n",path);
+      //      printf("claim that %s exists\n",path);
       return;
     }
   }
@@ -6253,7 +6254,7 @@ void queue_expt(GtkAction *action, dbuff *buff){
   }
 
 
-  // check channels are the same as in acq buff.XXXX
+  // check channels are the same as in acq buff.
 
   // ok, so it doesn't exist now, need to make sure we're not going to do it in an already
   // queue'd experiment and our file name doesn't exist.
@@ -6320,7 +6321,7 @@ void queue_window(GtkAction *action, dbuff *buff){
  gdk_window_raise(queue.dialog->window);
 
  if ( gtk_tree_selection_get_selected(queue.select,&model,&queue.iter)){
-   printf("unselecting\n");
+   //   printf("unselecting\n");
    gtk_tree_selection_unselect_iter(queue.select,&queue.iter);
  }
  
@@ -6341,13 +6342,13 @@ void remove_queue (GtkWidget *widget,gpointer dum){
     gtk_list_store_remove(queue.list,&queue.iter);
     queue.num_queued -= 1;
     set_queue_label();
-    printf("selected buffer %i\n",bnum);
+    //    printf("selected buffer %i\n",bnum);
   }
   else {
     printf("in remove queue, but nothing selected\n");
   }
 
-  printf("%i experiments left in queue\n",queue.num_queued);
+  //  printf("%i experiments left in queue\n",queue.num_queued);
 
 
 

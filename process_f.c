@@ -229,7 +229,16 @@ gint do_ft(GtkWidget *widget, double *unused)
   spared=1.0;
   do_zero_fill(widget,&spared);
   cursor_busy(buff);
-  scale=sqrt((float) buff->param_set.npts);
+  //    scale=sqrt((float) buff->param_set.npts);
+  if (buff->flags & FT_FLAG){
+    //    printf("FT_FLAG is true\n");
+    scale = buff->param_set.npts/2.0;
+  }
+  else{
+    //    printf("FT_FLAG is false\n");
+    scale = 2.0;
+  }
+
 
   for(i=0;i<buff->npts2;i++){
     /* do ft for each 1d spectrum */
@@ -1471,8 +1480,11 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 
     //  printf("in 2dft just did zero fill\n");
   cursor_busy(buff);
-  scale=sqrt((float) buff->npts2/2);
-
+  //  scale=sqrt((float) buff->npts2/2);
+  if (buff->flags & FT_FLAG2)
+    scale = buff->npts2/4.0;
+  else
+    scale = 2.0;
 
   if (buff->is_hyper == FALSE){
     //    popup_msg("hypercomplex flag not set, doing real FT?",TRUE);
@@ -1489,8 +1501,9 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       }
       // do the ft
 
-      // correct the first point
-      new_data[0] /= 2.;
+      // correct the first point if we're going forward...
+      if (buff->flags & FT_FLAG2)
+	new_data[0] /= 2.;
       four1(new_data-1,buff->npts2/2,1);
 
       // descramble
