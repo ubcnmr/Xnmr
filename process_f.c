@@ -839,7 +839,7 @@ GtkWidget* create_process_frame()
   frame = gtk_frame_new(title);
 
   gtk_container_set_border_width(GTK_CONTAINER (frame),5);
-  gtk_widget_set_size_request(frame,800,300);
+  //  gtk_widget_set_size_request(frame,800,300);
 
   gtk_container_add(GTK_CONTAINER(frame),table);
   gtk_widget_show(frame);
@@ -1314,7 +1314,7 @@ GtkWidget* create_process_frame_2d()
   frame = gtk_frame_new(title);
 
   gtk_container_set_border_width(GTK_CONTAINER (frame),5);
-  gtk_widget_set_size_request(frame,800,300);
+  //  gtk_widget_set_size_request(frame,800,300);
 
   gtk_container_add(GTK_CONTAINER(frame),table);
   gtk_widget_show(frame);
