@@ -483,7 +483,7 @@ gint do_left_shift_and_display(GtkWidget * widget,double *val)
   dbuff *buff;
   gint result;
 
-  printf("in do_left_shift_and_display with val = %lf\n",*val);
+  //  printf("in do_left_shift_and_display with val = %lf\n",*val);
   result = do_left_shift( widget, val );
 
   if( widget == NULL ) {
