@@ -99,10 +99,13 @@ gint noacq_button_press(GtkWidget *widget, gpointer *data)
 
 gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 {
-  int was_in_progress,i,valid;
+  int was_in_progress,i,valid,count;
   //  printf("in kill_button_clicked, acq_in_progress=%i\n",acq_in_progress);
+  printf("in kill clicked, setting not green\n");
+  gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
 
   send_sig_acq( ACQ_KILL ); 
+  
   if (acq_in_progress ==ACQ_STOPPED) return 0;
 
   /* if acq is listening, sends pulse program a sure death */
@@ -124,16 +127,20 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 
   // if there were experiments queued, kill them too.
   
+  count = 0;
   for (i=0;i<queue.num_queued;i++){
     valid =  gtk_tree_model_get_iter_first(GTK_TREE_MODEL(queue.list),&queue.iter);
     if (valid == 1){
       gtk_list_store_remove(queue.list,&queue.iter);
-      queue.num_queued -= 1;
+      count += 1;
     }
     else
       printf("in kill, num_queued is messed up\n");
-    set_queue_label();
   }
+  queue.num_queued -= count;
+  printf("killed: %i experiments from the queue\n",count);
+  set_queue_label();
+  
 
 
   queue.num_queued = 0;
@@ -147,18 +154,19 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 
   // in here with data = 0 means acq+save,data = 1 acq nosave
   dbuff* buff;
+  GdkColor color;
   
   char s[PATH_LENGTH];
   static char norecur=0;
-  int result;
 
-  //printf("coming into start_button, norecur is: %i\n",norecur);
+  //  printf("coming into start_button, norecur is: %i\n",norecur);
+  
 
   buff = buffp[ current ];
 
   if (norecur == 1){
     norecur = 0;
-    printf("start button: returning on norecur=1\n");
+    //    printf("start button: returning on norecur=1\n");
     return 0;
   }
 
@@ -167,18 +175,18 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
     //  printf("widget is active\n");
     if( acq_in_progress == ACQ_STOPPED ) {
       char fileN[ PATH_LENGTH];
-      //    printf("acq is stopped\n");
+
+      // button coming down and we were stopped.  This is a start.
 
       if (array_popup_showing == 1){
 	popup_msg("Can't start Acquisition with Array window open",TRUE);
 	//	printf("trying to start acq with popup showing\n");
+	norecur = 1;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE); 
 	//	printf("returning on can't start with array open\n");
 	return 0;
       }
 	
-      
-      //printf( "Sending start normal signal to ACQ\n" );
       if (setup_channels() == -1){
 	  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE); 
 	  //	  printf("returning after sending normal start\n");
@@ -204,6 +212,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       else  // its a start and save, check to make sure filename is valid
 	if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == '/'){
 	  popup_msg("Invalid file name",TRUE);
+	  norecur = 1;
 	  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE); 
 	  //	  printf("returning with invalid file name\n");
 	  return 0;
@@ -219,52 +228,29 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 
       path_strcpy( fileN, data_shm->save_data_path);
 
-      errno = 0;
-      result = mkdir(fileN, S_IRWXU | S_IRWXG | S_IRWXO );
-      if (result < 0 && errno != EEXIST){
-	  popup_msg("check_overwrite(startb) can't mkdir?",TRUE);
-	  //	  printf("returing can't mkdir\n");
-	  return 0 ;
-      }
+
       acq_in_progress = ACQ_RUNNING;
       redraw = 0;
 
-      if( result == 0 ||  data_shm->mode == NORMAL_MODE_NOSAVE) {
-	check_buff_size();
-	//	last_draw();
-	send_sig_acq( ACQ_START );
-      }
-      
-      else { 
-	GtkWidget *dialog;
-	int result;
-
-	dialog = gtk_message_dialog_new(GTK_WINDOW(buff->win.window),
-					GTK_DIALOG_DESTROY_WITH_PARENT,
-					GTK_MESSAGE_QUESTION,
-					GTK_BUTTONS_YES_NO,
-					"File %s already exists.  Overwrite?",buffp[current]->param_set.save_path);
-	gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
-      
-	result = gtk_dialog_run(GTK_DIALOG(dialog));
-	if (result != GTK_RESPONSE_YES){
-	  gtk_widget_destroy(dialog);
+      if (data_shm->mode != NORMAL_MODE_NOSAVE)
+	if (check_overwrite(buffp[current],fileN) == FALSE){
 	  acq_in_progress = ACQ_STOPPED;
 	  norecur = 1;
 	  gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), FALSE );
 	  return 0;
-	}	
-	else{
-	  check_buff_size();  
-	  send_sig_acq( ACQ_START );
-	  gtk_widget_destroy( dialog );
-	  return 0;
 	}
-      
 
-      }
+      //      printf("starting!\n");
+      check_buff_size();  
+      send_sig_acq( ACQ_START );
+      gdk_color_parse("green",&color);
+      gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+
+      return 0;
+        
+
     }
-    // so to be in here at all means the button is coming down.
+    // so to be in here at all means the button is coming down, but we're not stopped
     // we just dealt with coming down and ACQ_STOPPED
     else {  
       if (acq_in_progress==ACQ_RUNNING){  // so this is button coming down but already running
@@ -277,19 +263,18 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 	  //	  printf("button coming down but running data == 1\n");
 	  return 0;
 	}
-	//	printf("setting norecur, raising button\n");
+	//	printf("button coming down, but wasn't stopped setting norecur, raising button\n");
 	norecur=1;
 	gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );
 	
       }
          //otherwise, it's an invalid press because another button is down, set the button inactive
+      // ie get here if we're repeating
       else{
-	//	printf("invalid press because other button is down\n");
-	gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );
-	
+	//	printf("invalid press because other button is down - we're repeating?\n");
+	norecur = 1;
+	gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );	
       }
-
-
     }
 	
   }
@@ -297,19 +282,24 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
     //  printf("widget is inactive\n");
     /* If control reaches here, the toggle button is up */
     if( acq_in_progress == ACQ_RUNNING ) {  //a genuine stop
-      //    printf("got genuine stop\n");
+      //      printf("got genuine stop, putting button back down\n");
+      norecur = 1;
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),TRUE); /* and put the
 		button back down, it will come back up at the end of this scan */
       send_sig_acq( ACQ_STOP );
     }
       
     else {
-      //    printf("inactive and not running (normal stop?\n");
+      printf("setting syle nocolor\n");
+
+      gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
+
+      //      printf("inactive and not running (normal stop?\n");
       /* this is raise of the button was not triggered by the user, 
-	 but by a call to gtk_toggle_button_set_active */
+	 but by a call to gtk_toggle_button_set_active from idle_button_up*/
     } 
   }
-  //printf("got to end of start button\n");
+  //  printf("got to end of start button\n");
   return 0;
 }
 
@@ -319,12 +309,20 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 
 gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
 {
+  GdkColor color;
+  static char norecur=0;
+  if (norecur == 1){
+    norecur = 0;
+    return 0;
+  }
+
 
   if (GTK_TOGGLE_BUTTON (widget)->active) {
-    /* If control reaches here, the toggle button is down */
+    /* If control reaches here, the toggle button is coming down */
 
     if( acq_in_progress == ACQ_STOPPED ) {
       if (setup_channels() == -1){
+	norecur = 1;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE); 
 	return 0;
       }
@@ -344,6 +342,9 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
       path_strcpy(buffp[current]->path_for_reload,data_shm->save_data_path);
       set_window_title(buffp[current]);
 
+      gdk_color_parse("green",&color);
+      gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+
       acq_in_progress = ACQ_REPEATING;
       redraw = 0;
       //      last_draw();
@@ -351,9 +352,8 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
     }
 
     else {     //if this is an invalid press, set the button inactive
-	
+      norecur = 1;
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );
-
     }
 	
   }
@@ -364,10 +364,14 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
     /* If control reaches here, the toggle button is up */
     if( acq_in_progress == ACQ_REPEATING ) {  //a genuine stop
       //printf( "Sending stop signal to ACQ\n" );
+      // put the button back down though, it will come up on its own at end of scan
+      norecur = 1;
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(widget),TRUE);
       send_sig_acq( ACQ_STOP );
     }
       
     else {
+      gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
 
     }
   }
@@ -377,12 +381,21 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
 
 gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
 {
+
+  GdkColor color;
+  static char norecur = 0;
+  if (norecur == 1){
+    norecur = 0;
+    return 0;
+  }
+
   if (GTK_TOGGLE_BUTTON (widget)->active) {
     /* If control reaches here, the toggle button is down */
 
     if( acq_in_progress == ACQ_STOPPED ) {
       //printf( "Sending start repeat and process signal to ACQ\n" );
       if (setup_channels() == -1) {
+	norecur = 1;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE); 
 	return 0;
       }
@@ -398,6 +411,8 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
       data_shm->dwell= buffp[current]->param_set.dwell; // this is what the pulse program will use
 
       //      printf("put %f in shm dwell\n",data_shm->dwell);
+      gdk_color_parse("green",&color);
+      gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
 
       acq_in_progress = ACQ_REPEATING_AND_PROCESSING;
       redraw = 0;
@@ -407,9 +422,9 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
     }
 
     else {     //if this is an invalid press, set the button inactive
-	
-    gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );
-
+      norecur = 1;
+      gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );
+      
     }
   }
 
@@ -418,11 +433,13 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
     /* If control reaches here, the toggle button is up */
     if( acq_in_progress == ACQ_REPEATING_AND_PROCESSING ) {  //a genuine stop
       //printf( "Sending stop signal to ACQ\n" );
+      norecur = 1;
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(widget),TRUE);
       send_sig_acq( ACQ_STOP );
     }
       
     else {
-
+      gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
     }
   }
   return 0;

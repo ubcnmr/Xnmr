@@ -229,7 +229,7 @@ int init_shm()
       perror("acq: setrlimit");
     }
     else{ // only do the memlock if we were able to set our limit.
-      printf("doing the mlockall\n");
+      //      printf("doing the mlockall\n");
       if (mlockall( MCL_CURRENT |MCL_FUTURE ) !=0 )
 	perror("mlockall");
     }
@@ -643,8 +643,8 @@ int run()
       return 0;
     }
     else
-      //      printf( "already exists\n" );
-    errno = 0;
+      //      printf( "aq says directory %s already exists\n",path );
+      errno = 0;
   }
 
 

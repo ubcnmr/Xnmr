@@ -401,7 +401,18 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 
 
 
+void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
+{
 
+  // this is used just to to show the parameter frame  if we loaded a new pulse program in update_paths.
+  // need this in case we destroy a widget that has the focus.
+
+  gdk_threads_enter();
+  //  printf("showing parameter frame in mutex wrap\n");
+  show_parameter_frame(current_param_set);
+  
+  gdk_threads_leave();
+}
 
   gint update_paths( GtkWidget* widget, gpointer data ) 
   { 
@@ -413,7 +424,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     char last_exec[ PATH_LENGTH ] = "";
     
 
-    //    printf("in update_paths\n");
+    printf("in update_paths\n");
     /*    if (data != NULL){
       printf("in update_paths, with data not Null, must be focus out\n");
       } */
@@ -435,6 +446,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
        }
      }
     else if (widget == save_text_box){
+
       path_strcpy(s, current_param_set->save_path);
       lpath = strrchr(s,'/');
       if (lpath != NULL)
@@ -520,7 +532,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	strncpy(lpath+1,s,PATH_LENGTH - strlen(current_param_set->save_path)-1);
       }
       update_param_win_title(&buffp[current]->param_set);
-      //      printf( "update_paths: new save path: %s\n", current_param_set->save_path); 
+      printf( "update_paths: new save path: %s\n", current_param_set->save_path); 
     }
      
     /* 
@@ -533,21 +545,30 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 
     
     if( strcmp( old_exec, current_param_set->exec_path) ) {       
-
       path_strcpy ( s, current_param_set->exec_path); 
       //      printf("trying to load param_file\n");
       if (load_param_file( s, current_param_set ) != -1 ){ // this if is new CM Aug 24, 2004
 	//	printf("back from load without -1\n");
-	show_parameter_frame( current_param_set ); 
 
+	g_idle_add ((GtkFunction) show_parameter_frame_mutex_wrap, current_param_set) ; 
+
+
+	/*
       // put the focus back on the program box...  gtk seems to crash if we try to focus out to a spin 
       // button that show_parameter_frame destroyed
+
+
+	widget = gtk_window_get_focus(panwindow);
+	if (widget == prog_text_box ) printf("get_focus says its the prog text box\n");
+	printf("focus: %0x\n",widget);
+	printf("acqs_adj: %0x\n",acqs_adj);
+
 	gtk_widget_grab_focus(GTK_WIDGET(prog_text_box));
 	// this unselects the text in the program box.
 	gtk_editable_select_region(GTK_EDITABLE(prog_text_box),0,0);
 	// and puts the cursor at the end.
 	gtk_editable_set_position(GTK_EDITABLE(prog_text_box),-1);
-
+	*/
 
       }
     }
@@ -563,7 +584,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     //need this to prevent infinte looping in here? 
 
     if (norecur == 1){
-      printf("update_acqn, got norecur\n");
+      //      printf("update_acqn, got norecur\n");
       norecur = 0;
       return;
     }

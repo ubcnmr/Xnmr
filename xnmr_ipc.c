@@ -493,7 +493,7 @@ gint idle_button_up( GtkWidget *button )
 
 {
   gdk_threads_enter();
-  printf( "in idle_button_up\n" );
+  //  printf( "in idle_button_up\n" );
   gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( button ), FALSE );
   gdk_threads_leave();
   return FALSE;
@@ -505,7 +505,7 @@ gint idle_queue( GtkWidget *button )
   int valid,bnum;
   gdk_threads_enter();
 
-  printf("in idle_queue\n");
+  //  printf("in idle_queue\n");
   if (queue.num_queued ==0){
     printf("in idle_queue, but none in queue!\n");
 
@@ -518,7 +518,7 @@ gint idle_queue( GtkWidget *button )
     }
     gtk_tree_model_get(GTK_TREE_MODEL(queue.list),&queue.iter,
 		       BUFFER_COLUMN,&bnum,-1);
-    printf("got buff at top of queue: %i\n",bnum);
+    //    printf("got buff at top of queue: %i\n",bnum);
     
     gtk_list_store_remove(GTK_LIST_STORE(queue.list),&queue.iter);
     
@@ -527,7 +527,7 @@ gint idle_queue( GtkWidget *button )
     make_active(buffp[bnum]);
     
     set_queue_label();
-    printf("num left in queue: %i\n",queue.num_queued);
+    //    printf("num left in queue: %i\n",queue.num_queued);
     
     gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), TRUE );
   }

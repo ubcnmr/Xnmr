@@ -23,7 +23,7 @@
 
 
 
-  file_save_as ->check_overwrite_wrapper     (save_as menu item)
+  file_save_as ->check_overwrite_wrapper  -> do_save   (save_as menu item)
                   |
                   |
   file_save ->  check_overwrite      ->    do_save   (save menu item)
@@ -84,6 +84,7 @@ int array_popup_showing;
 int peak=-1, s_pt1=-1,s_pt2; // for s2n, integrate
 int i_pt1,i_pt2; 
 
+
 int from_make_active = 0;
 GtkWidget* s2n_dialog;
 GtkWidget* int_dialog;  
@@ -100,9 +101,10 @@ GtkWidget *setsf1dialog;
 /* need to be able to  to bigger and smaller first order phases 
    (ie + and - buttons that increase the scale by 360 deg */
 
-
-
-
+gint window_focus(GtkWidget *widget,GdkEventExpose *event,dbuff *buff){
+  printf("got event for buff %i\n",buff->buffnum);
+  return FALSE;
+}
 
 
 dbuff *create_buff(int num){
@@ -491,6 +493,9 @@ dbuff *create_buff(int num){
     g_signal_connect (G_OBJECT(window),"delete_event", //was "destroy"
 		       G_CALLBACK(destroy_buff),buff);
 
+
+    //    g_signal_connect(G_OBJECT(window),"show",G_CALLBACK(window_focus),buff);
+
     set_window_title(buff);
 
     main_vbox=gtk_vbox_new(FALSE,1);
@@ -687,8 +692,14 @@ dbuff *create_buff(int num){
     buff->win.p2_label = gtk_label_new("p2: 0");
     gtk_box_pack_start(GTK_BOX(vbox1),buff->win.p2_label,FALSE,FALSE,0);
 
+    // so we can change the background color of the ct label    
+    
+    buff->win.ct_box = gtk_event_box_new();
+    
     buff->win.ct_label = gtk_label_new("ct: 0");
-    gtk_box_pack_start(GTK_BOX(vbox1),buff->win.ct_label,FALSE,FALSE,0);
+    gtk_container_add( GTK_CONTAINER(buff->win.ct_box),buff->win.ct_label);
+    gtk_box_pack_start(GTK_BOX(vbox1),buff->win.ct_box,FALSE,FALSE,0);
+    
 
 
     hbox5=gtk_hbox_new(FALSE,1);
@@ -771,17 +782,28 @@ dbuff *create_buff(int num){
 }
 
 
-
-
 gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff)
 {
-  
-gdk_draw_drawable(widget->window,
-		widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-		buff->win.pixmap,
-		event->area.x, event->area.y,
-		event->area.x, event->area.y,
-		event->area.width, event->area.height);
+  // nearly right, except that expose events happen all the time from acq.
+  /*
+  printf("in expose with buff: %i, current is %i\n",buff->buffnum,current);
+  if (buff->buffnum != current)
+    if (gtk_window_has_toplevel_focus(GTK_WINDOW(buff->win.window))) {
+      make_active(buff);
+      printf("raising %i\n",buff->buffnum);
+    }
+  */
+
+  gdk_draw_drawable(widget->window,
+		    widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+		    buff->win.pixmap,
+		    event->area.x, event->area.y,
+		    event->area.x, event->area.y,
+		    event->area.width, event->area.height); 
+  // do this later when we're finished to avoid looping
+
+
+
 return FALSE; 
 }
 
@@ -1501,7 +1523,12 @@ void file_save(GtkAction *action,dbuff *buff)
     popup_msg("Invalid file name",TRUE);
     return;
   }
-  check_overwrite( buff, buff->param_set.save_path); 
+  if (check_overwrite( buff, buff->param_set.save_path) == TRUE){
+    printf("in file_save, got check_overwrite TRUE\n");
+    do_save(buff,buff->param_set.save_path);
+  }
+  else printf("not saving\n");
+  
   return;
 }
 
@@ -1644,7 +1671,7 @@ void user_scales(GtkAction *action,dbuff *buff)
     unauto(buff); // turns off auto scaling if it was on.
 
     inputbox = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    OK_button= gtk_button_new_with_label("Exit");
+    OK_button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
     Update= gtk_button_new_with_label("Update Scales");
     //    printf("%i\n",(int)buff->disp.xx1);
 
@@ -2928,7 +2955,6 @@ void show_active_border()
   dbuff *buff;
   GdkRectangle rect;
 
-
  buff=buffp[current];
  if(buff != NULL){
     gdk_gc_set_foreground(colourgc,&colours[RED]);
@@ -2991,7 +3017,6 @@ void show_active_border()
    gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
 
  }
-
  return;
 }
 
@@ -3446,7 +3471,11 @@ gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs )
   
 
   if (path[strlen(path)-1] == '/') path[strlen(path)-1]=0;
-  check_overwrite( buff, path );
+  if (check_overwrite( buff, path ) == TRUE){
+    printf("got check_overwrite true\n");
+    do_save(buff,path);
+  }
+  else printf("not saving\n");
   
   gtk_widget_destroy(GTK_WIDGET(fs));
   return result;
@@ -3487,9 +3516,6 @@ gint check_overwrite( dbuff* buff, char* path )
 
 
 
-
-
-
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
     if( errno != EEXIST ) {
       popup_msg("check_overwrite can't mkdir?",TRUE);
@@ -3507,16 +3533,19 @@ gint check_overwrite( dbuff* buff, char* path )
       result = gtk_dialog_run(GTK_DIALOG(dialog));
       if (result != GTK_RESPONSE_YES){
 	gtk_widget_destroy(dialog);
-	return 0;
+	return FALSE; // don't overwrite
       }	
       else gtk_widget_destroy(dialog);
+      
     }
   } 
-  do_save( buff, path );
-  
-  return 0;
+
+  //    do_save( buff, path );
+
+  return TRUE; // do overwrite
 
 }
+
 
 
 gint do_save( dbuff* buff, char* path )
@@ -6136,6 +6165,7 @@ void queue_expt(GtkAction *action, dbuff *buff){
     }
     else{
       popup_msg("File Exists - pick a new name",TRUE);
+      printf("claim that %s exists\n",path);
       return;
     }
   }
@@ -6204,11 +6234,17 @@ void queue_expt(GtkAction *action, dbuff *buff){
 
 }
 void queue_window(GtkAction *action, dbuff *buff){
+  GtkTreeModel *model;
  printf("in queue_window\n");
 
 
  gtk_widget_show_all(queue.dialog);
  gdk_window_raise(queue.dialog->window);
+
+ if ( gtk_tree_selection_get_selected(queue.select,&model,&queue.iter)){
+   printf("unselecting\n");
+   gtk_tree_selection_unselect_iter(queue.select,&queue.iter);
+ }
  
 }
 
@@ -6226,6 +6262,7 @@ void remove_queue (GtkWidget *widget,gpointer dum){
     gtk_tree_model_get(model,&queue.iter,BUFFER_COLUMN,&bnum,-1);
     gtk_list_store_remove(queue.list,&queue.iter);
     queue.num_queued -= 1;
+    set_queue_label();
     printf("selected buffer %i\n",bnum);
   }
   else {
@@ -6235,7 +6272,6 @@ void remove_queue (GtkWidget *widget,gpointer dum){
   printf("%i experiments left in queue\n",queue.num_queued);
 
 
-  // now remove the one we selected
 
 
   return;
