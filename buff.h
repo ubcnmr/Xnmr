@@ -62,8 +62,8 @@ typedef struct {
     } add_sub_struct;
 
 typedef struct{
-  GtkWidget *dialog,*s_buff,*d_buff,*s_record,*d_record,*components,
-    *start_clicking,*end_clicking,*run_fit,*precalc,*close,*enable_proc_broad,
+  GtkWidget *dialog,*s_buff,*d_buff,*s_record,*d_record,*components,*add_dialog,
+    *start_clicking,*end_clicking,*run_fit,*precalc,*close,*enable_proc_broad,*store_fit,
   *center[MAX_FIT],*amplitude[MAX_FIT],*gauss_wid[MAX_FIT],
     *lorentz_wid[MAX_FIT],*enable_gauss[MAX_FIT],*enable_lorentz[MAX_FIT],*hbox[MAX_FIT];
   int shown,num_components,s_rec,d_rec;

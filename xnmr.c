@@ -340,6 +340,9 @@ int main(int argc,char *argv[])
   label=gtk_label_new("Add/Subtract");
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),label,FALSE,FALSE,0);
 
+  gtk_window_set_transient_for(GTK_WINDOW(add_sub.dialog),GTK_WINDOW(panwindow));
+  gtk_window_set_position(GTK_WINDOW(add_sub.dialog),GTK_WIN_POS_CENTER_ON_PARENT);
+
 
   // The buffer line:
   hbox=gtk_hbox_new(TRUE,2);
@@ -478,6 +481,11 @@ int main(int argc,char *argv[])
 
   fit_data.dialog = gtk_dialog_new();
   gtk_window_set_resizable(GTK_WINDOW(fit_data.dialog),0);
+  fit_data.add_dialog = NULL;
+
+  gtk_window_set_transient_for(GTK_WINDOW(fit_data.dialog),GTK_WINDOW(panwindow));
+  gtk_window_set_position(GTK_WINDOW(fit_data.dialog),GTK_WIN_POS_CENTER_ON_PARENT);
+
 
   label = gtk_label_new("Fitting");
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),label,FALSE,FALSE,0);
@@ -493,9 +501,11 @@ int main(int argc,char *argv[])
   label=gtk_label_new("Best Fit Destination");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  fit_data.close = gtk_button_new_with_label("Close");
-  gtk_box_pack_start(GTK_BOX(hbox),fit_data.close,FALSE,FALSE,2);
-  g_signal_connect(G_OBJECT(fit_data.close),"clicked",G_CALLBACK(fitting_buttons),NULL);
+  label=gtk_label_new("Store best fit?");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+
+
 
   // buffer line:
   hbox=gtk_hbox_new(TRUE,2);
@@ -519,8 +529,11 @@ int main(int argc,char *argv[])
 
   gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_buff),"New");
 
-  label=gtk_label_new("  \t");
-  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+  fit_data.store_fit = gtk_check_button_new();
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.store_fit,FALSE,FALSE,2);
+
+
+
 
   // record line
   hbox=gtk_hbox_new(TRUE,2);
@@ -571,10 +584,10 @@ int main(int argc,char *argv[])
   g_signal_connect(G_OBJECT(fit_data.components),"value_changed",G_CALLBACK(fit_data_changed),NULL);
 
   label = gtk_label_new("       Enable\nProcess Broadening");
-  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,3);
 
   fit_data.enable_proc_broad = gtk_check_button_new();
-  gtk_box_pack_start(GTK_BOX(hbox),fit_data.enable_proc_broad,FALSE,FALSE,2);
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.enable_proc_broad,FALSE,FALSE,0);
   
 
 
@@ -590,6 +603,10 @@ int main(int argc,char *argv[])
   fit_data.run_fit = gtk_button_new_with_label("Run Fit");
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.run_fit,FALSE,FALSE,2);
   g_signal_connect(G_OBJECT(fit_data.run_fit),"clicked",G_CALLBACK(fitting_buttons),NULL);
+
+  fit_data.close = gtk_button_new_with_label("Close");
+  gtk_box_pack_end(GTK_BOX(hbox),fit_data.close,FALSE,FALSE,2);
+  g_signal_connect(G_OBJECT(fit_data.close),"clicked",G_CALLBACK(fitting_buttons),NULL);
 
   //  the labels for the start values
   vbox=gtk_vbox_new(TRUE,0);

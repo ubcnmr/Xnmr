@@ -2010,7 +2010,8 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
    // printf("count: %i f1: %f f2: %f integral: %f\n",count, f1, f2, integral);
    // printf("style: %i record: %i record2: %i\n", buff->disp.dispstyle, buff->disp.record, buff->disp.record2);
    
-   integral *=  fabs(f1-f2) /  count;
+   //   integral *=  fabs(f1-f2) /  count;
+   integral *= 2./sqrt(buff->param_set.npts);
    
    printf("%f\n",integral);  //print to screen
    
@@ -4506,7 +4507,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
   static GtkWidget* dialog=NULL;
   GtkWidget* button;
   GtkWidget* label;
-  static int current_buff = -1;
+  static int spline_current_buff = -1;
   static int redo_buff = -1;
   GdkEventButton *event;
   int i,j;
@@ -4524,15 +4525,15 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 
 
   /* First:  if we get a point */
-  if (current_buff != -1){
+  if (spline_current_buff != -1){
 
-    if ((void *) buff == (void *) buffp[current_buff]->win.canvas){
+    if ((void *) buff == (void *) buffp[spline_current_buff]->win.canvas){
       event = (GdkEventButton *) action;
 
-      if (buffp[current_buff]->disp.dispstyle==SLICE_ROW){
-	xval= (event->x-1.)/(buffp[current_buff]->win.sizex-1) *
-	  (buffp[current_buff]->disp.xx2-buffp[current_buff]->disp.xx1)
-	  +buffp[current_buff]->disp.xx1;
+      if (buffp[spline_current_buff]->disp.dispstyle==SLICE_ROW){
+	xval= (event->x-1.)/(buffp[spline_current_buff]->win.sizex-1) *
+	  (buffp[spline_current_buff]->disp.xx2-buffp[spline_current_buff]->disp.xx1)
+	  +buffp[spline_current_buff]->disp.xx1;
 
 	//	printf("got x val: %f\n",xval);
 
@@ -4540,14 +4541,14 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 	for(i=0;i<num_spline_points;i++)
 	  // need to map the frac's that are stored into pixels...
 	  // otherwise you can't erase them properly.
-	  if (event->x == (int) ((spline_points[i]-buffp[current_buff]->disp.xx1)*
-	    (buffp[current_buff]->win.sizex-1)/
-	    (buffp[current_buff]->disp.xx2-buffp[current_buff]->disp.xx1)+1.5)){
+	  if (event->x == (int) ((spline_points[i]-buffp[spline_current_buff]->disp.xx1)*
+	    (buffp[spline_current_buff]->win.sizex-1)/
+	    (buffp[spline_current_buff]->disp.xx2-buffp[spline_current_buff]->disp.xx1)+1.5)){
 
 
 	    old_point = 1;
 	    printf("found old point, erase it\n");
-	    draw_vertical(buffp[current_buff],&colours[WHITE],0.,(int)event->x);
+	    draw_vertical(buffp[spline_current_buff],&colours[WHITE],0.,(int)event->x);
 	    for ( j = i ; j < num_spline_points-1 ; j++ )
 	      spline_points[j] = spline_points[j+1];
 	    num_spline_points -= 1;
@@ -4556,7 +4557,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 	  if(num_spline_points < 100){
 	    spline_points[num_spline_points] = xval;
 	    num_spline_points +=1;
-	    draw_vertical(buffp[current_buff],&colours[BLUE],0.,(int)event->x);	    
+	    draw_vertical(buffp[spline_current_buff],&colours[BLUE],0.,(int)event->x);	    
 	  }
 	  else {
 	    popup_msg("Too many spline points!");
@@ -4583,22 +4584,22 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
       //           printf("buff is dialog!\n");
       gtk_object_destroy(GTK_OBJECT(dialog));
       
-      if ( buffp[current_buff] == NULL){ // our buffer destroyed while we were open...
+      if ( buffp[spline_current_buff] == NULL){ // our buffer destroyed while we were open...
 	printf("Baseline_spline: buffer was destroyed while we were open\n");
       }
       else{
-	buffp[current_buff]->win.press_pend = 0;
-	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[current_buff]->win.canvas), 
-					      G_CALLBACK( baseline_spline), buffp[current_buff]);
+	buffp[spline_current_buff]->win.press_pend = 0;
+	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[spline_current_buff]->win.canvas), 
+					      G_CALLBACK( baseline_spline), buffp[spline_current_buff]);
 	
-	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[current_buff]->win.canvas),
+	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[spline_current_buff]->win.canvas),
 					  G_CALLBACK (press_in_win_event),
-					  buffp[current_buff]);
+					  buffp[spline_current_buff]);
       }
       
       //      printf("got a total of: %i points for spline\n",num_spline_points);
-      draw_canvas(buffp[current_buff]);
-      current_buff = -1;
+      draw_canvas(buffp[spline_current_buff]);
+      spline_current_buff = -1;
 
       // the spline points should be in order:
       csort(spline_points,num_spline_points);
@@ -4651,7 +4652,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
       
       gtk_widget_show_all (dialog);
       
-      current_buff = buff->buffnum;
+      spline_current_buff = buff->buffnum;
       g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
 				      G_CALLBACK (press_in_win_event),
 				      buff);
@@ -4803,6 +4804,7 @@ void add_subtract(dbuff *buff, int action, GtkWidget *widget ){
 
 
   if (add_sub.shown == 0){
+
     gtk_widget_show_all(add_sub.dialog);
     add_sub.shown = 1;
   }
@@ -5063,7 +5065,7 @@ if the number of records on the input records doesn't match for "each each", err
     dbnum = current;
     if (dbnum == my_current) // didn't create buffer, too many?
       return;
-    gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_buff),num_buffs);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_buff),add_sub.index[dbnum]+1);
     if (k == 1){
       k = 2; // if it would have been append, set to first record.
       gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),2);
@@ -5194,6 +5196,152 @@ if the number of records on the input records doesn't match for "each each", err
 
 
 
+void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
+
+  int sbnum;
+  float xval,sw;
+  GdkEventButton *event;
+
+  sbnum = add_sub.index[gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff))];
+  printf ("in fit_add_components, got sbnum: %i\n",sbnum);
+
+  // if we're coming in from a press event in the window:
+  if ((void *) buff == (void *) buffp[sbnum]->win.canvas){
+    int i,i_max,xpt,record,i_left,i_right;
+    float max,m,b,width,x_left,x_right;
+
+    event = (GdkEventButton *) action;
+    printf("believe we got a press event\n");
+
+    if (fit_data.num_components == MAX_FIT){
+      popup_msg("Too Many components");
+      return;
+    }
+
+    if (buffp[sbnum]->disp.dispstyle==SLICE_ROW){ // only capture point on a row
+      xval= (event->x-1.)/(buffp[sbnum]->win.sizex-1) *
+	(buffp[sbnum]->disp.xx2-buffp[sbnum]->disp.xx1)	+buffp[sbnum]->disp.xx1;
+      printf("xval is: %f\n",xval);
+    }
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.components),fit_data.num_components+1);
+    // now set the values in it
+    sw = buffp[sbnum]->param_set.sw;
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.center[fit_data.num_components-1]),-xval*sw+sw/2);
+
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[fit_data.num_components-1]),TRUE);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[fit_data.num_components-1]),TRUE);
+
+    // now need the width and amplitude
+    // we used exactly the center that the user selected.  Find a nearby maximum and then get a width.
+
+    xpt = pix_to_x(buffp[sbnum],event->x);
+    printf("got point %i\n",xpt);
+    i_max = xpt;
+    record = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record));
+
+    max = buffp[sbnum]->data[xpt*2 + buffp[sbnum]->param_set.npts*2*record];
+
+    if (xpt < buffp[sbnum]->param_set.npts-1)
+      for (i=xpt+1;i<buffp[sbnum]->param_set.npts;i++){
+	if (buffp[sbnum]->data[2*i + buffp[sbnum]->param_set.npts*2*record] > max){
+	  max = buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record];
+	  i_max = i;
+	}
+	else i = buffp[sbnum]->param_set.npts;
+      }
+    if (xpt > 0)
+      for (i=xpt-1;i>=0;i--){
+	if (buffp[sbnum]->data[2*i + buffp[sbnum]->param_set.npts*2*record] > max){
+	  max = buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record];
+	  i_max = i;
+	}
+	else i = -1;
+      }
+      
+    //so we should have the max:
+    printf("found max of %f at %i\n",max,i_max);
+
+    // now look for the width.
+    // look to the right till we get below half max
+    i_left=xpt;
+    i_right=xpt;
+    if (xpt < buffp[sbnum]->param_set.npts-1)
+      for(i=xpt+1;i<buffp[sbnum]->param_set.npts;i++){
+	if (buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record] < max/2.){
+	  i_right = i;
+	  i = buffp[sbnum]->param_set.npts;
+	}
+      }
+    if (xpt > 0)
+      for (i=xpt-1;i>=0;i--){
+	if (buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record] < max/2.){
+	  i_left = i;
+	  i = -1;
+	}
+      }
+    printf("left and right limits: %i %i\n",i_left,i_right);
+    // so we've got a rough width, let's do a little better
+    width = 0;
+    x_left = xpt;
+    x_right = xpt;
+    if (i_left != xpt){
+      m = (buffp[sbnum]->data[2*(i_left+1)+buffp[sbnum]->param_set.npts*2*record]-
+	   buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]);
+      b= buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]-m*i_left;
+      x_left = (max/2.-b)/m;
+      printf("using %f for left edge\n",x_left);
+      width += (xpt-x_left)
+	*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
+    }
+  
+    if (i_right != xpt){
+      m = (buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-
+	   buffp[sbnum]->data[2*(i_right-1)+buffp[sbnum]->param_set.npts*2*record]);
+      b= buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-m*i_right;
+      x_right = (max/2.-b)/m;
+      printf("using %f for right edge\n",x_right);
+      
+      width += (x_right-xpt)*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
+    
+    }
+    printf("so width is: %f\n",width);
+    // stick half in each of lorentz and gaus
+	
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[fit_data.num_components-1]),width/2.);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[fit_data.num_components-1]),width/2.);
+    
+    // and then the amplitude.  The integral is height * width(in points)/sqrt(npts)*2
+    // give it an extra * 1.5 for good luck.
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.amplitude[fit_data.num_components-1]),
+			      2.*1.5*max*(x_right-x_left)/sqrt(buffp[sbnum]->param_set.npts));
+
+
+
+  }
+
+  if ((void *) buff == (void *) fit_data.add_dialog){ 
+    //           printf("buff is dialog!\n");
+    printf("believe we got a delete event for dialog\n");
+    gtk_object_destroy(GTK_OBJECT(fit_data.add_dialog));
+    fit_data.add_dialog = NULL;
+      if ( buffp[sbnum] == NULL){ // our buffer destroyed while we were open... shouldn't happen
+	printf("fit_add_components: buffer was destroyed while we were open\n");
+      }
+      else{
+	buffp[sbnum]->win.press_pend = 0;
+	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[sbnum]->win.canvas), 
+					      G_CALLBACK( fit_add_components), buffp[sbnum]);
+	
+	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[sbnum]->win.canvas),
+					  G_CALLBACK (press_in_win_event),
+					  buffp[sbnum]);
+      }
+      
+      //      printf("got a total of: %i points for spline\n",num_spline_points);
+      draw_canvas(buffp[sbnum]);
+
+  }
+}
 
 
 
@@ -5222,7 +5370,6 @@ void fitting(dbuff *buff, int action, GtkWidget *widget ){
 
   if (fit_data.shown == 0){ // ok - so fill in default 'from' and 'to'
 
-
     gtk_widget_show(fit_data.dialog);
     fit_data.shown = 1;
   }
@@ -5230,8 +5377,10 @@ void fitting(dbuff *buff, int action, GtkWidget *widget ){
     gdk_window_raise( fit_data.dialog->window); // but not fill in here
 
 
+  
 
 }
+
 void dummy(); // extra function for n2f
 void dummy(){}
 void n2f_(int *n,int *p,float *x,void (*calc_spectrum_residuals),int *iv,int *liv,int *lv,float *v,
@@ -5239,7 +5388,7 @@ void n2f_(int *n,int *p,float *x,void (*calc_spectrum_residuals),int *iv,int *li
 
 void fitting_buttons(GtkWidget *widget, gpointer data ){
 
-  int sbnum,dbnum,i,j;
+  int sbnum,dbnum,i,j,my_current;
 
   if (widget  == fit_data.close){ //close button
     gtk_widget_hide(fit_data.dialog);
@@ -5261,12 +5410,51 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
   if (j>=1) dbnum = add_sub.index[j-1];
   else dbnum = -1; // indicates new buffer.
 
+  printf("dbnum is %i\n",dbnum);
 
 
   if (widget == fit_data.start_clicking){
     
-    popup_msg("Graphical addition of components not implemented yet!");
+    GtkWidget *label, *button;
 
+      if (buffp[sbnum]->win.press_pend != 0){
+	popup_msg("There's already a press pending\n(maybe Expand or Offset?)");
+	return;
+      }
+
+      if (buffp[sbnum]->disp.dispstyle != SLICE_ROW){
+	popup_msg("Add components only works on rows for now");
+	return;
+      }
+
+      
+      /* open up a window that we click ok in when we're done */
+      fit_data.add_dialog = gtk_dialog_new();
+      label = gtk_label_new ( "Hit ok when finished adding components" );
+      button = gtk_button_new_with_label("OK");
+      
+      /* catches the ok button */
+      g_signal_connect_swapped(G_OBJECT (button), "clicked", G_CALLBACK (fit_add_components), G_OBJECT( fit_data.add_dialog ) );
+      
+      /* also need to catch when we get a close signal from the wm */
+      g_signal_connect(G_OBJECT (fit_data.add_dialog),"delete_event",G_CALLBACK (fit_add_components),G_OBJECT( fit_data.add_dialog ));
+      
+      gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(fit_data.add_dialog)->action_area ),button,FALSE,FALSE,0);
+      gtk_container_set_border_width( GTK_CONTAINER(fit_data.add_dialog), 5 );
+      gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(fit_data.add_dialog)->vbox) ), label, FALSE, FALSE, 5 );
+      
+      gtk_window_set_transient_for(GTK_WINDOW(fit_data.add_dialog),GTK_WINDOW(panwindow));
+      gtk_window_set_position(GTK_WINDOW(fit_data.add_dialog),GTK_WIN_POS_CENTER_ON_PARENT);
+      gtk_widget_show_all (fit_data.add_dialog);
+      
+      g_signal_handlers_block_by_func(G_OBJECT(buffp[sbnum]->win.canvas),
+				      G_CALLBACK (press_in_win_event),
+				      buffp[sbnum]);
+      // connect our event
+      g_signal_connect (G_OBJECT (buffp[sbnum]->win.canvas), "button_press_event",
+                        G_CALLBACK( fit_add_components), buffp[sbnum]);
+      buffp[sbnum]->win.press_pend=1;
+      return;
   }
 
   if (widget == fit_data.run_fit || widget == fit_data.precalc){ // ok, do the fit
@@ -5358,8 +5546,75 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       printf("doing final spectrum calc:\n");
       calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);
 
+
+      //stick the calc'd spectrum where it's supposed to go:
+      if ( widget == fit_data.run_fit && 
+	   gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.store_fit)) == TRUE){
+	// only actually do the fit if we want it done.
+	
+	// make sure dest buffer isn't busy acquiring.
+	if (dbnum == upload_buff && acq_in_progress != ACQ_STOPPED){
+	  popup_msg("output buffer is busy acquiring");
+	  goto dont_move_fit;
+	}
+	if (dbnum == sbnum && gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record)) == 
+	    gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) -1 ){
+	  popup_msg("Can't replace data with fit.  Try Append");
+	  goto dont_move_fit;
+	}
+	// create a new buffer if we need to
+	if (dbnum == -1){
+	  my_current = current;
+	  printf("creating a new buffer\n");
+	  file_new(NULL,0,NULL);
+	  dbnum = current;
+	  printf("created buffer %i\n",current);
+	  if (dbnum == my_current){ // didn't create buffer, too many?
+	    printf("couldn't open a buffer?\n");
+	    goto dont_move_fit;
+	  }
+	  // if we asked for append, set to first record.
+	  
+	  if (gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) == 0){
+	    printf("had append as dest record, change to record 0\n");
+	    gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_record),1);
+	  }
+	  
+	  printf("resizing to: %i %i\n",buffp[sbnum]->param_set.npts,1);
+	  buff_resize(buffp[dbnum],buffp[sbnum]->param_set.npts,1); // set the size of the buffer.
+	  printf("setting combo box to %i\n",add_sub.index[dbnum]+1);
+	  gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_buff),add_sub.index[dbnum]+1);
+	  
+	  
+	  //	current = my_current; // set current back to where it was??
+	  
+	}
+	else{ // we requested an existing buffer.  See if we need to resize
+	  if (buffp[dbnum]->npts2 < gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) ||
+	      buffp[dbnum]->param_set.npts != buffp[sbnum]->param_set.npts ||
+	      gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) == 0){
+	    printf("resizing buffer to : %i %i\n",buffp[sbnum]->param_set.npts,buffp[dbnum]->npts2+1);
+	    buff_resize(buffp[dbnum],buffp[sbnum]->param_set.npts,buffp[dbnum]->npts2+1);
+
+	    // set the combo box so subsequent attempts go to the same place, if we said append
+	    if (gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) == 0){
+	      printf("setting active record to %i\n", buffp[dbnum]->npts2);
+	      gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_record),buffp[dbnum]->npts2);
+	    }
+	  }
+	}
+	// ok, so we should be ready to go.
+	for (i=0;i<buffp[sbnum]->param_set.npts*2;i++){
+	  buffp[dbnum]->data[i + (gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record))-1)
+			     *buffp[dbnum]->param_set.npts*2] = spect[i];	  	  
+	}
+	draw_canvas(buffp[dbnum]);
+      }
+      
+  dont_move_fit:
+
+
       // in here we need to give the user the output,
-      // stick the calc'd spectrum where its supposed to go
       // only if its a run_fit.
       
 
@@ -5378,7 +5633,6 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
 	gtk_widget_queue_draw_area(buffp[sbnum]->win.canvas,1,1,buffp[sbnum]->win.sizex,buffp[sbnum]->win.sizey);
       }
-
 
 
       
@@ -5445,7 +5699,7 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_proc_broad)) == TRUE){
     float factor,temp;
     factor = buffp[sbnum]->process_data[EM].val;
-    printf("got enable process broadening\n");
+    //    printf("got enable process broadening\n");
     if (buffp[sbnum]->process_data[EM].status == SCALABLE_PROCESS_ON){ // do the mult
       printf("doing exp mult with value: %f\n",factor);
       for( i=0; i<buffp[sbnum]->param_set.npts; i++ ){
@@ -5484,13 +5738,7 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
       2*buffp[sbnum]->param_set.npts*gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record))];
   }
 
-
-
-
-
-
 }
-
 
 
 void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz_wid,float *spect,int np,float dwell)
@@ -5500,7 +5748,7 @@ void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz
   //  printf("add_lorentz_line: center: %f, amp: %f, width: %f, dwell %f\n",center,amp,wid,dwell);
 
   for(i=0;i<np;i++){
-    prefactor = amp*exp(-i*dwell*lorentz_wid)*exp(-i*dwell*gauss_wid/1.6651*i*dwell*gauss_wid/1.6651);
+    prefactor = amp*exp(-i*dwell*M_PI*lorentz_wid)*exp(-i*dwell*M_PI*gauss_wid/1.6651*i*dwell*M_PI*gauss_wid/1.6651); 
     spect[2*i] += prefactor * cos(-center*2*M_PI*dwell*i);
     spect[2*i+1] += prefactor * sin(-center*2*M_PI*dwell*i);
   }
@@ -5516,6 +5764,13 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
   int i,j;
   int  snum,dnum;
   char s[5];
+  static int norecur = 0,old_sbnum = 0;
+
+  if (norecur == 1){
+    printf("doing norecur in fit_data_changed\n");
+    norecur = 0;
+    return;
+  }
 
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_buff));
@@ -5548,6 +5803,14 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
     return;
   }
   if(widget == fit_data.s_buff){
+    // do we have the components window open???
+    if (fit_data.add_dialog != NULL){
+      popup_msg("Don't change the source buffer while adding components!");
+      norecur = 1;
+      gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.s_buff),old_sbnum);
+      return;
+    }
+    old_sbnum =  snum;
     // source buffer number changed, fix the number of records
     if (buffp[snum]->npts2 < fit_data.s_rec){ // too many
 
@@ -5566,11 +5829,9 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
     return;
   }
   if(widget == fit_data.d_buff){
-    printf("dest buffer changed!\n");
     int new_num = 1; // if its to a 'new' buffer, assume just one record in it
     if (dnum >= 0 ) new_num = buffp[dnum]->npts2;
     if (new_num < fit_data.d_rec){ // too many
-
       for(i= fit_data.d_rec-1;i>= new_num;i--){
 	gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.d_record),i+1);
       }
