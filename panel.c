@@ -99,7 +99,7 @@ gint noacq_button_press(GtkWidget *widget, gpointer *data)
 
 gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 {
-  int was_in_progress;
+  int was_in_progress,i;
   //  printf("in kill_button_clicked, acq_in_progress=%i\n",acq_in_progress);
 
   send_sig_acq( ACQ_KILL ); 
@@ -122,6 +122,11 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
   if (was_in_progress == ACQ_REPEATING_AND_PROCESSING)
     gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( repeat_p_button ), FALSE );
 
+  // if there were experiments queued, kill them too.
+  
+  for (i=0;i<queue.num_queued;i++)
+    gtk_combo_box_remove_text(GTK_COMBO_BOX(queue.combo),0);
+  queue.num_queued = 0;
 
   return 0;
 }

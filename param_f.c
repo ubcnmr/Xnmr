@@ -68,6 +68,29 @@ gpointer *update_obj;
  */
 
 
+gint am_i_queued(){
+  int i;
+  for(i=0;i<queue.num_queued;i++)
+    if (queue.index[i] == current)
+      return TRUE;
+  return FALSE;
+}
+
+gint allowed_to_change(){
+  if ((am_i_queued() == TRUE || (upload_buff == current && acq_in_progress !=ACQ_STOPPED))
+      && from_make_active == 0)
+    return FALSE;
+  return TRUE;
+}
+
+gint allowed_to_change_repeat(){
+  if ((am_i_queued() == TRUE || (upload_buff == current && acq_in_progress == ACQ_RUNNING))
+      && from_make_active == 0)
+    return FALSE;
+  return TRUE;
+}
+
+
 void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must be loaded first!
 
 {
@@ -90,8 +113,8 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
      // so if the value hasn't changed, get out 
 
 
-    if (doing_2d_update == 0 ){ // ok, so we're not doing 2d update 
-      if(upload_buff==current && acq_in_progress == ACQ_RUNNING){  
+    if (doing_2d_update == 0 && from_make_active == 0 ){ // ok, so we're not doing 2d update 
+      if(allowed_to_change_repeat() == FALSE){  
         //user punched a value 
 	//        printf("can't change value during acquistion\n");    
         switch(param->type) 
@@ -119,7 +142,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     	}
 	
 	if (no_update_open == 0)
-	  popup_no_update("Can't change parameter value during acquisition");  
+	  popup_no_update("Can't change parameter value in acquiring or queued window");  
         return; 
       }
     }
@@ -189,13 +212,13 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       } */
 
 
-    if (upload_buff == current && acq_in_progress == ACQ_RUNNING){ 
+    if (allowed_to_change() == FALSE ){ 
       //      printf("Can't change params while in progress\n"); 
       norecur = 1; 
       gtk_entry_set_text(ent,n_param->t_val); 
       norecur = 0;
       if (no_update_open == 0)
-	popup_no_update("Can't change parameter value during acquisition");
+	popup_no_update("Can't change parameter value in acquiring or queued window");
       return FALSE; 
     } 
 
@@ -378,11 +401,10 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     }
 
 
-
-     if(upload_buff==current && acq_in_progress != ACQ_STOPPED){ 
+    if (allowed_to_change() == FALSE){ 
        printf("can't change value during acquistion\n"); 
        if (no_update_open == 0)
-	 popup_no_update("Can't change value during acquisition");  
+	 popup_no_update("Can't change value in acquiring or queued window");  
 
       // put the old name back in.
 
@@ -491,11 +513,17 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       return;
     }
 
-    if (upload_buff==current && acq_in_progress != ACQ_STOPPED && adj != GTK_ADJUSTMENT(npts_adj)){ // not allowed to change.  reset
+    if (allowed_to_change() == FALSE && !(adj == GTK_ADJUSTMENT(npts_adj) && current == upload_buff)){  // npts should be allowed to change in the acq buff.
+      // not allowed to change.  reset
       //    printf("in update_acqn, seems to be current\n");
       if (adj ==  GTK_ADJUSTMENT(acqs_adj)){
 	norecur = 1;
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_adj),current_param_set->num_acqs);
+	norecur = 0;
+      }
+      if (adj ==  GTK_ADJUSTMENT(npts_adj)){
+	norecur = 1;
+	gtk_adjustment_set_value(GTK_ADJUSTMENT(npts_adj),current_param_set->npts);
 	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(acqs_2d_adj)){
@@ -517,7 +545,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	printf("in update_acqn with unknow widget...\n");
       }
       if (no_update_open == 0)
-	popup_no_update("Can't change parameter value during acquisition");  
+	popup_no_update("Can't change parameter valus in acquiring or queued window");  
       return;
     }
 
@@ -1504,9 +1532,9 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     if( *button < 0 ) 
       return; 
 
-    if (current == upload_buff && acq_in_progress != ACQ_STOPPED){ 
+    if (allowed_to_change() == FALSE){ 
       if (no_update_open == 0)
-	popup_no_update("Can't open array window in acq buffer while acq in progress"); 
+	popup_no_update("Can't open array window for acquiring or queued window"); 
      return; 
     } 
  
@@ -1885,36 +1913,15 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 
   { 
     GtkWidget* dialog; 
-    GtkWidget* button; 
-    GtkWidget* label; 
+
 
     no_update_open = 1; 
-    dialog = gtk_dialog_new(); 
-    
 
-    // if we comment this line out, there's no problem:
-    //    gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE ); 
-
-    label = gtk_label_new ( msg ); 
-    button = gtk_button_new_with_label("OK"); 
-    g_signal_connect_swapped(G_OBJECT (button), "clicked",  
-  			     G_CALLBACK (popup_no_update_ok), G_OBJECT( dialog )); 
-    g_signal_connect(G_OBJECT ( dialog ) ,"delete_event", G_CALLBACK(popup_no_update_ok),
-			      0);
-    gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(dialog)->action_area ),button,FALSE,FALSE,0); 
-
-    gtk_container_set_border_width( GTK_CONTAINER(dialog), 5 ); 
-
-    gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(dialog)->vbox) ), label, FALSE, FALSE, 5 ); 
-    //    gtk_widget_set_uposition(dialog,(int) 50,(int) 200);
-
-
-    //    gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(buffp[current]->win.window));
-    gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(panwindow));
-    gtk_window_set_position(GTK_WINDOW(dialog),GTK_WIN_POS_CENTER_ON_PARENT);
-
-    gtk_widget_show_all (dialog); 
-
+    dialog=gtk_message_dialog_new(GTK_WINDOW(panwindow),GTK_DIALOG_DESTROY_WITH_PARENT,
+				  GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,msg);
+    gtk_widget_show(dialog);
+    g_signal_connect_swapped(dialog,"response",G_CALLBACK(popup_no_update_ok),dialog);
+  
     return FALSE; 
   }
 

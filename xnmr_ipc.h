@@ -44,6 +44,7 @@ gint upload_and_draw_canvas( dbuff *buff  );
 gint upload_and_draw_canvas_with_process( dbuff *buff  );
 
 gint idle_button_up( GtkWidget* button );
+gint idle_queue( GtkWidget* button );
 
 void acq_signal_handler();
 

@@ -30,9 +30,9 @@
                    \                     /
 		     -> do_save_wrapper /
 
-file_open  -> do_load_wrapper -> do_load       (open menu item)
+file_open   -> do_load       (open menu item)
                                /
-reload -----------------------/                (reload button)
+reload -------/                (reload button)
  /\
   |
 reload wrapper                             (from end of acquisition)
@@ -82,6 +82,7 @@ int array_popup_showing;
 int peak=-1, s_pt1=-1,s_pt2; // for s2n, integrate
 int i_pt1,i_pt2; 
 
+int from_make_active = 0;
 GtkWidget* s2n_dialog;
 GtkWidget* int_dialog;  
 GtkWidget* s2n_label;
@@ -111,6 +112,7 @@ dbuff *create_buff(int num){
     { "DisplayMenu",NULL,"_Display"},
     { "AnalysisMenu",NULL,"_Analysis"},
     { "BaselineMenu",NULL,"_Baseline"},
+    { "QueueMenu",NULL,"_Queueing"},
     { "HardwareMenu",NULL,"Hardware"},
     // name, icon, menu label, accelerator, tooltip, callback.
     { "New",GTK_STOCK_NEW,"_New","<control>N","Open a new buffer window",G_CALLBACK(file_new)},
@@ -142,7 +144,9 @@ dbuff *create_buff(int num){
     { "showsplinefit",NULL,"Show Spline Fit",NULL,"Show fit with current points",G_CALLBACK(show_spline_fit)},
     { "dospline",NULL,"Do Spline",NULL,"Apply spline fit to data",G_CALLBACK(do_spline)},
     { "undospline",NULL,"Undo Spline",NULL,"Undo the last spline",G_CALLBACK(undo_spline)},
-    { "clearspline",NULL,"Clear Spline Points",NULL,"Clear the spline points",G_CALLBACK(clear_spline)}
+    { "clearspline",NULL,"Clear Spline Points",NULL,"Clear the spline points",G_CALLBACK(clear_spline)},
+    {"queueexpt",NULL,"Queue Experiment",NULL,"Queue this experiment",G_CALLBACK(queue_expt)},
+    {"queuewindow",NULL,"Queue Window",NULL,"Display the queue window",G_CALLBACK(queue_window)}
     };
 
  static const char *ui_description =
@@ -191,53 +195,16 @@ dbuff *create_buff(int num){
    "    <menuitem action='undospline'/>"
    "    <menuitem action='clearspline'/>"
    "   </menu>"
+   "   <menu action='QueueMenu'>"
+   "     <menuitem action='queueexpt'/>"
+   "     <menuitem action='queuewindow'/>"
+   "   </menu>"
    "   <menu action='HardwareMenu'>"
    "    <menuitem action='ResetDSP'/>"
    "   </menu>"
    " </menubar>"
    "</ui>";
 
-  /* here is my menu structure */
-    /* menu path,   accelerator   callback, callback action, item_type */
- /* static  GtkItemFactoryEntry menu_items[]={
-    {"/_File",       NULL,         NULL, 0, "<Branch>"},
-    {"/File/_New",  "<control>N", file_new,0,NULL},
-    {"/File/_Open", "<control>O", file_open,0,NULL},
-    {"/File/_Save", "<control>S", file_save,0,NULL},
-    {"/File/Save _As", NULL,      file_save_as,0,NULL},
-    {"/File/Append", "<control>A", file_append,0,NULL},
-    {"/File/_Export",NULL,        file_export,0,NULL},
-    {"/File/sep1",  NULL ,        NULL, 0,"<Separator>"},
-    {"/File/_Close", NULL,       file_close,0,NULL},
-    {"/File/E_xit",   NULL         , file_exit,0,NULL},
-    {"/_Display",    NULL,        NULL,0,"<Branch>"},
-    {"/Display/_Real", "<alt>R", toggle_disp,0,NULL},
-    {"/Display/_Imaginary", "<alt>I", toggle_disp,1,NULL},
-    {"/Display/_Magnitude", "<alt>M", toggle_disp,2,NULL},
-    {"/Display/_Baseline", "<alt>J", toggle_disp,3,NULL},
-    {"/Display/_Store scales",NULL,  do_scales,0,NULL},
-    {"/Display/_Apply scales",NULL,  do_scales,1,NULL},
-    {"/Display/_User Defined scales",NULL, do_scales,2,NULL},
-    {"/_Analysis",   NULL,       NULL,0,"<Branch>"},
-    {"/_Analysis/_Phase", "<alt>H", open_phase,0,NULL},
-    {"/_Analysis/_Signal to Noise", NULL, signal2noise,0,NULL},
-    {"/_Analysis/Signal to Noise old",NULL, signal2noiseold,0,NULL},
-    {"/_Analysis/_Integrate", NULL, integrate,0,NULL},
-    {"/_Analysis/_Integrate old", NULL, integrateold,0,NULL},
-    {"/_Analysis/Integrate from file", NULL, integrate_from_file,0,NULL},
-    {"/_Analysis/_Clone from acq buff",NULL,clone_from_acq,0,NULL},
-    {"/_Analysis/_Set sf1", NULL, set_sf1,0, NULL},
-    {"/_Analysis/R_MS", NULL, calc_rms,0, NULL},
-    {"/_Analysis/_Add & subtract",NULL,add_subtract,0,NULL},
-    {"/_Analysis/_Fitting",NULL,fitting,0,NULL},
-    {"/_Baseline", NULL, NULL,0,"<Branch>"},
-    {"/_Baseline/_Pick Spline Points", NULL, baseline_spline,PICK_SPLINE_POINTS, NULL},
-    {"/_Baseline/_Show Spline Fit", NULL,baseline_spline,SHOW_SPLINE_FIT,NULL},
-    {"/_Baseline/_Do Spline", NULL, baseline_spline,DO_SPLINE, NULL},
-    {"/_Baseline/_Undo Spline", NULL, baseline_spline,UNDO_SPLINE, NULL},
-    {"/_Baseline/_Clear Spline Points", NULL, baseline_spline,CLEAR_SPLINE_POINTS, NULL},
-    {"/Hardware/Reset DSP and Synth",NULL, reset_dsp_and_synth,0,NULL}
-    }; */
  GtkActionGroup *action_group;
  GtkUIManager *ui_manager;
  GError *error;
@@ -519,7 +486,7 @@ dbuff *create_buff(int num){
 
     buff->win.window=window;
     g_signal_connect (G_OBJECT(window),"delete_event", //was "destroy"
-		       G_CALLBACK(destroy_buff),NULL);
+		       G_CALLBACK(destroy_buff),buff);
 
     set_window_title(buff);
 
@@ -548,7 +515,6 @@ dbuff *create_buff(int num){
 
      menubar = gtk_ui_manager_get_widget(ui_manager,"/MainMenu");
      gtk_box_pack_start(GTK_BOX(main_vbox),menubar,FALSE,FALSE,0);
-     gtk_widget_show(menubar);
 
 
     
@@ -572,7 +538,6 @@ dbuff *create_buff(int num){
     hbox1=gtk_hbox_new(FALSE,1);
     
     gtk_box_pack_start(GTK_BOX(hbox1),canvas,TRUE,TRUE,0);
-    gtk_widget_show(canvas);
     g_signal_connect(G_OBJECT(canvas),"expose_event",
 		       G_CALLBACK (expose_event),buff);
     // configure event was connected in here
@@ -593,19 +558,16 @@ dbuff *create_buff(int num){
     gtk_box_pack_start(GTK_BOX(vbox1),expandb,FALSE,FALSE,0);
     g_signal_connect(G_OBJECT(expandb),"clicked",
 		       G_CALLBACK(expand_routine),buff);
-    gtk_widget_show(expandb);
     
     expandfb=gtk_toggle_button_new_with_label("Exp First");
     gtk_box_pack_start(GTK_BOX(vbox1),expandfb,FALSE,FALSE,0);
     g_signal_connect(G_OBJECT(expandfb),"clicked",
 		       G_CALLBACK(expandf_routine),buff);
-    gtk_widget_show(expandfb);
     
     fullb=gtk_button_new_with_label("Full");
     gtk_box_pack_start(GTK_BOX(vbox1),fullb,FALSE,FALSE,0);
     g_signal_connect(G_OBJECT(fullb),"clicked",
 		       G_CALLBACK(full_routine),buff);
-    gtk_widget_show(fullb);
     
     hbox2=gtk_hbox_new(FALSE,1);
     
@@ -615,25 +577,19 @@ dbuff *create_buff(int num){
     arrow = gtk_arrow_new(GTK_ARROW_UP,GTK_SHADOW_OUT);
     gtk_container_add(GTK_CONTAINER(Bbutton) , arrow);
 
-    gtk_widget_show(arrow);
-    gtk_widget_show(Bbutton);
 
     gtk_box_pack_start(GTK_BOX(hbox2),Bbutton,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(Bbutton),"clicked",
 		       G_CALLBACK(Bbutton_routine),buff);
-    gtk_widget_show(Bbutton);
     
     Sbutton = gtk_button_new();
     gtk_widget_set_size_request(Sbutton,0,25);
     arrow = gtk_arrow_new(GTK_ARROW_DOWN,GTK_SHADOW_OUT);
     gtk_container_add(GTK_CONTAINER(Sbutton),arrow);
-    gtk_widget_show(arrow);
     gtk_box_pack_start(GTK_BOX(hbox2),Sbutton,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(Sbutton),"clicked",
 		       G_CALLBACK(Sbutton_routine),buff);
-    gtk_widget_show(Sbutton);
     
-    gtk_widget_show(hbox2);
     gtk_box_pack_start(GTK_BOX(vbox1),hbox2,FALSE,FALSE,0);
     
     /* now lowercase buttons */
@@ -643,21 +599,17 @@ dbuff *create_buff(int num){
     gtk_widget_set_size_request(bbutton,0,25);
     arrow = gtk_arrow_new(GTK_ARROW_UP,GTK_SHADOW_ETCHED_OUT);
     gtk_container_add(GTK_CONTAINER(bbutton),arrow);
-    gtk_widget_show(arrow);
     gtk_box_pack_start(GTK_BOX(hbox3),bbutton,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(bbutton),"clicked",
 		       G_CALLBACK(bbutton_routine),buff);
-    gtk_widget_show(bbutton);
     
     sbutton=gtk_button_new();
     gtk_widget_set_size_request(sbutton,0,25);
     arrow = gtk_arrow_new(GTK_ARROW_DOWN,GTK_SHADOW_ETCHED_IN);
     gtk_container_add(GTK_CONTAINER(sbutton),arrow);
-    gtk_widget_show(arrow);
     gtk_box_pack_start(GTK_BOX(hbox3),sbutton,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(sbutton),"clicked",
 		       G_CALLBACK(sbutton_routine),buff);
-    gtk_widget_show(sbutton);
     
     gtk_widget_show(hbox3);
     gtk_box_pack_start(GTK_BOX(vbox1),hbox3,FALSE,FALSE,0);
@@ -676,9 +628,7 @@ dbuff *create_buff(int num){
 
     g_signal_connect(G_OBJECT(autocheck),"clicked",
 		      G_CALLBACK(autocheck_routine),buff);
-    gtk_widget_show(autocheck);
     gtk_box_pack_start(GTK_BOX(hbox4),autocheck,FALSE,FALSE,1);
-    gtk_widget_show(hbox4);
    
 
 
@@ -687,45 +637,33 @@ dbuff *create_buff(int num){
     g_signal_connect(G_OBJECT(autob),"clicked",
 		       G_CALLBACK(auto_routine),buff);
 
-    gtk_widget_show(autob);
-    
-
-
 
     offsetb=gtk_toggle_button_new_with_label("Offset");
     gtk_box_pack_start(GTK_BOX(vbox1),offsetb,FALSE,FALSE,0);
     g_signal_connect(G_OBJECT(offsetb),"clicked",
 		       G_CALLBACK(offset_routine),buff);
-    gtk_widget_show(offsetb);
     
     buff->win.hypercheck=gtk_check_button_new_with_label("Is Hyper");
     gtk_box_pack_start(GTK_BOX(vbox1),buff->win.hypercheck,FALSE,FALSE,0);
-    gtk_widget_show(buff->win.hypercheck);
     g_signal_connect(G_OBJECT(buff->win.hypercheck),"clicked",
 		       G_CALLBACK(hyper_check_routine),buff);
     
     
     hbox=gtk_hbox_new(FALSE,1);
     gtk_box_pack_start(GTK_BOX(vbox1),hbox,FALSE,FALSE,0);
-    gtk_widget_show(hbox);
 
     button=gtk_button_new_with_label("+");
     gtk_box_pack_start(GTK_BOX(hbox),button,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(button),"clicked",
 		       G_CALLBACK(plus_button),buff);
-    gtk_widget_show(button);
 
     button=gtk_button_new_with_label("-");
     gtk_box_pack_start(GTK_BOX(hbox),button,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(button),"clicked",
 		       G_CALLBACK(minus_button),buff);
-    gtk_widget_show(button);
-    gtk_widget_show(hbox);
 
     buff->win.row_col_lab=gtk_label_new("Row");
-    gtk_widget_show(buff->win.row_col_lab);
     button=gtk_button_new();
-    gtk_widget_show(button);
     g_signal_connect(G_OBJECT(button),"clicked",
 		       G_CALLBACK(row_col_routine),buff);
     gtk_container_add(GTK_CONTAINER(button),buff->win.row_col_lab);
@@ -733,7 +671,6 @@ dbuff *create_buff(int num){
 
 
     buff->win.slice_2d_lab=gtk_label_new("2D");
-    gtk_widget_show(buff->win.slice_2d_lab);
     button=gtk_button_new();
     gtk_widget_show(button);
     g_signal_connect(G_OBJECT(button),"clicked",
@@ -743,15 +680,12 @@ dbuff *create_buff(int num){
 
     buff->win.p1_label = gtk_label_new("p1: 0");
     gtk_box_pack_start(GTK_BOX(vbox1),buff->win.p1_label,FALSE,FALSE,0);
-    gtk_widget_show(buff->win.p1_label);
 
     buff->win.p2_label = gtk_label_new("p2: 0");
     gtk_box_pack_start(GTK_BOX(vbox1),buff->win.p2_label,FALSE,FALSE,0);
-    gtk_widget_show(buff->win.p2_label);
 
     buff->win.ct_label = gtk_label_new("ct: 0");
     gtk_box_pack_start(GTK_BOX(vbox1),buff->win.ct_label,FALSE,FALSE,0);
-    gtk_widget_show(buff->win.ct_label);
 
 
     hbox5=gtk_hbox_new(FALSE,1);
@@ -763,11 +697,7 @@ dbuff *create_buff(int num){
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1a,FALSE,FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1b,FALSE,FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1c,FALSE,FALSE,0);
-    gtk_widget_show(buff->win.but1a);
-    gtk_widget_show(buff->win.but1b);
-    gtk_widget_show(buff->win.but1c);
     gtk_box_pack_start(GTK_BOX(hbox5),vbox2,FALSE,FALSE,0);
-    gtk_widget_show(vbox2);
     
 
     vbox2=gtk_vbox_new(FALSE,1);
@@ -776,14 +706,9 @@ dbuff *create_buff(int num){
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but2a,FALSE,FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but2b,FALSE,FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but2c,FALSE,FALSE,0);
-    gtk_widget_show(buff->win.but2a);
-    gtk_widget_show(buff->win.but2b);
-    gtk_widget_show(buff->win.but2c);
     gtk_box_pack_start(GTK_BOX(hbox5),vbox2,FALSE,FALSE,0);
-    gtk_widget_show(vbox2);
 
     gtk_box_pack_start(GTK_BOX(vbox1),hbox5,FALSE,FALSE,0);
-    gtk_widget_show(hbox5);
     
     // want to set up in here...
     if (num_buffs >1){
@@ -803,15 +728,12 @@ dbuff *create_buff(int num){
     g_signal_connect(G_OBJECT( buff->win.but2c ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
 
 
-    gtk_widget_show(vbox1);
     gtk_box_pack_start(GTK_BOX(hbox1),vbox1,FALSE,FALSE,0);
-    gtk_widget_show(hbox1);
     gtk_box_pack_start(GTK_BOX(main_vbox),hbox1,TRUE,TRUE,0);
     
-    gtk_widget_show (main_vbox);
 
 
-    gtk_widget_show(window);
+    gtk_widget_show_all(window);
 
     //    printf("returning from create_buff\n");
 
@@ -1330,53 +1252,65 @@ return;
 
 
 
-//void file_open(dbuff *buff,int action,GtkWidget *widget)
 void file_open(GtkAction *action,dbuff *buff)
 
 {
   GtkWidget *filew;
-  char s[PATH_LENGTH];
 
-  if (buff->buffnum == upload_buff && acq_in_progress != ACQ_STOPPED){
+  if (allowed_to_change() == FALSE){
     popup_msg("Can't open while Acquisition is running\n",TRUE);
     return;
   }
-  filew = gtk_file_selection_new ("Load");
+  //  filew = gtk_file_selection_new ("Load");
+  filew = gtk_file_chooser_dialog_new("Open File",NULL,
+				     GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+				     GTK_STOCK_CANCEL,GTK_RESPONSE_CANCEL,
+				     GTK_STOCK_OPEN,-GTK_RESPONSE_ACCEPT,NULL);
 
-  // Connect the ok_button
-  g_signal_connect (G_OBJECT( GTK_FILE_SELECTION(filew)->ok_button), "clicked", G_CALLBACK (do_load_wrapper),
-		      GTK_FILE_SELECTION (filew)  );
-        
-  // Connect the cancel_button
-  g_signal_connect_swapped (G_OBJECT (GTK_FILE_SELECTION(filew)->cancel_button), "clicked", 
-			     G_CALLBACK( gtk_widget_destroy), G_OBJECT (filew));
-        
-  g_object_set_data( G_OBJECT( filew ), BUFF_KEY, buff );
+  //  gtk_file_chooser_set_action(GTK_FILE_CHOOSER(filew),GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
+  gtk_window_set_keep_above(GTK_WINDOW(filew),TRUE);
 
-  
-  getcwd(s,PATH_LENGTH);
-  path_strcat(s,"/");
-  gtk_file_selection_set_filename ( GTK_FILE_SELECTION (filew),s);
+  if (gtk_dialog_run(GTK_DIALOG(filew)) == -GTK_RESPONSE_ACCEPT) {
+    char *filename;
+    printf("back from file_open dialog\n");
+    filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filew));
+    printf("got filename: %s\n",filename);
+    
+    
+    if (buff != NULL){
+      
+      // here we need to strip out a potential trailing /
+      if (filename[strlen(filename)-1] == '/' ) filename[strlen(filename)-1] = 0;
+      printf("path is: %s\n",filename);
+      
+      do_load( buff, filename);
+    }
+    else popup_msg("buffer was destroyed, can't open",TRUE);
+    g_free(filename);
+    
+  }
+  else { 
+    printf("got no filename\n");
+  }
+  gtk_widget_destroy(filew);
 
-  // place the window
-  gtk_window_set_transient_for(GTK_WINDOW(filew),GTK_WINDOW(buff->win.window));
-  gtk_window_set_position(GTK_WINDOW(filew),GTK_WIN_POS_CENTER_ON_PARENT);
-  gtk_window_set_modal(GTK_WINDOW(filew),TRUE);
-  gtk_widget_show( filew );
-        
   return;
 }
 
-gint destroy_buff(GtkWidget *widget,gpointer data)
+gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 {
   int bnum=0;
   int i,j;
-  dbuff *buff;
+  //  dbuff *buff;
   char old_update_open;
+
+  bnum = buff->buffnum;
 
   // sadly,  it appears as though gtk is slightly broken, delete event doesn't pass 
   // back the data it should, so need to figure out what buff this is.
- 
+  // nope, its not broken, I just wasn't using it correctly!
+
+  /*
   for (i=0;i<MAX_BUFFERS;i++){
     if (buffp[i] != NULL)
       if (buffp[i]->win.window == widget){
@@ -1386,11 +1320,9 @@ gint destroy_buff(GtkWidget *widget,gpointer data)
       }
   }
 
-
-
   
   buff = buffp[bnum];
-
+  */
   // find reasons to not quit
 
   if(buff->win.press_pend > 0 && from_do_destroy_all == 0 ){ // if we're killing everything, kill this one too.
@@ -1515,7 +1447,7 @@ gint destroy_buff(GtkWidget *widget,gpointer data)
 
     show_process_frame( buffp[ current ]->process_data );
 
-    if (buffp[current]->buffnum== upload_buff && acq_in_progress == ACQ_RUNNING)
+    if (buffp[current]->buffnum == upload_buff && acq_in_progress == ACQ_RUNNING)
       update_2d_buttons();
     else
       update_2d_buttons_from_buff( buffp[current] );
@@ -1530,26 +1462,26 @@ gint destroy_buff(GtkWidget *widget,gpointer data)
 
 }
 
-//void file_close(dbuff *buff,int action,GtkWidget *widget)
+
 void file_close(GtkAction *action,dbuff *buff)
 {
   /* this is where we come when you select file_close from the menu ,
      We also go to destroy_buff if we get destroyed from the wm
   This seems to be roughly the same sequence that we'd get if we emitted a delete_event signal*/
 
-  gpointer data=NULL;
+
   int result;
   //  printf("file close for buffer: %i\n",buff->buffnum);
   /* kill the window */
   
-  result = destroy_buff(GTK_WIDGET(buff->win.window),data);
+  result = destroy_buff(GTK_WIDGET(buff->win.window),NULL,buff);
 
   return;
 }
 
 
 
-//void file_save(dbuff *buff,int action,GtkWidget *widget)
+
 void file_save(GtkAction *action,dbuff *buff)
 {
 
@@ -1562,11 +1494,28 @@ void file_save(GtkAction *action,dbuff *buff)
   return;
 }
 
-//void file_save_as(dbuff *buff,int action,GtkWidget *widget)
+
 void file_save_as(GtkAction *action, dbuff *buff)
 {
   GtkWidget *filew;
   char path[PATH_LENGTH];
+
+  /*  unfinished.  The chooser_dialog doesn't work well enough yet.
+  filew = gtk_file_chooser_dialog_new("Open File",NULL,
+				      GTK_FILE_CHOOSER_ACTION_SAVE,GTK_STOCK_CANCEL,
+				      GTK_RESPONSE_CANCEL,GTK_STOCK_OPEN,GTK_RESPONSE_ACCEPT
+				      ,NULL);
+  gtk_window_set_keep_above(GTK_WINDOW(filew),TRUE);
+
+  if (gtk_dialog_run(GTK_DIALOG(filew)) == GTK_RESPONSE_ACCEPT){
+    char *filename;
+
+    g_free(filename);
+  }
+
+  gtk_widget_destroy(filew);
+  */  
+	 
 
   filew = gtk_file_selection_new ("Save As");
 
@@ -1588,12 +1537,11 @@ void file_save_as(GtkAction *action, dbuff *buff)
   gtk_window_set_position(GTK_WINDOW(filew),GTK_WIN_POS_CENTER_ON_PARENT);
   gtk_window_set_modal(GTK_WINDOW(filew),TRUE);
 
-  gtk_widget_show( filew );
+  gtk_widget_show( filew ); 
   return;
   //printf("file save as\n");
 }
 
-//void file_new(dbuff *buff,int action,GtkWidget *widget)
 void file_new(GtkAction *action,dbuff *buff)
 {
   int i;
@@ -1619,11 +1567,10 @@ void file_new(GtkAction *action,dbuff *buff)
 
 void file_exit(GtkAction *action,dbuff *buff)
 {
-  //printf("file_exit\n");
   destroy_all(NULL,NULL); 
 }
 
-gint unauto(dbuff *buff)             //What is this? -SN
+gint unauto(dbuff *buff)         
 {
 
   // turns off the "auto" toggle button
@@ -1633,12 +1580,10 @@ gint unauto(dbuff *buff)             //What is this? -SN
 }
 
 
-//static float xx1=0,xx2=1,yy1=0,yy2=1,yscale=1,yoffset=0;
 static struct {
   float xx1,xx2,yy1,yy2,yscale,yoffset;
 } scales={0.,1.,0.,1.,1.,0.};
 
-//void do_scales(dbuff *buff,int action,GtkWidget *widget)
 void store_scales(GtkAction *action,dbuff *buff)
 {
     scales.xx1=buff->disp.xx1;
@@ -1835,10 +1780,25 @@ gint full_routine(GtkWidget *widget,dbuff *buff)
 
 
 
+void s2ndelete(dbuff *buff,GtkWidget *widget){
+
+      gtk_widget_destroy(s2n_dialog);
+
+      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+				     G_CALLBACK (press_in_win_event),
+				     buff);
+  // disconnect our event
+
+      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
+                        G_CALLBACK( s2n_press_event), buff);
+      doing_s2n = 0;
+      buff->win.press_pend=0;
+
+      draw_canvas (buff);
+
+}
 
 
-
-//void signal2noise( dbuff *buff, int action, GtkWidget *widget )
 void signal2noise(GtkAction *action,dbuff *buff)
 {
   
@@ -1864,7 +1824,7 @@ void signal2noise(GtkAction *action,dbuff *buff)
   gtk_window_set_transient_for(GTK_WINDOW(s2n_dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(s2n_dialog),GTK_WIN_POS_CENTER_ON_PARENT);
 
-
+  g_signal_connect_swapped(G_OBJECT(s2n_dialog),"delete_event",G_CALLBACK(s2ndelete),buff);
   gtk_widget_show_all (s2n_dialog); 
 
 
@@ -1944,7 +1904,6 @@ if (pt1 <0 || pt2 < 0 || peak < 0) return;
  
  s2n = s/n;
  
- draw_canvas (buff);
  snprintf(string,UTIL_LEN,"S/N = %g\nS = %g, N= %g",s2n,s,n );
  printf("Using point %i with value %f\n",maxi,max);
  popup_msg(string,TRUE);
@@ -1973,6 +1932,7 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
       //      printf("pixel: %i, x: %i\n",(int) event->x,peak);
       draw_vertical(buff,&colours[BLUE],0.,(int) event->x);
+      buff->win.press_pend=2;
 
       break;
     case 2:
@@ -1980,31 +1940,21 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
       s_pt1 = pix_to_x(buff,event->x);
 
       draw_vertical(buff,&colours[BLUE],0.,(int) event->x);
+      buff->win.press_pend=1;
       break;
     case 1:
-      gtk_widget_destroy(s2n_dialog);
       s_pt2 = pix_to_x(buff, event->x);
       // now in here we need to calculate the s2n and display it
 
-
-
-      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
-				     G_CALLBACK (press_in_win_event),
-				     buff);
-  // disconnect our event
-
-      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
-                        G_CALLBACK( s2n_press_event), buff);
-      doing_s2n = 0;
+      s2ndelete(buff,widget);
       do_s2n(peak,s_pt1,s_pt2,buff);
+
       // calculate the s2n
       break;
     }
-  buff->win.press_pend--;
 
 }
 
-//void signal2noiseold( dbuff *buff, int action, GtkWidget *widget )
 void signal2noiseold(GtkAction *action, dbuff *buff)
 {
   if (peak == -1) {
@@ -2017,8 +1967,20 @@ void signal2noiseold(GtkAction *action, dbuff *buff)
 
 
 
+void int_delete(dbuff *buff,GtkWidget *widget){
+  printf("in int_delete\n");
+  buff->win.press_pend = 0;
+  doing_int = 0;
+  g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
+					G_CALLBACK( integrate_press_event), buff);
+  g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+				    G_CALLBACK (press_in_win_event),buff);
 
-//void integrate( dbuff *buff, int action, GtkWidget *widget )
+  gtk_widget_destroy(int_dialog);
+  draw_canvas (buff);
+
+}
+
 void integrate(GtkAction *action, dbuff *buff)
 {
   
@@ -2055,6 +2017,8 @@ void integrate(GtkAction *action, dbuff *buff)
   // connect our event
   g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
                         G_CALLBACK( integrate_press_event), buff);
+  //trap user killing our window
+  g_signal_connect_swapped(G_OBJECT(int_dialog),"delete_event",G_CALLBACK(int_delete),buff);
   
   return;
 
@@ -2170,7 +2134,6 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  }
  if (export == 1) fclose(fstream);
  printf("\n");
- draw_canvas (buff);
 }
 
 
@@ -2194,35 +2157,26 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
       printf("integrate: pt1: %i ", i_pt1);
 
       draw_vertical(buff,&colours[BLUE],0.,(int) event->x);
+      buff->win.press_pend = 1;
       break;
     case 1:
-      gtk_widget_destroy(int_dialog);
       i_pt2 = pix_to_x(buff, event->x);
       printf("pt2: %i\n", i_pt2);
       // now in here we need to calculate the integral and display it
 
 
       // disconnect our event
-
-      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
-                        G_CALLBACK( integrate_press_event), buff);
-      //      printf("about to unblock old\n");
-      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
-				     G_CALLBACK (press_in_win_event),
-				     buff);
+      int_delete(buff,widget);
 
       //      printf("about to do_integrate\n");
-      doing_int = 0;
       do_integrate(i_pt1,i_pt2,buff);
       // calculate the integral
       break;
     }
-  buff->win.press_pend--;
 
 }
 
 
-//void integrateold( dbuff *buff, int action, GtkWidget *widget )
 void integrateold(GtkAction *action, dbuff *buff)
 {
 
@@ -2787,21 +2741,26 @@ gint offset_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 
 void make_active(dbuff *buff){
-    //printf("trying to raise\n");
+
+  int temp_current;
+    printf("trying to raise\n");
     // if acq is in progress, change the order
   // I think this is to avoid "changing parameter during acquisition errors
+    temp_current = current;
+    current = buff->buffnum;
 
-    if (buff->buffnum== upload_buff && acq_in_progress == ACQ_RUNNING){
+    if (allowed_to_change() == FALSE){
+      printf("in make active, setting from make_active = 1\n");
+      from_make_active = 1;
       show_parameter_frame( &buff->param_set );
       show_process_frame( buff->process_data );
-      last_current = current;
-      current = buff->buffnum;
+      last_current = temp_current;
       show_active_border(); 
       gdk_window_raise(buff->win.window->window);
       update_2d_buttons();
+      from_make_active = 0;
     }else{
-      last_current = current;
-      current = buff->buffnum;
+      last_current = temp_current;
       show_active_border(); 
       gdk_window_raise(buff->win.window->window);
       show_parameter_frame( &buff->param_set );
@@ -3284,34 +3243,7 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
 
 
 
-gint do_load_wrapper( GtkWidget* widget, GtkFileSelection* fs )
 
-{
-  char path[PATH_LENGTH];
-  dbuff* buff;
-  int result;
-
-
-  path_strcpy(path, gtk_file_selection_get_filename ( GTK_FILE_SELECTION(fs) ));
-  buff =  (dbuff *)  g_object_get_data( G_OBJECT( fs ), BUFF_KEY );
-  //make sure the buffer still exists!
-
-  if (buff == NULL){
-    popup_msg("buffer was destroyed, can't open",TRUE);
-    //    gtk_widget_destroy(GTK_WIDGET(widget));
-    return TRUE;
-  }
-
-  // here we need to strip out a potential trailing /
-  if (path[strlen(path)-1] == '/' ) path[strlen(path)-1] = 0;
-
-
-  result = do_load( buff, path);
-    
-  gtk_widget_hide( GTK_WIDGET( fs ) );
-  gtk_widget_destroy( GTK_WIDGET( fs ) );
-  return result;
-}
 
 gint do_load( dbuff* buff, char* path )
 {
@@ -3510,15 +3442,12 @@ gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs )
   //  printf("from check_overwrite_wrapper (file_save dialog): %s\n",path);
 
   // assume this is always a data file even if has a trailing /
+
+  
+
   if (path[strlen(path)-1] == '/') path[strlen(path)-1]=0;
-  //  printf("from check_overwrite_wrapper (file_save dialog): %s\n",path);
-
-  result = check_overwrite( buff, path );
-
-
-
-  gtk_widget_hide( GTK_WIDGET( fs ) );
-  gtk_widget_destroy( GTK_WIDGET( fs ) );
+  check_overwrite( buff, path );
+  
 
   return result;
 }
@@ -3538,7 +3467,7 @@ gint check_overwrite( dbuff* buff, char* path )
   }
   //  printf("in check_overwrite got path: %s\n",path);
 
-  if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) < 0 ) {
+  if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
     if( errno != EEXIST ) {
       popup_msg("check_overwrite can't mkdir?",TRUE);
       return 0 ;
@@ -3779,7 +3708,6 @@ void set_window_title(dbuff *buff)
 }
 	  
 
-//void file_export(dbuff *buff,int action,GtkWidget *widget)
 void file_export(GtkAction *action,dbuff *buff)
 {
 
@@ -3947,7 +3875,6 @@ return;
 }
 
 
-//void file_append(dbuff *buff,int action,GtkWidget *widget)
 void file_append(GtkAction *action, dbuff *buff)
 {
   char s[PATH_LENGTH],s2[PATH_LENGTH],s3[UTIL_LEN],old_exec[PATH_LENGTH];
@@ -4166,7 +4093,6 @@ gint put_name_in_buff(dbuff *buff,char *fname)
   
 }
 
-//void clone_from_acq(dbuff *buff, int action, GtkWidget *widget )
 void clone_from_acq(GtkAction *action,dbuff *buff )
 {
 
@@ -4249,6 +4175,21 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   
 }
 
+void sf1delete(dbuff *buff,GtkWidget *widget){
+
+
+  buff->win.press_pend = 0;
+  
+
+  g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
+					G_CALLBACK( set_sf1_press_event), buff);
+  g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+				     G_CALLBACK (press_in_win_event),
+				     buff);
+  gtk_widget_destroy(setsf1dialog);
+  
+  return;
+}
 
 
 void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
@@ -4260,17 +4201,12 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   double diff;
   char s[PARAM_NAME_LEN];
 
-  gtk_widget_destroy(setsf1dialog);
-  buff->win.press_pend = 0;
+
+  sf1delete(buff,widget);
+  
 
   point = pix_to_x(buff, event->x);
 
-  g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
-				     G_CALLBACK (press_in_win_event),
-				     buff);
-  
-  g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
-				 G_CALLBACK( set_sf1_press_event), buff);
   // now in here, need to figure out what the new frequency should be, and set it.
 
   if (get_ch1(buff) == 'C') strncpy(param_search,"sf2",4);
@@ -4362,7 +4298,6 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 }
 
-//void set_sf1(dbuff *buff, int action, GtkWidget *widget )
 void set_sf1(GtkAction *action,dbuff *buff)
 {
 
@@ -4395,18 +4330,19 @@ void set_sf1(GtkAction *action,dbuff *buff)
                         G_CALLBACK( set_sf1_press_event), buff);
   
 
-  // raise out window and give some instruction
+  // raise our window and give some instruction
 
   last_current = current;
   current = buff->buffnum;
   show_active_border();
 
+  
+
   setsf1dialog = gtk_dialog_new(); 
   setsf1label = gtk_label_new("Click on the new carrier frequency");
   gtk_container_set_border_width( GTK_CONTAINER(setsf1dialog), 5 ); 
   gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(setsf1dialog)->vbox) ), setsf1label, FALSE, FALSE, 5 ); 
-
-
+  g_signal_connect_swapped(G_OBJECT(setsf1dialog),"delete_event",G_CALLBACK(sf1delete),buff);
   gtk_window_set_transient_for(GTK_WINDOW(setsf1dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(setsf1dialog),GTK_WIN_POS_CENTER_ON_PARENT);
 
@@ -4419,7 +4355,8 @@ void set_sf1(GtkAction *action,dbuff *buff)
 
 }
 
-//void reset_dsp_and_synth(dbuff *buff, int action, GtkWidget *widget){
+
+
 void reset_dsp_and_synth(GtkAction *action,dbuff *buff){
 
   if (no_acq != FALSE)
@@ -4432,7 +4369,6 @@ void reset_dsp_and_synth(GtkAction *action,dbuff *buff){
   }
   
 }
-//void calc_rms(dbuff *buff, int action, GtkWidget *widget )
 void calc_rms(GtkAction *action,dbuff *buff)
 {
 
@@ -4574,9 +4510,9 @@ gint channel_button_change(GtkWidget *widget,dbuff *buff){
 
   //    printf("in channel_button_change, buffnum: %i, acq_in_progress %i\n",buff->buffnum,acq_in_progress);
 
-  if (buff->buffnum == upload_buff && acq_in_progress != ACQ_STOPPED){    
+  if (allowed_to_change() == FALSE){    
     if ( no_update_open == 0)
-      popup_no_update("Can't change channels while acq is in progress");
+      popup_no_update("Can't change channels in acquiring or queued window");
     if (widget == buff->win.but1a || widget == buff->win.but1b || widget == buff->win.but1c){
       //      printf("got channel 1 setting to: %c\n",data_shm->ch1);
       norecur = 1;
@@ -4675,7 +4611,6 @@ void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spl
 
 void pick_spline_points(GtkAction *action,dbuff *buff){
   int i;
-  GtkWidget *label,*button;
 
   if (base.spline_current_buff != -1) {
     gdk_window_raise(base.dialog->window);
@@ -4707,26 +4642,18 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
       
       
   /* open up a window that we click ok in when we're done */
-  base.dialog = gtk_dialog_new();
-  //    gtk_window_set_modal( GTK_WINDOW( base.dialog ), TRUE );
-  label = gtk_label_new ( "Hit ok when baseline points have been entered" );
-  button = gtk_button_new_with_label("OK");
-  
-  /* catches the ok button */
-  g_signal_connect_swapped(G_OBJECT (button), "clicked", G_CALLBACK (baseline_spline), G_OBJECT( base.dialog ) );
-  
+  base.dialog = gtk_message_dialog_new(GTK_WINDOW(panwindow),
+				  GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,
+					    GTK_BUTTONS_OK,"Hit ok when baseline points have been entered");
+  //  label = gtk_label_new ( "Hit ok when baseline points have been entered" );
+  //  gtk_container_add(GTK_CONTAINER(GTK_DIALOG(base.dialog)->vbox),label);
+
   /* also need to catch when we get a close signal from the wm */
-  g_signal_connect(G_OBJECT (base.dialog),"delete_event",G_CALLBACK (baseline_spline),G_OBJECT( base.dialog ));
-  
-  gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(base.dialog)->action_area ),button,FALSE,FALSE,0);
-  gtk_container_set_border_width( GTK_CONTAINER(base.dialog), 5 );
-  gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(base.dialog)->vbox) ), label, FALSE, FALSE, 5 );
-  
-  gtk_window_set_transient_for(GTK_WINDOW(base.dialog),GTK_WINDOW(panwindow));
-  gtk_window_set_position(GTK_WINDOW(base.dialog),GTK_WIN_POS_CENTER_ON_PARENT);
-  
+  g_signal_connect(G_OBJECT (base.dialog),"response",G_CALLBACK (baseline_spline),G_OBJECT( base.dialog ));
   gtk_widget_show_all (base.dialog);
   
+
+
   base.spline_current_buff = buff->buffnum;
   g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
 				  G_CALLBACK (press_in_win_event),
@@ -4979,7 +4906,6 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 
 
 
-//void add_subtract(dbuff *buff, int action, GtkWidget *widget ){
 void add_subtract(GtkAction *action, dbuff *buff){
 
   // need to maintain lists of buffers -
@@ -5537,7 +5463,6 @@ gint hide_add_sub(GtkWidget *widget,gpointer data){
 }
 
 
-//void fitting(dbuff *buff, int action, GtkWidget *widget ){
 void fitting(GtkAction *action,dbuff *buff){
 
     // default is current buffer and record
@@ -6144,4 +6069,127 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
   }
   printf("in fit_data_changed but don't know what changed?\n");
 
+}
+
+
+void queue_expt(GtkAction *action, dbuff *buff){
+  char path[PATH_LENGTH];
+  int i;
+  printf("in queue_expt\n");
+
+  if (queue.num_queued >= MAX_QUEUE){
+    popup_msg("Queue is full",TRUE);
+    return;
+  }
+
+  /* in here we:  make sure acq is running.
+     if its nosave, popup a warning.
+
+     - make sure our buffer isn't already in the queue
+     - make sure our filename is good.
+     - check that channels are the same as current acq
+     - add our experiment to the queue
+
+  */
+
+  
+  if (acq_in_progress != ACQ_RUNNING){
+    popup_msg("Must be acquiring to queue",TRUE);
+    return;
+  }
+
+
+  // need to check goodness of filename in here...
+  //  check_overwrite( buff, buff->param_set.save_path); 
+
+
+  path_strcpy(path,buff->param_set.save_path);
+  
+  if (path[strlen(path)-1] == '/'){
+    popup_msg("Invalid filename",TRUE);
+    return;
+  }
+  //  printf("in check_overwrite got path: %s\n",path);
+
+  if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
+    if( errno != EEXIST ) {
+      popup_msg("Unable to create save file!",TRUE);
+      return;
+    }
+    else{
+      popup_msg("File Exists - pick a new name",TRUE);
+      return;
+    }
+  }
+  if (rmdir(path)!= 0){
+    popup_msg("Weird created dir, but couldn't remove it",TRUE);
+    return;
+  }
+
+
+  // ok, so it doesn't exist now, need to make sure we're not going to do it in an already
+  // queue'd experiment
+
+  for (i=0;i<queue.num_queued;i++)
+    if (strncmp(path,buffp[queue.index[i]]->param_set.save_path,PATH_LENGTH) == 0){
+      popup_msg("Save file name matches one already queued.  Pick another",TRUE);
+      return;
+    }
+
+
+  // check channels are the same as in acq buff.
+
+  if (data_shm->mode != NORMAL_MODE)
+    popup_msg("Warning, currently acquisition is set to save to acq_temp!!",TRUE);
+
+
+  for (i=0;i<queue.num_queued;i++)
+    if (queue.index[i] == buff->buffnum){
+      popup_msg("This experiment already in the queue",TRUE);
+      return;
+    }
+
+  if (upload_buff == current){
+    popup_msg("This experiment is the current acq buff",TRUE);
+    return;
+  }
+
+
+  // print buff num and file name into combo box
+
+  snprintf(path,PATH_LENGTH,"%i - %s",buff->buffnum,buff->param_set.save_path);
+  
+  gtk_combo_box_append_text(GTK_COMBO_BOX(queue.combo),path);
+  
+  gtk_combo_box_set_active(GTK_COMBO_BOX(queue.combo),queue.num_queued);
+  queue.index[queue.num_queued] = buff->buffnum;
+  queue.num_queued += 1;
+  snprintf(path,PATH_LENGTH,"Buffer %i with save path:\n %s\n added to queue",
+	   buff->buffnum,buff->param_set.save_path);
+
+  popup_msg(path,TRUE);
+  
+
+}
+void queue_window(GtkAction *action, dbuff *buff){
+ printf("in queue_window\n");
+
+ gtk_widget_show_all(queue.dialog);
+
+}
+
+void remove_queue (GtkWidget *widget,gpointer dum){
+  int i;
+
+  // remove the current experiment from the queue
+  if (queue.num_queued >0){
+    i = gtk_combo_box_get_active(GTK_COMBO_BOX(queue.combo));
+    gtk_combo_box_remove_text(GTK_COMBO_BOX(queue.combo),i);
+  }
+  else printf("in remove_queue, but none queued\n");
+
+
+
+
+  return;
 }

@@ -72,6 +72,15 @@ typedef struct{
 } fitting_struct;
 
 
+#define MAX_QUEUE 25
+typedef struct{
+  GtkWidget *dialog,*combo;
+  int num_queued;
+  int index[MAX_QUEUE];
+    } queue_struct;
+
+
+
 /* global variables */
 
 extern int current;
@@ -83,6 +92,7 @@ extern char data_path[PATH_LENGTH];
 extern char from_do_destroy_all;
 extern char no_update_open;
 extern GtkWidget *panwindow;
+extern int from_make_active;
 
 /* function prototypes */
 dbuff *create_buff();
@@ -125,7 +135,7 @@ void draw_oned(dbuff *buff,float extrayoff,float extraxoff,float *data
 	       ,int npts);
 void draw_oned2(dbuff *buff,float extrayoff,float extraxoff);
 void draw_canvas(dbuff *buff);
-gint destroy_buff(GtkWidget *widget,gpointer num);
+gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *num);
 gint full_routine(GtkWidget *widget,dbuff *buff);
 gint expand_routine(GtkWidget *widget,dbuff *buff);
 gint expandf_routine(GtkWidget *widget,dbuff *buff);
@@ -226,10 +236,14 @@ void add_sub_buttons(GtkWidget *widget,gpointer data);
 void fitting_buttons(GtkWidget *widget,gpointer data);
 gint hide_add_sub(GtkWidget *widget,gpointer data);
 gint hide_fit(GtkWidget *widget,gpointer data);
+void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff);
 
 void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *lty,float *ty,void *uf);
 void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz_wid,float *spect,int np,float dwell);
 
+void queue_expt(GtkAction *action, dbuff *buff);
+void queue_window(GtkAction *action, dbuff *buff);
+void remove_queue(GtkWidget *widget, gpointer dum);
 #endif
 
 

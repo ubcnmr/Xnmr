@@ -29,6 +29,7 @@ extern GdkGC  *colourgc;
 extern phase_data_struct  phase_data;
 extern add_sub_struct add_sub;
 extern fitting_struct fit_data;
+extern queue_struct queue;
 
 extern GtkWidget  *phase_dialog,*freq_popup,*fplab1,*fplab2,*fplab3,*fplab4,*fplab5;
 extern GtkObject  *phase0_ad,*phase1_ad;

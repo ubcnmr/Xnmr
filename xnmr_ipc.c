@@ -420,7 +420,7 @@ void set_acqn_labels()
   //  snprintf(s,UTIL_LEN,"completion:\n%s",comp_time);
   //  gtk_label_set_text( GTK_LABEL(completion_time_label),s);
   
-  snprintf( s,UTIL_LEN*2, "%2d:%2d:%2d\n%s",hour,min,sec,comp_time);
+  snprintf( s,UTIL_LEN*2, "%2d:%2d:%2d\n%s\nacq buff: %i",hour,min,sec,comp_time,upload_buff);
   gtk_label_set_text( GTK_LABEL(time_remaining_label),s);
 
   //  printf("left set labels\n");
@@ -493,8 +493,35 @@ gint idle_button_up( GtkWidget *button )
 
 {
   gdk_threads_enter();
-  //  printf( "in_idle_button_up\n" );
+  printf( "in_idle_button_up\n" );
   gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( button ), FALSE );
+  gdk_threads_leave();
+  return FALSE;
+}
+
+gint idle_queue( GtkWidget *button )
+
+{
+  int i;
+  gdk_threads_enter();
+
+  printf("in idle_queue\n");
+  if (queue.num_queued ==0){
+    printf("in idle_queue, but none in queue!\n");
+  }
+  else{
+    gtk_combo_box_remove_text(GTK_COMBO_BOX(queue.combo),0);
+
+    queue.num_queued -= 1;
+    for (i=0;i<queue.num_queued;i++)
+      queue.index[i]=queue.index[i+1];
+
+    make_active(buffp[queue.index[0]]);
+    
+    
+    //  printf( "in_idle_button_down\n" );
+    gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), TRUE );
+  }
   gdk_threads_leave();
   return FALSE;
 }
@@ -707,6 +734,11 @@ void acq_signal_handler()
 	    //	    printf("calling idle_button up for acq nosave\n");
 	  }
 	  data_shm->mode = NO_MODE;
+
+	  // if there's experiments in the queue, deal with them in the main thread.
+	  if (queue.num_queued > 0)
+	    g_idle_add( (GtkFunction) idle_queue,NULL);
+	  
 	  break;
 	case ACQ_REPEATING:
 	  g_idle_add( (GtkFunction) idle_button_up, repeat_button );
@@ -719,7 +751,6 @@ void acq_signal_handler()
 	default:
 	  break;
 	}
-
       return;
       break;
     case NO_SIGNAL:

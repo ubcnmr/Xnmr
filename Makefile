@@ -17,6 +17,11 @@ all: Xnmr acq libxnmr.so Xnmr_preproc
 spin_bug: spin_bug.c
 	cc -o spin_bug -g -Wall `pkg-config --cflags gtk+-2.0` spin_bug.c `pkg-config --libs gtk+-2.0`
 
+chooser_bug.o: chooser_bug.c
+	cc -c chooser_bug.c $(CFLAGS)
+
+chooser_bug: chooser_bug.o
+	cc -o chooser_bug chooser_bug.o `pkg-config --libs gthread-2.0 gtk+-2.0`
 
 Xnmr_preproc: Xnmr_preproc.c
 	$(CC) $(CFLAGS)  -o Xnmr_preproc Xnmr_preproc.c

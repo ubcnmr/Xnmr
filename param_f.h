@@ -87,7 +87,8 @@ void apply_inc_pressed( GtkWidget* widget, gpointer data );
 void destroy_popup( GtkWidget *widget, gpointer data );
 gint popup_no_update_ok(GtkWidget *widget,gpointer *dialog);
 gint popup_no_update( char* msg );
-
+gint am_i_running_or_queued();
+gint allowed_to_change();
 
 #endif
 

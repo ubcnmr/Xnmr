@@ -154,6 +154,7 @@ GdkGC *colourgc;
 phase_data_struct phase_data;
 add_sub_struct add_sub;
 fitting_struct fit_data;
+queue_struct queue;
 
 int phase_npts=0;
 GtkWidget *phase_dialog,*freq_popup,*fplab1,*fplab2,*fplab3,*fplab4,*fplab5;
@@ -202,10 +203,12 @@ int main(int argc,char *argv[])
   //block_signal();
 
   /* initialize the gtk stuff */
+
   g_thread_init(NULL); // we don't really use threads, except to catch signals
   gdk_threads_init();
   // mutex to ensure that routines added with idle_add don't collide.
   gtk_init(&argc, &argv);
+
   /* look for command line arguments  that gtk didn't want*/
   do{
     ar=getopt_long(argc,argv,"n",cmds,&longindex);
@@ -344,12 +347,51 @@ int main(int argc,char *argv[])
     if (result != 0) perror("making ~/Xnmr/data:");
   }
 
+  /* build the queue window */
+  printf("mark 5\n");
+
+  queue.dialog = gtk_dialog_new();
+  gtk_window_set_transient_for(GTK_WINDOW(queue.dialog),GTK_WINDOW(panwindow));
+  gtk_window_set_position(GTK_WINDOW(queue.dialog),GTK_WIN_POS_CENTER_ON_PARENT);
+  gtk_window_set_title(GTK_WINDOW(queue.dialog),"Queueing");
+
+
+  label=gtk_label_new("Experiments in Queue");
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),label,FALSE,FALSE,0);
+
+
+  hbox = gtk_hbox_new(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),hbox,FALSE,FALSE,0);
+
+  queue.combo = gtk_combo_box_new_text();
+  gtk_box_pack_start(GTK_BOX(hbox),queue.combo,FALSE,FALSE,0);
+  
+  button = gtk_button_new_with_label("Remove from Queue");
+  gtk_box_pack_start(GTK_BOX(hbox),button,FALSE,FALSE,0);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(remove_queue),NULL);
+
+  button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->action_area),button,TRUE,TRUE,2);
+
+  g_signal_connect_swapped(G_OBJECT(button),"clicked",G_CALLBACK(gtk_widget_hide),queue.dialog);
+
+  g_signal_connect_swapped( G_OBJECT (queue.dialog), "delete_event", G_CALLBACK( gtk_widget_hide ), queue.dialog);
+
+  queue.num_queued = 0;
+
+
+
+
+  printf("mark 4\n");
+
+
 
   /* build the add/subtract window */
 
   add_sub.dialog = gtk_dialog_new();
-  label=gtk_label_new("Add/Subtract");
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),label,FALSE,FALSE,0);
+  gtk_window_set_title(GTK_WINDOW(add_sub.dialog),"Add/Subtract");
+  //  label=gtk_label_new("Add/Subtract");
+  //  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),label,FALSE,FALSE,0);
 
   gtk_window_set_transient_for(GTK_WINDOW(add_sub.dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(add_sub.dialog),GTK_WIN_POS_CENTER_ON_PARENT);
@@ -449,6 +491,7 @@ int main(int argc,char *argv[])
 
 
   // now the multiplier line:
+  printf("mark 3\n");
 
   hbox = gtk_hbox_new(TRUE,2);
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),hbox,FALSE,FALSE,0);
@@ -473,11 +516,11 @@ int main(int argc,char *argv[])
   label = gtk_label_new(" ");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  add_sub.apply = gtk_button_new_with_label("Apply");
+  add_sub.apply = gtk_button_new_from_stock(GTK_STOCK_APPLY);
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->action_area),add_sub.apply,TRUE,TRUE,2);
   g_signal_connect(G_OBJECT(add_sub.apply),"clicked",G_CALLBACK(add_sub_buttons),NULL);
 
-  add_sub.close = gtk_button_new_with_label("Close");
+  add_sub.close=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->action_area),add_sub.close,TRUE,TRUE,2);
   g_signal_connect(G_OBJECT(add_sub.close),"clicked",G_CALLBACK(add_sub_buttons),NULL);
 
@@ -497,9 +540,9 @@ int main(int argc,char *argv[])
   gtk_window_set_transient_for(GTK_WINDOW(fit_data.dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(fit_data.dialog),GTK_WIN_POS_CENTER_ON_PARENT);
 
-
-  label = gtk_label_new("Fitting");
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),label,FALSE,FALSE,0);
+  gtk_window_set_title(GTK_WINDOW(fit_data.dialog),"Fitting");
+  //  label = gtk_label_new("Fitting");
+  //  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),label,FALSE,FALSE,0);
 
   // the label line:
 
@@ -576,6 +619,7 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
 
+  printf("mark 2\n");
 
   // next line:
 
@@ -619,7 +663,8 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.run_fit_range,FALSE,FALSE,2);
   g_signal_connect(G_OBJECT(fit_data.run_fit_range),"clicked",G_CALLBACK(fitting_buttons),NULL);
 
-  fit_data.close = gtk_button_new_with_label("Close");
+  //  fit_data.close = gtk_button_new_with_label("Close");
+  fit_data.close = gtk_button_new_from_stock(GTK_STOCK_CLOSE);
   gtk_box_pack_end(GTK_BOX(hbox),fit_data.close,FALSE,FALSE,2);
   g_signal_connect(G_OBJECT(fit_data.close),"clicked",G_CALLBACK(fitting_buttons),NULL);
 
@@ -653,6 +698,7 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
 
 
+  printf("mark 1\n");
 
 
   gtk_widget_show_all(GTK_WIDGET(GTK_DIALOG(fit_data.dialog)->vbox));
@@ -724,9 +770,10 @@ int main(int argc,char *argv[])
 
 
 
-
+  printf("before create buff\n");
 
   buffp[0]=create_buff(0);
+  printf("after create buff\n");
 
 
   gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff1),0);
@@ -935,7 +982,8 @@ white set up below  */
 		     G_CALLBACK(phase_changed),NULL);
   gtk_widget_show (phase_data.pscroll0);
 
-  button=gtk_button_new_with_label("Ok");
+
+  button=gtk_button_new_from_stock(GTK_STOCK_OK);
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->action_area),
 		     button,TRUE,TRUE,1);
   g_signal_connect(G_OBJECT(button),"clicked",
@@ -960,7 +1008,7 @@ white set up below  */
   gtk_widget_show(button);
   phase_data.update=button;
 
-  button=gtk_button_new_with_label("Cancel");
+  button=gtk_button_new_from_stock(GTK_STOCK_CANCEL);
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->action_area),
 		     button,TRUE,TRUE,1);
   g_signal_connect(G_OBJECT(button),"clicked",
@@ -1557,7 +1605,8 @@ gint destroy_all(GtkWidget *widget, gpointer data)
     
     dialog = gtk_dialog_new();
     gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
-    
+    gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
+
     label = gtk_label_new ("Acquisition is in progress, are you sure you want to quit?");
     
     yes_b = gtk_button_new_with_label("Yes (Quit and leave Acq running)");
@@ -1593,7 +1642,7 @@ void do_destroy_all()
   from_do_destroy_all = 1;
   for( i=0; i<MAX_BUFFERS; i++ ) {
     if( buffp[i] != NULL )
-      destroy_buff( buffp[i]->win.window, NULL ); 
+      destroy_buff( buffp[i]->win.window, NULL,buffp[i] ); 
   }
 
   //release_ipc_stuff will be called when the last file window is destroyed,, so we don't have to 
@@ -1615,35 +1664,24 @@ gint hide_phase( GtkWidget *widget, GdkEvent  *event, gpointer   data )
 gint popup_msg( char* msg ,char modal)
 {
   GtkWidget* dialog;
-  GtkWidget* button;
   GtkWidget* label;
 
-  dialog = gtk_dialog_new();
 
-  if (modal == TRUE)
-    gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
-
-  label = gtk_label_new ( msg );
-  button = gtk_button_new_with_label("OK");
-  g_signal_connect_swapped (G_OBJECT (button), "clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT( dialog ) );
-  gtk_box_pack_start (GTK_BOX ( GTK_DIALOG(dialog)->action_area ),button,FALSE,FALSE,0);
-
-  gtk_container_set_border_width( GTK_CONTAINER(dialog), 5 );
-
-  gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(dialog)->vbox) ), label, FALSE, FALSE, 5 );
-
-  //  gtk_widget_set_uposition(dialog,(int) 50,(int) 200);
-  if (modal == TRUE)
-    gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(buffp[current]->win.window));
-  else
-    gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(panwindow));
-  gtk_window_set_position(GTK_WINDOW(dialog),GTK_WIN_POS_CENTER_ON_PARENT);
-
-
-  gtk_widget_show_all (dialog);
-
-  //  gdk_window_raise(dialog->window); // seems unnecessary
-  //  printf("raised dialog?\n");
+  if (modal == TRUE){
+    dialog = gtk_message_dialog_new(GTK_WINDOW(buffp[current]->win.window),GTK_DIALOG_DESTROY_WITH_PARENT,
+				  GTK_MESSAGE_INFO,GTK_BUTTONS_CLOSE,msg);
+    gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+  }
+  else{
+    dialog = gtk_dialog_new_with_buttons("Fit Results",GTK_WINDOW(panwindow),
+	      GTK_DIALOG_DESTROY_WITH_PARENT,GTK_STOCK_CLOSE,GTK_RESPONSE_NONE,NULL);
+    label=gtk_label_new(msg);
+    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox),label);
+    gtk_widget_show_all(dialog);
+    g_signal_connect_swapped(dialog,"response",G_CALLBACK(gtk_widget_destroy),dialog);
+  }
   return FALSE;
 }
 
