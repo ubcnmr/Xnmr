@@ -13,7 +13,6 @@
 
 /* to do:  
    1 finish fitting routine
-   2 fix up s/n so it finds the nearby peak...
 */
    
 
@@ -1215,7 +1214,7 @@ void file_open(dbuff *buff,int action,GtkWidget *widget)
   char s[PATH_LENGTH];
 
   if (buff->buffnum == upload_buff && acq_in_progress != ACQ_STOPPED){
-    popup_msg("Can't open while Acquisition is running\n");
+    popup_msg("Can't open while Acquisition is running\n",TRUE);
     return;
   }
   filew = gtk_file_selection_new ("Load");
@@ -1271,7 +1270,7 @@ gint destroy_buff(GtkWidget *widget,gpointer data)
   // find reasons to not quit
 
   if(buff->win.press_pend > 0 && from_do_destroy_all == 0 ){ // if we're killing everything, kill this one too.
-    popup_msg("Can't close buffer while press pending (integrate or expand or S2N or set sf1 or phase)");
+    popup_msg("Can't close buffer while press pending (integrate or expand or S2N or set sf1 or phase)",TRUE);
     return TRUE;
   }
 
@@ -1283,7 +1282,7 @@ gint destroy_buff(GtkWidget *widget,gpointer data)
 
   if ( popup_data.bnum == bnum &&  array_popup_showing == 1 ){
     array_cancel_pressed(NULL,NULL); // both args are bogus
-    //    popup_msg("Close Array window before closing buffer!");
+    //    popup_msg("Close Array window before closing buffer!",TRUE);
     //    return TRUE;
   }
 
@@ -1291,7 +1290,7 @@ gint destroy_buff(GtkWidget *widget,gpointer data)
   if (  buff->scales_dialog != NULL){
     //    printf("killing scales window for buffer %i\n",bnum);
     do_wrapup_user_scales(GTK_WIDGET(buff->scales_dialog),buff);
-      //    popup_msg("close scales dialog before closing buffer");
+      //    popup_msg("close scales dialog before closing buffer",TRUE);
     //    return TRUE;
   }
 
@@ -1309,7 +1308,7 @@ gint destroy_buff(GtkWidget *widget,gpointer data)
     // ok, if this is the acq buffer and the user selected close or x'd the window:
     if (bnum == upload_buff && acq_in_progress != ACQ_STOPPED){
       printf("Can't close Acquisition Buffer !!\n");
-      popup_msg("Can't close Acquisition Buffer!!");
+      popup_msg("Can't close Acquisition Buffer!!",TRUE);
       return TRUE; //not destroyed, but event handled
     }
   }
@@ -1430,7 +1429,7 @@ void file_save(dbuff *buff,int action,GtkWidget *widget)
 
   printf("in file_save, using path: %s\n",buff->param_set.save_path);
   if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == '/'){
-    popup_msg("Invalid file name");
+    popup_msg("Invalid file name",TRUE);
     return;
   }
   check_overwrite( buff, buff->param_set.save_path); 
@@ -1485,7 +1484,7 @@ void file_new(dbuff *buff,int action,GtkWidget *widget)
   }
   else{
     printf("Max buffers in use\n");
-    popup_msg("Too many buffers already");
+    popup_msg("Too many buffers already",TRUE);
   }
 }
 
@@ -1534,7 +1533,7 @@ switch (action)
     break;
   case 1:
     if (buff->scales_dialog != NULL){
-      popup_msg("Can't apply while scales dialog open");
+      popup_msg("Can't apply while scales dialog open",TRUE);
       return;
     }
     unauto(buff); // turns off auto scaling if it was on.
@@ -1550,7 +1549,7 @@ switch (action)
   case 2:   //User defined scales
 
     if ( buff->scales_dialog != NULL){  //this buff already has a scale dialog
-      popup_msg("scales dialog already open for this buffer\n");
+      popup_msg("scales dialog already open for this buffer\n",TRUE);
       return ;
     }
   
@@ -1682,7 +1681,7 @@ void toggle_disp(dbuff *buff,int action,GtkWidget *widget)
 gint full_routine(GtkWidget *widget,dbuff *buff)
 {
   if (buff->scales_dialog != NULL){
-    popup_msg("Can't 'full' while scales dialog open");
+    popup_msg("Can't 'full' while scales dialog open",TRUE);
     return TRUE;
   }
 
@@ -1710,7 +1709,7 @@ void signal2noise( dbuff *buff, int action, GtkWidget *widget )
   
 
   if (buff->win.press_pend > 0){
-    popup_msg("Can't start signal to noise while press pending");
+    popup_msg("Can't start signal to noise while press pending",TRUE);
     return;
   }
   if (doing_s2n == 1) return;
@@ -1813,7 +1812,7 @@ if (pt1 <0 || pt2 < 0 || peak < 0) return;
  draw_canvas (buff);
  snprintf(string,UTIL_LEN,"S/N = %g\nS = %g, N= %g",s2n,s,n );
  printf("Using point %i with value %f\n",maxi,max);
- popup_msg(string);
+ popup_msg(string,TRUE);
  
 
 }
@@ -1873,7 +1872,7 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 void signal2noiseold( dbuff *buff, int action, GtkWidget *widget )
 {
   if (peak == -1) {
-    popup_msg("No old s2n values to use");
+    popup_msg("No old s2n values to use",TRUE);
     return;
   }
   do_s2n(peak,s_pt1,s_pt2 ,buff);
@@ -1888,7 +1887,7 @@ void integrate( dbuff *buff, int action, GtkWidget *widget )
   
 
   if (buff->win.press_pend > 0){
-    popup_msg("Can't start integrate while press pending");
+    popup_msg("Can't start integrate while press pending",TRUE);
     return;
   }
   if (doing_int == 1) return;
@@ -1957,7 +1956,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  if (export == 1) {
    fstream = fopen(fileN,"w");
    if ( fstream == NULL){
-     popup_msg("Error opening file for integration  export");
+     popup_msg("Error opening file for integration  export",TRUE);
      export = 0;
      //    return;
    }
@@ -2028,7 +2027,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
    }  
    if (j==buff->disp.record){
      snprintf(string,UTIL_LEN,"Integral = %g",integral);
-     popup_msg(string);
+     popup_msg(string,TRUE);
    }
    
  }
@@ -2090,7 +2089,7 @@ void integrateold( dbuff *buff, int action, GtkWidget *widget )
 {
 
   if (i_pt1 == -1) {
-    popup_msg("No old bounds to use");
+    popup_msg("No old bounds to use",TRUE);
     return;
   }
   do_integrate(i_pt1,i_pt2,buff);
@@ -2108,7 +2107,7 @@ void integrate_from_file( dbuff *buff, int action, GtkWidget *widget )
    //   f_int = fopen("/usr/people/nmruser/Xnmr/prog/integrate_from_file_parameters.txt","r");
    f_int = fopen(filename,"r");
    if ( f_int == NULL){
-    popup_msg("Error opening file for integration");
+    popup_msg("Error opening file for integration",TRUE);
     return;
    }
 
@@ -2133,7 +2132,7 @@ gint expand_routine(GtkWidget *widget,dbuff *buff)
   }
 
   if (buff->scales_dialog != NULL){
-    popup_msg("Can't expand while scales dialog open");
+    popup_msg("Can't expand while scales dialog open",TRUE);
     norecur = 1;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE);
     norecur = 0;
@@ -2290,7 +2289,7 @@ gint expandf_routine(GtkWidget *widget,dbuff *buff)
   }
 
   if (buff->scales_dialog != NULL){
-    popup_msg("Can't expand while scales dialog open");
+    popup_msg("Can't expand while scales dialog open",TRUE);
     norecur = 1;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE);
     norecur = 0;
@@ -3075,7 +3074,7 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
       buff->data=data_old;
       printf("buff resize: MALLOC ERROR\n");
       snprintf(title,UTIL_LEN,"buff resize: MALLOR ERROR\nasked for npts %i npts2 %i",npts1,npts2);
-      popup_msg(title);
+      popup_msg(title,TRUE);
       return 0;
     }
 
@@ -3160,7 +3159,7 @@ gint do_load_wrapper( GtkWidget* widget, GtkFileSelection* fs )
   //make sure the buffer still exists!
 
   if (buff == NULL){
-    popup_msg("buffer was destroyed, can't open");
+    popup_msg("buffer was destroyed, can't open",TRUE);
     //    gtk_widget_destroy(GTK_WIDGET(widget));
     return TRUE;
   }
@@ -3213,7 +3212,7 @@ gint do_load( dbuff* buff, char* path )
   fstream = fopen( fileN, "r" );
 
   if( fstream == NULL ) {
-    popup_msg("File not found");
+    popup_msg("File not found",TRUE);
     return -1;
   }
 
@@ -3396,14 +3395,14 @@ gint check_overwrite( dbuff* buff, char* path )
   // if check_overwrite gets something with a trailing /, it should barf.
 
   if (path[strlen(path)-1] == '/'){
-    popup_msg("Invalid filename");
+    popup_msg("Invalid filename",TRUE);
     return 0;
   }
   //  printf("in check_overwrite got path: %s\n",path);
 
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) < 0 ) {
     if( errno != EEXIST ) {
-      popup_msg("check_overwrite can't mkdir?");
+      popup_msg("check_overwrite can't mkdir?",TRUE);
       return 0 ;
     }
     else // does exist...
@@ -3653,7 +3652,7 @@ void file_export(dbuff *buff,int action,GtkWidget *widget)
   // first juggle the filename
 
   if (strcmp(buff->path_for_reload,"") == 0){
-    popup_msg("Can't export, no reload path?");
+    popup_msg("Can't export, no reload path?",TRUE);
     return;
   }
 
@@ -3664,7 +3663,7 @@ void file_export(dbuff *buff,int action,GtkWidget *widget)
   //  printf("using filename: %s\n",fileN);
   fstream = fopen(fileN,"w");
   if ( fstream == NULL){
-    popup_msg("Error opening file for export");
+    popup_msg("Error opening file for export",TRUE);
     return;
   }
   
@@ -3824,7 +3823,7 @@ void file_append(dbuff *buff,int action,GtkWidget *widget)
   //  printf("in file_append\n");
 
   if (buff->npts2 != 1){
-    popup_msg("Can't append a 2d data set");
+    popup_msg("Can't append a 2d data set",TRUE);
     return;
   }
 // first need to build a filename - same algorithm as for save
@@ -3836,7 +3835,7 @@ printf("append file, using path %s\n",s);
 // make sure file exists
   fstream = fopen( s , "r");
   if (fstream == NULL){
-    popup_msg("Couldn't open file for append");
+    popup_msg("Couldn't open file for append",TRUE);
     return;
   }
 
@@ -3851,12 +3850,12 @@ printf("append file, using path %s\n",s);
 
 
   if ( npts != buff->param_set.npts){
-    popup_msg("Can't append to file of different npts");
+    popup_msg("Can't append to file of different npts",TRUE);
     fclose(fstream);
     return;
   }
   if (strcmp ( old_exec , buff->param_set.exec_path ) != 0 )
-    popup_msg("Warning: \"append\" with different pulse program");
+    popup_msg("Warning: \"append\" with different pulse program",TRUE);
 
   // read in the parameters from the file
   strcpy(params,"");
@@ -3895,7 +3894,7 @@ printf("append file, using path %s\n",s);
   //different from what we have currently, append it to the file. 
 
   if (fstream == NULL){
-    popup_msg("Can't open for append");
+    popup_msg("Can't open for append",TRUE);
     return;
   }
 
@@ -3933,7 +3932,7 @@ printf("append file, using path %s\n",s);
 
 	break;
       default:
-	popup_msg("unknown data_type in append");
+	popup_msg("unknown data_type in append",TRUE);
 
     }  
 
@@ -3947,7 +3946,7 @@ printf("append file, using path %s\n",s);
   path_strcat(s , "/data");
   fstream = fopen(s,"a");
   if (fstream == NULL){
-    popup_msg("Can't open data for append");
+    popup_msg("Can't open data for append",TRUE);
     return;
   }
 
@@ -4036,7 +4035,7 @@ void clone_from_acq(dbuff *buff, int action, GtkWidget *widget )
   if (buff->buffnum == upload_buff && action == 0 && no_acq == FALSE ) return; // if user pulled it down from the acq buffer
 
   if ( connected == FALSE ){
-    popup_msg("Can't clone from acq - not connected to shm");
+    popup_msg("Can't clone from acq - not connected to shm",TRUE);
     return;
   }
 
@@ -4140,7 +4139,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   }
 
   if (sf_param == -1){
-    popup_msg("Set sf: no suitable sf parameter found\n");
+    popup_msg("Set sf: no suitable sf parameter found\n",TRUE);
     printf("no parameter with name %s found\n",param_search);
     return;
   }
@@ -4222,17 +4221,17 @@ void set_sf1(dbuff *buff, int action, GtkWidget *widget )
   GtkWidget * setsf1label;
 
   if (buff->win.press_pend > 0){
-    popup_msg("Can't start set_sf1 while press pending");
+    popup_msg("Can't start set_sf1 while press pending",TRUE);
     return;
   }
 
   if (buff->buffnum == upload_buff && acq_in_progress == ACQ_RUNNING){
-    popup_msg("Can't change frequency while acq is running");
+    popup_msg("Can't change frequency while acq is running",TRUE);
     return;
   }
 
   if ((buff->flags & FT_FLAG) == 0){
-    popup_msg("Can't set frequency from the time domain");
+    popup_msg("Can't set frequency from the time domain",TRUE);
     return;
   }
 
@@ -4275,12 +4274,12 @@ void set_sf1(dbuff *buff, int action, GtkWidget *widget )
 void reset_dsp_and_synth(dbuff *buff, int action, GtkWidget *widget){
 
   if (no_acq != FALSE)
-    popup_msg("Can't reset dsp and synth in noacq mode");
+    popup_msg("Can't reset dsp and synth in noacq mode",TRUE);
   else if (acq_in_progress != ACQ_STOPPED)
-    popup_msg("Can't reset dsp and synth while running");
+    popup_msg("Can't reset dsp and synth while running",TRUE);
   else{
     data_shm->reset_dsp_and_synth = 1;
-    popup_msg("DSP and Synth will be reset on start of next acq");
+    popup_msg("DSP and Synth will be reset on start of next acq",TRUE);
   }
   
 }
@@ -4322,7 +4321,7 @@ void calc_rms(dbuff *buff, int action, GtkWidget *widget )
  printf("RMS: Real: %f  Imaginary: %f\n",rms, rmsi);
  if (j==buff->disp.record){
    snprintf(out_string,UTIL_LEN,"RMS for real: %f, imag: %f",rms,rmsi);
-   popup_msg(out_string);
+   popup_msg(out_string,TRUE);
  }
  }
  printf("\n");
@@ -4363,7 +4362,7 @@ char get_ch2(dbuff *buff){
 
 }
 void bug_found(){
-  popup_msg("It appears as though some action performed in the past second or two\nhas caused an internal inconsistency\nPlease note what actions were being taken. The user interface program is likely unstable\nThere should be other error windows with some more information");
+  popup_msg("It appears as though some action performed in the past second or two\nhas caused an internal inconsistency\nPlease note what actions were being taken. The user interface program is likely unstable\nThere should be other error windows with some more information",TRUE);
 }
 
 void check_for_overrun_timeout(gpointer data){
@@ -4381,24 +4380,24 @@ void check_for_overrun_timeout(gpointer data){
 
       if (buffp[i]->buffnum != i){
 	snprintf(title,UTIL_LEN,"error, buffnum doesn't match for buff: %i",i);
-	popup_msg(title);
+	popup_msg(title,TRUE);
 	bug=1;
       }
 	
       if (buffp[i]->overrun1 != 85*(1+256+65536+16777216)){
 	printf("buffer %i overrun1 wrong!!!\n",i);
-	popup_msg("found an overrun1 problem!");
+	popup_msg("found an overrun1 problem!",TRUE);
 	bug = 1;
       }
       if (buffp[i]->overrun2 != 85*(1+256+65536+16777216)){
 	printf("buffer %i overrun2 wrong!!!\n",i);
-	popup_msg("found an overrun2 problem!");
+	popup_msg("found an overrun2 problem!",TRUE);
 	bug = 1;
       }
     }
   }
   if (count != num_buffs){
-    popup_msg("check overrun, wrong number of buffers");
+    popup_msg("check overrun, wrong number of buffers",TRUE);
     
   } 
   if (bug == 1) bug_found();
@@ -4560,7 +4559,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 	    draw_vertical(buffp[spline_current_buff],&colours[BLUE],0.,(int)event->x);	    
 	  }
 	  else {
-	    popup_msg("Too many spline points!");
+	    popup_msg("Too many spline points!",TRUE);
 	    return;
 	  }
 	}
@@ -4568,7 +4567,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 
       }
       else{
-	popup_msg("To finish picking points, must view a row");
+	popup_msg("To finish picking points, must view a row",TRUE);
 	return;
       }
 
@@ -4613,12 +4612,12 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
     if (action == PICK_SPLINE_POINTS){
       
       if (buff->win.press_pend != 0){
-	popup_msg("There's already a press pending\n(maybe Expand or Offset?)");
+	popup_msg("There's already a press pending\n(maybe Expand or Offset?)",TRUE);
 	return;
       }
 
       if (buff->disp.dispstyle != SLICE_ROW){
-	popup_msg("Spline only works on rows for now");
+	popup_msg("Spline only works on rows for now",TRUE);
 	return;
       }
 
@@ -4668,13 +4667,13 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
       //      printf("do spline\n");
 
       if (buff->disp.dispstyle != SLICE_ROW){
-	popup_msg("Spline only works on rows for now");
+	popup_msg("Spline only works on rows for now",TRUE);
 	return;
       }
 
 
       if (num_spline_points < 3){
-	popup_msg("Need at least 3 points for spline");
+	popup_msg("Need at least 3 points for spline",TRUE);
 	return;
       }
       
@@ -4741,7 +4740,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
       //      printf("show_spline_fit\n");
       
       if (buff->disp.dispstyle != SLICE_ROW){
-	popup_msg("Spline only works on rows for now");
+	popup_msg("Spline only works on rows for now",TRUE);
 	return;
       }
 
@@ -4769,7 +4768,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 	draw_canvas(buff);
       }
       else{
-	popup_msg("undo spline not available");
+	popup_msg("undo spline not available",TRUE);
 	return;
       }
 
@@ -4958,19 +4957,19 @@ void add_sub_buttons(GtkWidget *widget,gpointer data){
   // check that there are valid selections
   if (i>=0)  sbnum1 = add_sub.index[i];
   else{
-    popup_msg("Invalid source buffer 1");
+    popup_msg("Invalid source buffer 1",TRUE);
     return;
   }
 
   if (j>=0) sbnum2 = add_sub.index[j];
   else{
-    popup_msg("Invalid source buffer 2");
+    popup_msg("Invalid source buffer 2",TRUE);
     return;
   }
   if (k==0) dbnum = -1;
   else if (k>0) dbnum = add_sub.index[k-1];
   else{
-    popup_msg("Invalid destination buffer");
+    popup_msg("Invalid destination buffer",TRUE);
     return;
   }
     
@@ -4980,28 +4979,28 @@ void add_sub_buttons(GtkWidget *widget,gpointer data){
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record));
 
   if (i<0 || j<0||k<0){
-    popup_msg("Missing record selection");
+    popup_msg("Missing record selection",TRUE);
     return;
   }
 
   // make sure the records exist - they may not!
   if (i> 1 && i-2 >= buffp[sbnum1]->npts2){
-    popup_msg("Invalid record for source 1");
+    popup_msg("Invalid record for source 1",TRUE);
     return;
   }
   if (j>1 && j-2 >= buffp[sbnum2]->npts2){
-    popup_msg("Invalid record for source 1");
+    popup_msg("Invalid record for source 1",TRUE);
     return;
   }
   if (dbnum >=0){
     if (k>1 && k-2 >= buffp[dbnum]->npts2){
-      popup_msg("Invalid record for source 1");
+      popup_msg("Invalid record for source 1",TRUE);
       return;
     }
   }
 
   if(buffp[sbnum1]->param_set.npts != buffp[sbnum2]->param_set.npts){
-    popup_msg("Inputs must have same number of points!");
+    popup_msg("Inputs must have same number of points!",TRUE);
     return;
   }
   npts = buffp[sbnum1]->param_set.npts;
@@ -5029,30 +5028,30 @@ if the number of records on the input records doesn't match for "each each", err
   // last error checking before we go:
   if (i==0 || j == 0){ // there's at least one each
     if (k != 0){
-      popup_msg("output must be each in an input is each ");
+      popup_msg("output must be each in an input is each",TRUE);
       return;
     }
     if (i==0 && j == 0) if (buffp[sbnum1]->npts2 !=buffp[sbnum2]->npts2){
-      popup_msg("inputs must have same number of records");
+      popup_msg("inputs must have same number of records",TRUE);
       return;
     }
   }
 
   // if there's no each on the input, then can't have each on output
   if (i != 0 && j != 0 && k == 0){
-    popup_msg("can't have output each if inputs specify records");
+    popup_msg("can't have output each if inputs specify records",TRUE);
     return;
   }
 
   // inputs can't overlap with output can't overlap
   if (dbnum == sbnum1 || dbnum == sbnum2){
-    popup_msg("output buffer can't be an input buffer");
+    popup_msg("output buffer can't be an input buffer",TRUE);
     return;
   }
 
   // make sure dest buffer isn't busy acquiring.
   if (dbnum == upload_buff && acq_in_progress != ACQ_STOPPED){
-    popup_msg("output buffer is busy acquiring");
+    popup_msg("output buffer is busy acquiring",TRUE);
     return;
   }
 
@@ -5203,7 +5202,6 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
   GdkEventButton *event;
 
   sbnum = add_sub.index[gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff))];
-  printf ("in fit_add_components, got sbnum: %i\n",sbnum);
 
   // if we're coming in from a press event in the window:
   if ((void *) buff == (void *) buffp[sbnum]->win.canvas){
@@ -5211,31 +5209,31 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
     float max,m,b,width,x_left,x_right;
 
     event = (GdkEventButton *) action;
-    printf("believe we got a press event\n");
+    //    printf("believe we got a press event\n");
 
     if (fit_data.num_components == MAX_FIT){
-      popup_msg("Too Many components");
+      popup_msg("Too Many components",TRUE);
       return;
     }
 
     if (buffp[sbnum]->disp.dispstyle==SLICE_ROW){ // only capture point on a row
       xval= (event->x-1.)/(buffp[sbnum]->win.sizex-1) *
 	(buffp[sbnum]->disp.xx2-buffp[sbnum]->disp.xx1)	+buffp[sbnum]->disp.xx1;
-      printf("xval is: %f\n",xval);
+      //      printf("xval is: %f\n",xval);
     }
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.components),fit_data.num_components+1);
     // now set the values in it
     sw = buffp[sbnum]->param_set.sw;
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.center[fit_data.num_components-1]),-xval*sw+sw/2);
 
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[fit_data.num_components-1]),TRUE);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[fit_data.num_components-1]),FALSE);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[fit_data.num_components-1]),TRUE);
 
     // now need the width and amplitude
     // we used exactly the center that the user selected.  Find a nearby maximum and then get a width.
 
     xpt = pix_to_x(buffp[sbnum],event->x);
-    printf("got point %i\n",xpt);
+    //    printf("got point %i\n",xpt);
     i_max = xpt;
     record = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record));
 
@@ -5259,7 +5257,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
       }
       
     //so we should have the max:
-    printf("found max of %f at %i\n",max,i_max);
+    //    printf("found max of %f at %i\n",max,i_max);
 
     // now look for the width.
     // look to the right till we get below half max
@@ -5279,7 +5277,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 	  i = -1;
 	}
       }
-    printf("left and right limits: %i %i\n",i_left,i_right);
+    //    printf("left and right limits: %i %i\n",i_left,i_right);
     // so we've got a rough width, let's do a little better
     width = 0;
     x_left = xpt;
@@ -5289,7 +5287,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 	   buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]);
       b= buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]-m*i_left;
       x_left = (max/2.-b)/m;
-      printf("using %f for left edge\n",x_left);
+      //      printf("using %f for left edge\n",x_left);
       width += (xpt-x_left)
 	*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
     }
@@ -5299,16 +5297,16 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 	   buffp[sbnum]->data[2*(i_right-1)+buffp[sbnum]->param_set.npts*2*record]);
       b= buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-m*i_right;
       x_right = (max/2.-b)/m;
-      printf("using %f for right edge\n",x_right);
+      //      printf("using %f for right edge\n",x_right);
       
       width += (x_right-xpt)*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
     
     }
-    printf("so width is: %f\n",width);
+    //    printf("so width is: %f\n",width);
     // stick half in each of lorentz and gaus
 	
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[fit_data.num_components-1]),width/2.);
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[fit_data.num_components-1]),width/2.);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[fit_data.num_components-1]),width);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[fit_data.num_components-1]),width);
     
     // and then the amplitude.  The integral is height * width(in points)/sqrt(npts)*2
     // give it an extra * 1.5 for good luck.
@@ -5321,7 +5319,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 
   if ((void *) buff == (void *) fit_data.add_dialog){ 
     //           printf("buff is dialog!\n");
-    printf("believe we got a delete event for dialog\n");
+    //    printf("believe we got a delete event for dialog\n");
     gtk_object_destroy(GTK_OBJECT(fit_data.add_dialog));
     fit_data.add_dialog = NULL;
       if ( buffp[sbnum] == NULL){ // our buffer destroyed while we were open... shouldn't happen
@@ -5385,10 +5383,15 @@ void dummy(); // extra function for n2f
 void dummy(){}
 void n2f_(int *n,int *p,float *x,void (*calc_spectrum_residuals),int *iv,int *liv,int *lv,float *v,
      int *ui,float *ur,void (*dummy));
+void  ivset_(int *kind,int *iv, int *liv,int *lv,float *v);
 
 void fitting_buttons(GtkWidget *widget, gpointer data ){
 
-  int sbnum,dbnum,i,j,my_current;
+  int sbnum,dbnum,i,j,my_current,kind;
+  float stddev[MAX_FIT*4],chi2;
+  char out_string[500];
+  int out_len=0,max_len=500;
+  int i1,i2;
 
   if (widget  == fit_data.close){ //close button
     gtk_widget_hide(fit_data.dialog);
@@ -5404,13 +5407,13 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
   if (i>=0) sbnum = add_sub.index[i];
   else{
-    popup_msg("Invalid source buffer");
+    popup_msg("Invalid source buffer",TRUE);
     return;
   }
   if (j>=1) dbnum = add_sub.index[j-1];
   else dbnum = -1; // indicates new buffer.
 
-  printf("dbnum is %i\n",dbnum);
+  //  printf("dbnum is %i\n",dbnum);
 
 
   if (widget == fit_data.start_clicking){
@@ -5418,12 +5421,12 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
     GtkWidget *label, *button;
 
       if (buffp[sbnum]->win.press_pend != 0){
-	popup_msg("There's already a press pending\n(maybe Expand or Offset?)");
+	popup_msg("There's already a press pending\n(maybe Expand or Offset?)",TRUE);
 	return;
       }
 
       if (buffp[sbnum]->disp.dispstyle != SLICE_ROW){
-	popup_msg("Add components only works on rows for now");
+	popup_msg("Add components only works on rows for now",TRUE);
 	return;
       }
 
@@ -5457,7 +5460,8 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       return;
   }
 
-  if (widget == fit_data.run_fit || widget == fit_data.precalc){ // ok, do the fit
+  if (widget == fit_data.run_fit || widget == fit_data.precalc
+      || widget == fit_data.run_fit_range){ // ok, do the fit
 
     // so, we need to:  call n2f with:  the data, a list of parameters
     int 
@@ -5482,9 +5486,17 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       float *spect; // where our spectrum will go
 
       if (fit_data.num_components == 0){
-	popup_msg("Can't fit with no components!");
+	popup_msg("Can't fit with no components!",TRUE);
 	return;
       }
+
+      // check order of magnitude of amplitudes?
+      fit_data.amp_scale = 0;
+      for (i=0;i<fit_data.num_components;i++)
+	fit_data.amp_scale += gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.amplitude[i]));
+
+      fit_data.amp_scale /= fit_data.num_components*1000.;
+
 
       // ok, need to organize our parameters:
       // they are: freq, ((amp gaus, amp lorentz) or total amp), gauss width, lorentz width
@@ -5498,7 +5510,8 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	  x[pnum]=gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.center[i]));
 	  pnum ++;
 
-	  x[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.amplitude[i]));
+	  x[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.amplitude[i]))
+	    / fit_data.amp_scale;
 	  pnum++;
 
 	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE){
@@ -5514,16 +5527,30 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
 
       if (pnum == 0){
-	popup_msg("No Active components to fit!");
+	popup_msg("No Active components to fit!",TRUE);
 	return;
       }
 
       // set up remaining details:
 
-      // this n may change if we implement a freq range capability - should only use points displayed on screen!
-      n = buffp[sbnum]->param_set.npts *2.; // we're going to fit the imaginary part too!
+      i1=0;
+      i2= buffp[sbnum]->param_set.npts-1;
+
+      if (widget == fit_data.run_fit_range){
+	i1 = (int) ( buffp[sbnum]->disp.xx1*(buffp[sbnum]->param_set.npts-1)+0.5);
+	i2 = (int) ( buffp[sbnum]->disp.xx2*(buffp[sbnum]->param_set.npts-1)+0.5);
+
+	n = 2*(i2-i1+1);
+	       //	n = () * buffp[sbnum]->param_set.npts;
+	//	printf("got fit range, set npts from %i to %i total %i\n",i1,i2,n);
+      }
+      else
+	n = buffp[sbnum]->param_set.npts *2; // we're going to fit the imaginary part too!
       p = pnum;
       
+
+
+
       
       // allocate memory for fitting routine.
 
@@ -5538,28 +5565,94 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       iv[0] = 0; // uses defaults for iv and v
       
       // that should do it, go do the fit.
-      if ( widget == fit_data.run_fit){ // only actually do the fit if we want it done.
+      if ( widget == fit_data.run_fit || widget == fit_data.run_fit_range){ // only actually do the fit if we want it done.
+	//set initial values to turn off regression diagnostic.
+	// if the add_components dialog is open, kill it.
+	if (fit_data.add_dialog != NULL)
+	  fit_add_components((dbuff *) fit_data.add_dialog, 0,NULL);
+
+	  
+
+	kind = 1;
+	ivset_(&kind,iv,&liv,&lv,v);
+	iv[13] = 1; //printf just covariance matrix.  0=neither, 2 is just diagnotic, 3 = both
 	n2f_(&n,&p,x,&calc_spectrum_residuals,iv,&liv,&lv,v,ui,spect,&dummy);
+
+	for(i=0;i<p;i++) stddev[i] = 0.;
+	// check return value, see if the fit is good?
+	if (iv[0] == 3 || iv[0] == 4 || iv[0]==5){
+	  //	  printf("Claim to have a fit ");
+	  if (iv[25] > 0){
+	    j = iv[25]-1;
+	    for(i=0;i<p;i++){// get the stddevs
+	      stddev[i]=sqrt(v[j]);
+	      //	      printf("stddev: of %i is %f, used  v[%i]=%f\n",i,stddev[i],j,v[j]);
+	      j=j+i+2;
+	    }
+	  }
+	  else printf("didn't get a covariance matrix?\n");
+	}
+	else
+	  printf("didn't get a good fit\n");
+	// now need to output the results. and calc the goodness of fit.
+	out_len += snprintf(out_string,max_len,
+			    "FITTING RESULTS\n#Line      Center                Amplitude             Gaussian width      Lorentz width\n") ;
+	pnum = 0; 
+	for (i=0;i<fit_data.num_components;i++){
+	  if (out_len < max_len)
+	    out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f +/- %-8.2f % 8g +/- %-8g",i,
+				x[pnum],stddev[pnum],x[pnum+1]*fit_data.amp_scale,stddev[pnum+1]*fit_data.amp_scale) ;
+	  pnum+=2;
+	  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE && out_len < max_len){
+	    out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",x[pnum],stddev[pnum]) ;
+	    pnum +=1 ;
+	  }
+	  else if (out_len < max_len)
+	    out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",0.,0.)-1;
+	  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE && out_len < max_len){
+	    out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %- 8.2f",x[pnum],stddev[pnum]);
+	    pnum +=1 ;
+	  }
+	  else if (out_len < max_len)
+	    out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",0.,0.);
+	  if (out_len > 0) 
+	    out_len += snprintf(&out_string[out_len],max_len-out_len,"\n");
+
+	}
+
+	// now figure out the goodness of fit.
+
+	calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);	
+
+	chi2 = 0.;
+	for (i=i1*2;i<=i2*2;i++)
+	  chi2 += v[i]*v[i];
+	chi2 = sqrt(chi2/(i2-i1+1)/2.);
+
+	if (out_len > 0)
+	  out_len += snprintf(&out_string[out_len],max_len-out_len,"\nGoodness of fit: Sqrt(Chi^2/N): %f (compare to noise)\n",chi2);
+	  popup_msg(out_string,FALSE);
+	  printf("%s\n",out_string);
       }
 
       // calc the final spectrum
-      printf("doing final spectrum calc:\n");
+      //      printf("doing final spectrum calc:\n");
       calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);
 
 
       //stick the calc'd spectrum where it's supposed to go:
-      if ( widget == fit_data.run_fit && 
+      if ( (widget == fit_data.run_fit || widget == fit_data.run_fit_range) && 
 	   gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.store_fit)) == TRUE){
 	// only actually do the fit if we want it done.
 	
 	// make sure dest buffer isn't busy acquiring.
 	if (dbnum == upload_buff && acq_in_progress != ACQ_STOPPED){
-	  popup_msg("output buffer is busy acquiring");
+	  popup_msg("output buffer is busy acquiring",TRUE);
 	  goto dont_move_fit;
 	}
 	if (dbnum == sbnum && gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record)) == 
 	    gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) -1 ){
-	  popup_msg("Can't replace data with fit.  Try Append");
+	  popup_msg("Can't replace data with fit.  Try Append in Destination record",TRUE);
 	  goto dont_move_fit;
 	}
 	// create a new buffer if we need to
@@ -5626,9 +5719,9 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       //only do the display if we're actually viewing the correct data.
       if (buffp[sbnum]->disp.dispstyle == SLICE_ROW &&
 	  gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record)) == buffp[sbnum]->disp.record ){
-	printf("drawing the calc'd trace\n");
+	//	printf("drawing the calc'd trace\n");
 	draw_canvas(buffp[sbnum]);
-	draw_row_trace(buffp[sbnum],0,0,spect,n/2,&colours[BLUE],0);
+	draw_row_trace(buffp[sbnum],0,0,spect,buffp[sbnum]->param_set.npts,&colours[BLUE],0);
 	//	draw_row_trace(buffp[sbnum],0,0,spect,n/2,&colours[GREEN],1);
 
 	gtk_widget_queue_draw_area(buffp[sbnum]->win.canvas,1,1,buffp[sbnum]->win.sizex,buffp[sbnum]->win.sizey);
@@ -5656,16 +5749,19 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
   // ur is a float pointer passed through put our calc'd spectrum there.
   // and uf is a user function passed through.
 
-  int i,pnum,sbnum,do_gauss,do_lorentz;
+  int i,pnum,sbnum,do_gauss,do_lorentz,i1,npts;
   float scale,spare;
   //  printf("in calc_spectrum_residuals, got %i data points and %i parameters\n",*n,*p);
   
-  //initialize data array.
-  for (i=0;i<*n;i++) ur[i] = 0.;
-
   // need the source buffer
   i = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
   sbnum = add_sub.index[i];
+
+  npts=buffp[sbnum]->param_set.npts;
+
+  //initialize data array.
+  for (i=0;i<npts*2;i++) ur[i] = 0.;
+
 
   pnum = 0;
   for( i=0 ; i<fit_data.num_components;i++){
@@ -5676,17 +5772,17 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
 
     if(do_gauss == TRUE && do_lorentz == TRUE){
       //      printf("line %i, doing both only\n",i);
-      add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],x[pnum+3],ur,*n/2,buffp[sbnum]->param_set.dwell/1e6);
+      add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],x[pnum+3],ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 4;
       }
     else if (do_gauss == TRUE){
       //      printf("line %i, doing gauss only\n",i);
-      add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],0.,ur,*n/2,buffp[sbnum]->param_set.dwell/1e6);
+      add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],0.,ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 3;
       }
     else if (do_lorentz == TRUE){
       //      printf("line %i, doing lorentz only\n",i);
-      add_gauss_lorentz_line(x[pnum],x[pnum+1],0.,x[pnum+2],ur,*n/2,buffp[sbnum]->param_set.dwell/1e6);
+      add_gauss_lorentz_line(x[pnum],x[pnum+1],0.,x[pnum+2],ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 3;
     }
     else printf("for line: %i, didn't add a line\n",i);
@@ -5701,8 +5797,8 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
     factor = buffp[sbnum]->process_data[EM].val;
     //    printf("got enable process broadening\n");
     if (buffp[sbnum]->process_data[EM].status == SCALABLE_PROCESS_ON){ // do the mult
-      printf("doing exp mult with value: %f\n",factor);
-      for( i=0; i<buffp[sbnum]->param_set.npts; i++ ){
+      //      printf("doing exp mult with value: %f\n",factor);
+      for( i=0; i<npts; i++ ){
 	temp = exp(-1.0 * factor * i * buffp[sbnum]->param_set.dwell/1000000 * M_PI);
 	ur[2*i] *= temp; 
 	ur[2*i+1] *= temp; 
@@ -5710,8 +5806,8 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
     }
     if (buffp[sbnum]->process_data[GM].status == SCALABLE_PROCESS_ON){
       factor = buffp[sbnum]->process_data[GM].val;
-      printf("doing the gaussian mult with value: %f\n",factor);
-      for( i=0; i<buffp[sbnum]->param_set.npts; i++ ) {
+      //      printf("doing the gaussian mult with value: %f\n",factor);
+      for( i=0; i<npts; i++ ) {
 	temp = i*buffp[sbnum]->param_set.dwell/1000000 * M_PI * factor / 1.6651;
 	ur[2*i] *= exp( -1 * temp * temp );
 	ur[2*i+1] *= exp( -1 * temp * temp );
@@ -5722,20 +5818,27 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
 
   // then ft
   ur[0] /= 2;
-  scale = sqrt((float) *n/2);
-  four1(ur-1,*n/2,-1);
-  for(i=0;i<*n/2;i++){
+  scale = sqrt((float) npts);
+  four1(ur-1,npts,-1);
+  for(i=0;i<npts;i++){
     spare=ur[i]/scale;
-    ur[i]= ur[i+ *n/2 ]/scale;
-    ur[i + *n/2]=spare;
+    ur[i]= ur[i+ npts ]/scale;
+    ur[i + npts]=spare;
   }
   
   // then subtract off the experiment
   // here we'll have to change when we only look at what's viewed.
 
-  for (i=0;i<*n;i++){
-    r[i] = ur[i] - buffp[sbnum]->data[i+
-      2*buffp[sbnum]->param_set.npts*gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record))];
+  
+  if ( *n != npts*2){// then we're doing a fit range
+    i1 = (int) (buffp[sbnum]->disp.xx1*(npts-1)+0.5);
+  }
+  else i1 = 0;
+  //  printf("in calc spectrum residuals, starting at point %i\n",i1);
+
+  for (i=0; i<*n ;i++){
+    r[i] = ur[i+2*i1] - buffp[sbnum]->data[i+2*i1+
+      2*npts*gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record))];
   }
 
 }
@@ -5748,7 +5851,8 @@ void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz
   //  printf("add_lorentz_line: center: %f, amp: %f, width: %f, dwell %f\n",center,amp,wid,dwell);
 
   for(i=0;i<np;i++){
-    prefactor = amp*exp(-i*dwell*M_PI*lorentz_wid)*exp(-i*dwell*M_PI*gauss_wid/1.6651*i*dwell*M_PI*gauss_wid/1.6651); 
+    prefactor = amp*exp(-i*dwell*M_PI*lorentz_wid)*exp(-i*dwell*M_PI*gauss_wid/1.6651*i*dwell*M_PI*gauss_wid/1.6651) 
+      *fit_data.amp_scale; 
     spect[2*i] += prefactor * cos(-center*2*M_PI*dwell*i);
     spect[2*i+1] += prefactor * sin(-center*2*M_PI*dwell*i);
   }
@@ -5805,7 +5909,7 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
   if(widget == fit_data.s_buff){
     // do we have the components window open???
     if (fit_data.add_dialog != NULL){
-      popup_msg("Don't change the source buffer while adding components!");
+      popup_msg("Don't change the source buffer while adding components!",TRUE);
       norecur = 1;
       gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.s_buff),old_sbnum);
       return;
@@ -5847,7 +5951,7 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
     return;
   }
   if (widget == fit_data.s_record || widget == fit_data.d_record){
-    printf("one of the records changed\n");
+    //    printf("one of the records changed\n");
     return;
   }
   printf("in fit_data_changed but don't know what changed?\n");

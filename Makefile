@@ -55,7 +55,7 @@ Xnmr: xnmr.o buff.o four1.o panel.o process_f.o param_f.o xnmr_ipc.o param_utils
  splint.o nrutil.o 
 	$(CC) $(CFLAGS)  xnmr.o   buff.o four1.o panel.o process_f.o param_f.o\
  xnmr_ipc.o param_utils.o spline.o splint.o nrutil.o \
--o Xnmr `pkg-config --libs gthread-2.0 gtk+-2.0` -lm -lportP -lf2c  -Xlinker -defsym -Xlinker MAIN__=main
+-o Xnmr `pkg-config --libs gthread-2.0 gtk+-2.0` -lm -lport -lf2c  -Xlinker -defsym -Xlinker MAIN__=main
 
 # the -Xlinker -defsym -Xlinker MAIN__=main   passes: '-defsym MAIN__=main' to the linker, let us use 
 # fortran and C together.  The -lportP has the nonlinear fitting routine, and lf2c is necessary for fortran

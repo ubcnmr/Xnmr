@@ -63,7 +63,7 @@ int  setup_channels(){
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2c))) data_shm->ch2 = 'C';
   //  printf("setup channels: ch1 %c, ch2: %c\n",data_shm->ch1,data_shm->ch2);
   if (data_shm->ch1 == data_shm->ch2){ 
-    popup_msg("Channels 1 & 2 set to same hardware!\nNot proceeding.");
+    popup_msg("Channels 1 & 2 set to same hardware!\nNot proceeding.",TRUE);
     return -1;
   }
   return 0;
@@ -73,7 +73,7 @@ int  setup_channels(){
 
 gint noacq_kill_button_press(GtkWidget *widget, gpointer *data)
 {
-  popup_msg("Can't kill in noacq mode");
+  popup_msg("Can't kill in noacq mode",TRUE);
   return 0;
 }
 
@@ -87,7 +87,7 @@ gint noacq_button_press(GtkWidget *widget, gpointer *data)
     norecur = 0;
     return 0;
   }
-  popup_msg("Can't Acquire in noacq mode");
+  popup_msg("Can't Acquire in noacq mode",TRUE);
 
   norecur = 1;
   gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );
@@ -155,7 +155,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       //    printf("acq is stopped\n");
 
       if (array_popup_showing == 1){
-	popup_msg("Can't start Acquisition with Array window open");
+	popup_msg("Can't start Acquisition with Array window open",TRUE);
 	//	printf("trying to start acq with popup showing\n");
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE); 
 	//	printf("returning on can't start with array open\n");
@@ -188,7 +188,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       }
       else  // its a start and save, check to make sure filename is valid
 	if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == '/'){
-	  popup_msg("Invalid file name");
+	  popup_msg("Invalid file name",TRUE);
 	  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE); 
 	  //	  printf("returning with invalid file name\n");
 	  return 0;
@@ -207,7 +207,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       errno = 0;
       result = mkdir(fileN, S_IRWXU | S_IRWXG | S_IRWXO );
       if (result < 0 && errno != EEXIST){
-	  popup_msg("check_overwrite(startb) can't mkdir?");
+	  popup_msg("check_overwrite(startb) can't mkdir?",TRUE);
 	  //	  printf("returing can't mkdir\n");
 	  return 0 ;
       }

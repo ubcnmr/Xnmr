@@ -56,7 +56,7 @@ void do_destroy_all();
 
 gint hide_phase( GtkWidget *widget, GdkEvent  *event, gpointer data );
 
-gint popup_msg( char* msg );
+gint popup_msg( char* msg,char modal );
 gint popup_msg_mutex_wrap( char* msg );
 
 void draw_vertical(dbuff *buff,GdkColor  *col, float xvalf,int xvali);

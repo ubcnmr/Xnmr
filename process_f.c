@@ -67,7 +67,7 @@ gint do_offset_cal( GtkWidget *widget, double *unused )
     buff = buffp[ current ];
 
   if (buff == NULL){
-    popup_msg("do_offset_cal panic! buff is null!");
+    popup_msg("do_offset_cal panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -142,7 +142,7 @@ gint do_offset_cal_a( GtkWidget *widget, double *unused )
     buff = buffp[ current ];
 
   if (buff == NULL){
-    popup_msg("do_offset_cal panic! buff is null!");
+    popup_msg("do_offset_cal panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -209,7 +209,7 @@ gint do_ft(GtkWidget *widget, double *unused)
     //printf("do_ft- on buffer %i\n",current );
   }
   if (buff == NULL){
-    popup_msg("do_ft panic! buff is null!");
+    popup_msg("do_ft panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -285,7 +285,7 @@ gint do_exp_mult( GtkWidget* widget, double* val )
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_exp_mult panic! buff is null!");
+    popup_msg("do_exp_mult panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -333,7 +333,7 @@ gint do_gaussian_mult( GtkWidget* widget, double * val)
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_gaussian_mult panic! buff is null!");
+    popup_msg("do_gaussian_mult panic! buff is null!",TRUE);
     return 0;
   }
   // this is repeated in the fitting routine!
@@ -361,7 +361,7 @@ gint do_zero_fill(GtkWidget * widget,double *val)
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_zero_fill panic! buff is null!");
+    popup_msg("do_zero_fill panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -435,7 +435,7 @@ gint do_left_shift(GtkWidget * widget,double *val)
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_left_shift panic! buff is null!");
+    popup_msg("do_left_shift panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -511,7 +511,7 @@ gint do_phase_wrapper( GtkWidget* widget, double *unused )
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_phase_wrapper panic! buff is null!");
+    popup_msg("do_phase_wrapper panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -1051,26 +1051,26 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_cross_correlate panic! buff is null!");
+    popup_msg("do_cross_correlate panic! buff is null!",TRUE);
     return 0;
   }
   
   num_bits = (int) *bits;
 
   if (len[num_bits-1] == 0 ){
-    popup_msg("Cross Correlate: invalid number of bits");
+    popup_msg("Cross Correlate: invalid number of bits",TRUE);
     return -1;
   }
 
   num_seq = (int) buff->param_set.npts/len[ num_bits-1 ] - 1;
   
   if (buff->param_set.npts < len[ num_bits-1 ]){
-    popup_msg("do_cross_correlate: too few points for mlbs\n");
+    popup_msg("do_cross_correlate: too few points for mlbs\n",TRUE);
     return 0;
   }
   /*  
       if (num_seq < 1){ 
-      popup_msg("do_cross_correlate: num_seq < 1");
+      popup_msg("do_cross_correlate: num_seq < 1",TRUE);
       return 0;
       }
   */
@@ -1340,7 +1340,7 @@ gint do_zero_fill_2d(GtkWidget * widget,double *val)
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_zero_fill_2d panic! buff is null!");
+    popup_msg("do_zero_fill_2d panic! buff is null!",TRUE);
     return 0;
   }
   
@@ -1438,7 +1438,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     //printf("do_ft- on buffer %i\n",current );
   }
   if (buff == NULL){
-    popup_msg("do_ft_2d panic! buff is null!");
+    popup_msg("do_ft_2d panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -1469,7 +1469,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 
 
   if (buff->is_hyper == FALSE){
-    //    popup_msg("hypercomplex flag not set, doing real FT?");
+    //    popup_msg("hypercomplex flag not set, doing real FT?",TRUE);
     printf("hypercomplex flag not set, doing real FT\n");
     new_data = g_malloc(buff->npts2 * sizeof(float) );
     //  printf("2dft did malloc, 2dnpts = %i\n",buff->npts2);
@@ -1578,7 +1578,7 @@ gint do_exp_mult_2d( GtkWidget* widget, double * val )
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_exp_mult_2d panic! buff is null!");
+    popup_msg("do_exp_mult_2d panic! buff is null!",TRUE);
     return 0;
   }
 
@@ -1640,7 +1640,7 @@ gint do_offset_cal_2D( GtkWidget *widget, double *unused )
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_ft_offset_cal_2D panic! buff is null!");
+    popup_msg("do_ft_offset_cal_2D panic! buff is null!",TRUE);
     return 0;
     
   }
@@ -1733,7 +1733,7 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_ft_offset_cal_2D panic! buff is null!");
+    popup_msg("do_ft_offset_cal_2D panic! buff is null!",TRUE);
     return 0;
     
   }

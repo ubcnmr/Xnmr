@@ -307,7 +307,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     int i; 
 
     if (&buff->param_set != current_param_set){
-      popup_msg("Panic:  update_2d_buttons_from_buff, got a buffer that's not current?");
+      popup_msg("Panic:  update_2d_buttons_from_buff, got a buffer that's not current?",TRUE);
       return;
     }
     for( i=0; i<num_buttons; i++ ) { 
@@ -425,7 +425,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	path_strcpy(s2,lpath+1);
 	result = set_cwd(s);
 	if (result != 0) {
-	  popup_msg("Directory not found");
+	  popup_msg("Directory not found",TRUE);
 	  lpath = strrchr(current_param_set->save_path,'/');
 	  norecur = 1;
 	  gtk_entry_set_text(GTK_ENTRY(save_text_box),lpath+1);
@@ -900,7 +900,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
 	if (buffp[current] == NULL) // if the buffer doesn't exist yet, delay the popup
 	  g_idle_add ((GtkFunction) popup_msg_mutex_wrap,"Can't find pulse program");
 	else
-	  popup_msg("Can't find pulse program");
+	  popup_msg("Can't find pulse program",TRUE);
 	//	printf( "Can't open parameter file %s\n", fileN ); 
 	return -1; 
       } 
@@ -912,7 +912,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
   
     
     if (fs == NULL) {
-      popup_msg("Can't find parameter file\n");
+      popup_msg("Can't find parameter file\n",TRUE);
       return -1;
     }
     //    printf("got param file on: %s\n",s);
@@ -1858,7 +1858,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     else 
       buff = buffp[ upload_buff ]; // here we call at end of acq
     if (buff == NULL){
-      popup_msg("reload panic, buff = NULL");
+      popup_msg("reload panic, buff = NULL",TRUE);
       return;
     }
     path_strcpy( path, buff->path_for_reload); 

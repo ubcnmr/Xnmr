@@ -33,6 +33,17 @@ to pkg-config --cflags gtk+-2.0 and --libs gthread-2.0 gtk+-2.0
 
 7) changed gtk_accel_group_attach to gtk_window_add_accel_group
 
+
+Dependencies: 
+- gtk+-2.6 at least.
+- four1 and spline routines from numerical recipes (included in here)
+- the fitting package uses the AT&T PORT routine n2f.  If you don't have it,
+  comment out the calls to n2f and ivset in buff.c and remove -lf2c and -lport in the makefile.
+  OR, get the port library from AT&T (http://www.bell-labs.com/project/PORT/)
+  To compile it on gentoo linux, change the makefile so F77=gcc, also may need
+  to add flags -lf2c -lm.
+
+
 */
 /*
   files that go where:
@@ -600,9 +611,13 @@ int main(int argc,char *argv[])
   g_signal_connect(G_OBJECT(fit_data.precalc),"clicked",G_CALLBACK(fitting_buttons),NULL);
 
 
-  fit_data.run_fit = gtk_button_new_with_label("Run Fit");
+  fit_data.run_fit = gtk_button_new_with_label("Run Fit\nFull Spectrum");
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.run_fit,FALSE,FALSE,2);
   g_signal_connect(G_OBJECT(fit_data.run_fit),"clicked",G_CALLBACK(fitting_buttons),NULL);
+
+  fit_data.run_fit_range = gtk_button_new_with_label("Run Fit\nDisplayed Range");
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.run_fit_range,FALSE,FALSE,2);
+  g_signal_connect(G_OBJECT(fit_data.run_fit_range),"clicked",G_CALLBACK(fitting_buttons),NULL);
 
   fit_data.close = gtk_button_new_with_label("Close");
   gtk_box_pack_end(GTK_BOX(hbox),fit_data.close,FALSE,FALSE,2);
@@ -1225,7 +1240,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
 		     dp0,dp1,buff->param_set.npts);
 	  }
 	}// end if npts the same
-	else popup_msg("npts changed, didn't apply phase");
+	else popup_msg("npts changed, didn't apply phase",TRUE);
       }// end slice row
       else{ /* SLICE_COL */
 	if (phase_npts == buff->npts2/2){
@@ -1260,7 +1275,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
 	    }
 	  }
 	}// end npts the same
-	else popup_msg("npts changed, didn't apply phase");
+	else popup_msg("npts changed, didn't apply phase",TRUE);
       }// end slice col.
 
 
@@ -1595,7 +1610,7 @@ gint hide_phase( GtkWidget *widget, GdkEvent  *event, gpointer   data )
   return TRUE;
 }
 
-gint popup_msg( char* msg )
+gint popup_msg( char* msg ,char modal)
 
 {
   GtkWidget* dialog;
@@ -1603,7 +1618,10 @@ gint popup_msg( char* msg )
   GtkWidget* label;
 
   dialog = gtk_dialog_new();
-  gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
+
+  if (modal == TRUE)
+    gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
+
   label = gtk_label_new ( msg );
   button = gtk_button_new_with_label("OK");
   g_signal_connect_swapped (G_OBJECT (button), "clicked", G_CALLBACK (gtk_widget_destroy), G_OBJECT( dialog ) );
@@ -1627,7 +1645,7 @@ gint popup_msg( char* msg )
 gint popup_msg_mutex_wrap(char *msg){
   gint i;
   gdk_threads_enter();
-  i = popup_msg(msg);
+  i = popup_msg(msg,TRUE);
   gdk_threads_leave();
   return i;
 }
