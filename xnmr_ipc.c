@@ -256,7 +256,7 @@ void start_acq()
     pid = fork();
 
     if( pid == 0 ) {  //start the pulse program
-      
+      //      char bell=7;
       // now set process group id to be our own so that acq doesn't
       // get any signals meant for the Xnmr parent
       setpgid(0,0);
@@ -264,6 +264,26 @@ void start_acq()
       
       execl( "/usr/local/bin/acq", NULL );
       // reaching here meant that launching acq failed
+      // we can't pop up a dialog because we're a new program...
+      {
+	char mystr[2],i;
+	mystr[0]=7;
+	mystr[1]=0;
+	printf("*********************************************\n");
+	printf("*                                           *\n");
+	printf("*             FAILED TO LAUNCH ACQ          *\n");
+	printf("*                                           *\n");
+	printf("* You'll need to use ipcclean in the Xnmr   *\n");
+	printf("*           directory and put               *\n");
+	printf("*      a valid acq in /usr/local/bin/       *\n");
+	printf("*                                           *\n");
+	printf("*********************************************\n");
+	for(i=0;i<5;i++){
+	  printf(mystr);
+	  fflush(stdout);
+	  sleep(1);
+	}
+      }
       exit(1);
       
     }
