@@ -1,10 +1,10 @@
 still to do:
 
 
-
+- queueing experiments, sigh...
 - in Gtk+-2.0, old text params don't get copied correctly? (reproducability?)
-- in Gtk+-2.0, change between buffers while running complains about
-  changing parameter values during acquisition.(reproducability?)
+- fractional left shift
+- left shift in 2nd dim.
 
 
 With Gtk+-2.0 can get rid of text fields for freq - should redo params
@@ -19,11 +19,6 @@ to account for new precision and int/float specifications...
 
 
 
-- deal with shm problem - if we have a running Xnmr. then start another Xnmr 
-	without the noacq option (so it can clone from acq). Then the first
-	Xnmr quits, we can't restart until the second one exits because it
-	holds open the deleted shm.  Not sure what to do about this...
-- seems to be fixed in newer kernels... (2.4.18)
 
 - in new threaded version - need to check that the signal thread is still
   running periodically (like any time we push a start/stop button?
@@ -31,8 +26,6 @@ to account for new precision and int/float specifications...
 Both these seem hard...
 
 - large 2d data sets can overrun the parameter string buffer
-- fractional left shift
-- left shift in 2nd dim.
 - need to make # acquisitions be an arrayable parameter.  Ick.
 	probably easiest to make na a parameter like any other parameter
 	eg like dgain.  If so, probably smart to have a system-wide param file that
@@ -43,18 +36,10 @@ Both these seem hard...
 	loaded.  Seems like a lot of work for a security problem.
 - some sort of flag needs to be drawn in the acq buffer.
 - doubled params in param file should give error ?
-- if trying to pull a number from a text parameter fails we should get some feedback.
 
 --------------------------------------
-- check for oen when going to sleep to wait for ppo in noisy mode.
-- crashing when close phase dialog if buffer npts has increased
-- on make new buff, we don't copy the number of acq_points
-- change order of cross correlation and first bc.
-- arrays getting badly messed up (tau in Presat_OnePulse)? ah, only if text param is empty
 
 
-- text parameters still need work, should be able to get number of digits
-  at least, and maybe they could even have arrays and units too. - Obsolete with gtk+-2
 - scales 
 - overlays
 - printing
@@ -81,6 +66,22 @@ still to do in the far future (maybe?):
 
 
 done:
+- check for oen when going to sleep to wait for ppo in noisy mode.
+- deal with shm problem - if we have a running Xnmr. then start another Xnmr 
+	without the noacq option (so it can clone from acq). Then the first
+	Xnmr quits, we can't restart until the second one exits because it
+	holds open the deleted shm.  Not sure what to do about this...
+	Seems to be fixed in newer kernels (>2.4.18?)
+- text parameters still need work, should be able to get number of digits
+  at least, and maybe they could even have arrays and units too. - Obsolete with gtk+-2
+- add/subtract interface
+- if trying to pull a number from a text parameter fails we should get some feedback - obsolete
+- crashing when close phase dialog if buffer npts has increased
+- on make new buff, we don't copy the number of acq_points
+- change order of cross correlation and first bc.
+- arrays getting badly messed up (tau in Presat_OnePulse)? ah, only if text param is empty
+- in Gtk+-2.0, change between buffers while running complains about
+  changing parameter values during acquisition.(reproducability?)
 
 - finally caught the bug where data from new acquisitions seems to go missing...
   in buff resize, check for disp.record was > npts, should be >= npts.

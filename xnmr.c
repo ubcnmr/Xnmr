@@ -984,6 +984,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
 		     dp0,dp1,buff->param_set.npts);
 	  }
 	}// end if npts the same
+	else popup_msg("npts changed, didn't apply phase");
       }// end slice row
       else{ /* SLICE_COL */
 	if (phase_npts == buff->npts2/2){
@@ -1018,6 +1019,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
 	    }
 	  }
 	}// end npts the same
+	else popup_msg("npts changed, didn't apply phase");
       }// end slice col.
 
 
