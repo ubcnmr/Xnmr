@@ -1159,6 +1159,7 @@ void open_phase( dbuff *buff, int action, GtkWidget *widget )
       floor((GTK_ADJUSTMENT(phase1_ad)->value+180.0)/360.0)*360.-180. ;
   GTK_ADJUSTMENT(phase1_ad)->upper =GTK_ADJUSTMENT(phase1_ad)->lower+
     (old_up-old_low);
+  gtk_adjustment_changed(GTK_ADJUSTMENT(phase1_ad));
 
   gtk_window_set_transient_for(GTK_WINDOW(phase_dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(phase_dialog),GTK_WIN_POS_CENTER_ON_PARENT);
@@ -1337,7 +1338,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
       GTK_ADJUSTMENT(phase1_ad)->upper +=360.;
       gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),lp1);
       phase_changed(phase1_ad,NULL);
-      printf("just set phase1\n");
+      gtk_adjustment_changed(GTK_ADJUSTMENT(phase1_ad));
     }
     else if (widget == phase_data.mbut){
       lp1-=360;
@@ -1345,8 +1346,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
       GTK_ADJUSTMENT(phase1_ad)->upper -=360.;
       gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),lp1);
       phase_changed(phase1_ad,NULL);
-
-
+      gtk_adjustment_changed(GTK_ADJUSTMENT(phase1_ad));
     }
 
   }

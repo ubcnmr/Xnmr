@@ -5599,6 +5599,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 			    "FITTING RESULTS\n#Line      Center                Amplitude             Gaussian width      Lorentz width\n") ;
 	pnum = 0; 
 	for (i=0;i<fit_data.num_components;i++){
+	  // \302\261 will encode a +/- character in UTF-8!
 	  if (out_len < max_len)
 	    out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f +/- %-8.2f % 8g +/- %-8g",i,
 				x[pnum],stddev[pnum],x[pnum+1]*fit_data.amp_scale,stddev[pnum+1]*fit_data.amp_scale) ;
