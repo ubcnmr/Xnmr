@@ -8,7 +8,16 @@
  * 
  * written by: Carl Michal, Scott Nelson
  */
-/*  'ported' for GTK+-2.0 Oct 27, 2002 CM
+/*  August 2004 
+      - added add/subtract box
+      - fixed lots of potential crashes in scales dialog
+      - fixed some troubles quitting when various dialogs were open
+
+
+
+
+
+ 'ported' for GTK+-2.0 Oct 27, 2002 CM
     not much to change but:
 
 1)    array box didn't resize correctly,
