@@ -1,3 +1,8 @@
+pp0.99.4 Aug 2004
+ - added add/subtract window (needs gtk+-2.4
+ - fix a bunch of possible crashes on closing the scales dialog 
+ - and other dialogs when closing buffers or main shutdown.
+
 pp0.99.3
 - add noise spectroscopy flag and infrastructure in acq and pulse programing library.
   If a pulse program indicates that it is a noise spectroscopy
