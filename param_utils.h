@@ -64,6 +64,7 @@ typedef struct {
 #define PARAMETER_FORMAT_TEXT_S   "%s = '%[^'\n]'\n"
 #define PARAMETER_FORMAT_TEXT_O   "%s = %s'\n"
 #define PARAMETER_FORMAT_DOUBLE "%s = %lg\n"
+#define PARAMETER_FORMAT_DOUBLET "%s = '%lg'\n"
 #define PARAMETER_FORMAT_DOUBLEP "%s = %.*f%s\n"
 #define PARAMETER_2D_BREAK      ";\n"
 

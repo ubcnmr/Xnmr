@@ -84,7 +84,11 @@ int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
     else breaker += 2;
     match = strstr ( start ,nname); 
     if (match < breaker && match != NULL){
-      sscanf( match, PARAMETER_FORMAT_DOUBLE , s , var);
+      if (match[strlen(nname)+1] == '\''){ // this is to deal with old text-style doubles
+	sscanf(match,PARAMETER_FORMAT_DOUBLET, s , var);
+      }
+      else
+	sscanf( match, PARAMETER_FORMAT_DOUBLE , s , var);
       result = 0;
     }
     start = breaker;
