@@ -1,0 +1,91 @@
+June 10,2001
+
+Rules for pulse programming.
+
+start with:
+
+#include "pulse.h"
+
+have:
+main(){
+pulse_program_init(); right at the top.
+
+Then:
+do{
+   GET_PARAMETER_FLOAT (); macros
+
+   begin();
+
+Then 
+   EVENT time {label,value} {l2,v2} ... ;
+
+you can put a \ to mark a continuation line.  Next line must begin with {
+
+} while ( ready(phase_for_receiver) == P_PROGRAM_CALC);
+
+done();
+return 0;
+}
+
+
+
+a few issues.  values are always integers, with the max number of bits
+specified by the device in the h_config.h file.  Except for devices
+AMP1, AMP2, AMP3 and PHASE1, PHASE2, and PHASE3.  These are floats,
+the amplitudes should be between 0 and 1, phases can have any value,
+they get modulo 360.
+
+phase for receiver should be an integer (0,1,2,3)
+
+amplitude and phase values for the new transmitter require an extra
+pulse on the appropriate clk line to latch the values into the dacs -
+this is taken care of transparently, but there are a couple of little
+issues.  Amplitude and phase events get split into two for clocking
+purposes.  The dac values get loaded into the previous event and the
+current event, the clock toggle is set for the previous and current
+event, and then the event of interest is split into two events - one
+long one, and one a single counter cycle long.  A side effect: any
+amplitude or phase setting event is a minimum of 2 counter cycles
+long.
+
+
+
+Assign channels - logical channels in pulse program are 1,2,3
+can be assigned to hardware channels A, B, and C with statements like:
+#define CHANNEL1_B
+
+or
+
+#define CHANNEL3_C
+
+that go in BEFORE pulse.h is included.
+
+These channels affect the rf gate, amplitude, phase and blanking, but not the synthesizers.
+
+
+
+Calibrating transmitter phases and amplitudes:
+
+From head of pulse.c
+  A few notes on the amplitude and phase correction schemes for the new RF transmitters:
+
+  1) amplitude was easy:  collect data at different amplitude
+     settings: with _AMP = 0 to 1023. 
+     then fit it with a tanh, put the inverse in here.  no problem.
+  2) phase was not really harder...
+    a) to feed transmitter output through atten ( 40-60dB or so?) then
+     into receiver. using pulse program phase_sweep, with dwell = 25u,
+     pw1 = 50u. 
+    b) export the data - make sure the first point in the data file
+     corresponds to phase = 0
+    b) use read_phases to read them out (always reads from acq_tempexport.txt)
+    c) reverse_pairs to reverse them. - reads from stdin, use pipes:
+     < infile >outfile
+
+    presto.  the files that we look to for the phase lookups are:
+    /usr/src/Xnmr/current/correct_phaseN.txt
+    where the N is a 1 2 or 3.
+
+notes: phase_sweep starts off at -5 deg, so you'll want to left shift
+to there before exporting 
+

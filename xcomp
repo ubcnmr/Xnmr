@@ -1,0 +1,34 @@
+#!/bin/sh
+
+#CC=gcc3
+CC=gcc
+
+CFLAGS="-O2 -Wall `pkg-config --cflags glib-2.0` -I/usr/share/Xnmr/include/"
+LDFLAGS="-O2 -Wall `pkg-config --libs glib-2.0` -I/usr/share/Xnmr/include/"
+
+#check to see if the source file is .x ?
+#remove any trailing .c
+
+for i in $*; do
+fname=`sed 's/\.c$//' -  <<EOF
+$i
+EOF`
+#then remove any trailing .x
+fname=`sed 's/\.x$//' -  <<EOF
+$fname
+EOF`
+
+#    echo "xcomp: got filename: $fname"
+    if [ -f $fname.x ]; then 
+	echo preprocessing $fname.x
+	Xnmr_preproc $fname.x
+	echo compiling $fname.x.c
+	$CC $CFLAGS -c $fname.x.c
+	$CC $LDFLAGS -o $fname $fname.x.o -lxnmr -lm
+    else
+	echo compiling $fname.c
+	$CC $CFLAGS -c $fname.c
+	$CC $LDFLAGS -o $fname $fname.o -lxnmr -lm
+    fi
+echo
+done
