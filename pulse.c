@@ -4,7 +4,6 @@
 
 
 
-
   * 
   * This module is to be used for writing NMR pulse programs that are 
   * controlled by a separate process called acq (see acq.c) 
