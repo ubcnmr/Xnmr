@@ -696,7 +696,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     gtk_widget_show( param_frame ); 
 
     gtk_container_set_border_width(GTK_CONTAINER (param_frame),5); 
-    gtk_widget_set_size_request(param_frame,850,300); 
+    //    gtk_widget_set_size_request(param_frame,850,300); 
 
     param_scrolled_window =  gtk_scrolled_window_new( NULL, NULL);
     gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW(param_scrolled_window),
