@@ -433,9 +433,9 @@ dbuff *create_buff(int num){
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
 	buff->data[2*i+2*buff->param_set.npts*j]
-	  =cos(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.2/RAND_MAX-0.1;
+	  =cos(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-0.1;
 	buff->data[2*i+1+2*buff->param_set.npts*j]
-	  =sin(0.02*i*20)*exp(-i/100.)/(j+1)+ random()*0.2/RAND_MAX-0.1;
+	  =sin(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-0.1;
 
       }
 
@@ -4779,7 +4779,7 @@ void do_spline(GtkAction *action, dbuff *buff){
     base.undo_buff[i] = buff->data[i];
   base.redo_buff = buff->buffnum;
   
-  
+
   temp_data = g_malloc(2*8*buff->param_set.npts);
   calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
   
@@ -4805,11 +4805,11 @@ void do_spline(GtkAction *action, dbuff *buff){
       temp_data[i+buff->param_set.npts*2]=0; // set the second half to 0
     }
     // and do the reverse ft.
+    temp_data[0] /=2; // to avoid shifting the basline.
     four1(temp_data-1,buff->param_set.npts*2,-1);
     for(i=0;i<buff->param_set.npts*2;i++){
       buff->data[i+buff->disp.record*2*buff->param_set.npts]=temp_data[i]/buff->param_set.npts;
     }
-    //	g_free(temp_data);
     
     
   } // if not, give up on imag part...
