@@ -101,12 +101,13 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 {
   int was_in_progress,i,valid,count;
   //  printf("in kill_button_clicked, acq_in_progress=%i\n",acq_in_progress);
-  printf("in kill clicked, setting not green\n");
+
+  printf("in kill clicked, setting not green\nin progress: %i, mode: %i\n",acq_in_progress,data_shm->mode);
   gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
 
   send_sig_acq( ACQ_KILL ); 
   
-  if (acq_in_progress ==ACQ_STOPPED) return 0;
+  if (acq_in_progress == ACQ_STOPPED) return 0;
 
   /* if acq is listening, sends pulse program a sure death */
 
@@ -115,10 +116,14 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
   acq_in_progress = ACQ_STOPPED;
 
   if (was_in_progress == ACQ_RUNNING) {
-    if (data_shm->mode == NORMAL_MODE)
+    if (data_shm->mode == NORMAL_MODE){
+      printf("toggling start_button\n");
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), FALSE );
-    else
+    }
+    else{
+      printf("toggling start_button_nosave\n");
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button_nosave ), FALSE );
+    }
   }      
   if (was_in_progress == ACQ_REPEATING)
     gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( repeat_button ), FALSE );
@@ -159,9 +164,9 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
   char s[PATH_LENGTH];
   static char norecur=0;
 
-  //  printf("coming into start_button, norecur is: %i\n",norecur);
+    printf("coming into start_button, norecur is: %i\n",norecur);
   
-
+  
   buff = buffp[ current ];
 
   if (norecur == 1){
@@ -193,9 +198,14 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 	  return 0;
       }
 
-      if ((int) data == 0)
+      if (widget == start_button ){
+	printf("setting mode: NORMAL_MODE\n");
 	data_shm->mode = NORMAL_MODE;
-      else data_shm->mode = NORMAL_MODE_NOSAVE;
+      }
+      else {
+	printf("setting mode NOSAVE\n");
+	data_shm->mode = NORMAL_MODE_NOSAVE;
+      }
 
       acq_process_data = buffp[ current ]->process_data;
       upload_buff = current;
@@ -204,7 +214,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       // should really do this here, I think, and in repeat button, and repeat and process.
       send_paths(); // part of this is repeated below.
 
-      if ((int) data != 0 ) { // means its a start, not start and save
+      if (data_shm->mode == NORMAL_MODE_NOSAVE) { // means its a start, not start and save
 	path_strcpy( s, getenv("HOME"));
 	path_strcat( s,"/Xnmr/data/acq_temp");
 	path_strcpy( data_shm->save_data_path, s); 
@@ -290,7 +300,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
     }
       
     else {
-      printf("setting syle nocolor\n");
+      printf("setting style nocolor\n");
 
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
 
@@ -511,7 +521,7 @@ GtkWidget* create_panels()
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button_nosave ), TRUE );
       acq_in_progress = ACQ_RUNNING;
     }
-    g_signal_connect(G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(start_button_toggled),(gpointer *) 1);
+    g_signal_connect(G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(start_button_toggled),NULL);
   }
   else
     g_signal_connect (G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(noacq_button_press),NULL);

@@ -339,6 +339,7 @@ dbuff *create_buff(int num){
     put_name_in_buff(buff,s);
     //    printf("special buff creation put %s in save\n",buff->param_set.save_path);
 
+
     if( acq_in_progress != ACQ_STOPPED && num_buffs == 1 ) { //this is a currently running acq
       buff->win.ct_label = NULL; // clone_from_acq calls upload which tries to write this...
       current_param_set = &buff->param_set; // this used to be after clone_from_acq....
@@ -346,7 +347,7 @@ dbuff *create_buff(int num){
       do_auto(buff); // do this first time so it looks reasonable
 
       acq_param_set = &buff->param_set;
-
+      
       // now, if there is a signal waiting that isn't just data ready, deal with it.
       printf("started up running, signal from acq is: %i\n",data_shm->acq_sig_ui_meaning);
       if ( data_shm->acq_sig_ui_meaning != NEW_DATA_READY){
@@ -694,12 +695,17 @@ dbuff *create_buff(int num){
 
     // so we can change the background color of the ct label    
     
+    // we created the ct_box above, in order to color it if we're running.
+
     buff->win.ct_box = gtk_event_box_new();
-    
+
     buff->win.ct_label = gtk_label_new("ct: 0");
     gtk_container_add( GTK_CONTAINER(buff->win.ct_box),buff->win.ct_label);
     gtk_box_pack_start(GTK_BOX(vbox1),buff->win.ct_box,FALSE,FALSE,0);
-    
+
+    if (acq_in_progress != ACQ_STOPPED && num_buffs == 1){
+    }
+
 
 
     hbox5=gtk_hbox_new(FALSE,1);
@@ -729,7 +735,18 @@ dbuff *create_buff(int num){
       set_ch1(buff,get_ch1(buffp[current]));
       set_ch2(buff,get_ch2(buffp[current]));
     }
-    else {
+    else if (acq_in_progress != ACQ_STOPPED && num_buffs == 1){ // if we're already running.
+      GdkColor color;
+      
+      gdk_color_parse("green",&color);
+      gtk_widget_modify_bg(buff->win.ct_box,GTK_STATE_NORMAL,&color);
+      
+      // clone from acq already did this:
+      //      set_ch1(buff,data_shm->ch1); 
+      //      set_ch2(buff,data_shm->ch2);
+      
+    }
+    else{ // defaults:
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but1a),TRUE);
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but2c),TRUE);
     }
@@ -5348,99 +5365,100 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
       xval= (event->x-1.)/(buffp[sbnum]->win.sizex-1) *
 	(buffp[sbnum]->disp.xx2-buffp[sbnum]->disp.xx1)	+buffp[sbnum]->disp.xx1;
       //      printf("xval is: %f\n",xval);
-    }
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.components),fit_data.num_components+1);
-    // now set the values in it
-    sw = buffp[sbnum]->param_set.sw;
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.center[fit_data.num_components-1]),-xval*sw+sw/2);
-
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[fit_data.num_components-1]),FALSE);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[fit_data.num_components-1]),TRUE);
-
-    // now need the width and amplitude
-    // we used exactly the center that the user selected.  Find a nearby maximum and then get a width.
-
-    xpt = pix_to_x(buffp[sbnum],event->x);
-    //    printf("got point %i\n",xpt);
-    i_max = xpt;
-    record = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record));
-
-    max = buffp[sbnum]->data[xpt*2 + buffp[sbnum]->param_set.npts*2*record];
-
-    if (xpt < buffp[sbnum]->param_set.npts-1)
-      for (i=xpt+1;i<buffp[sbnum]->param_set.npts;i++){
-	if (buffp[sbnum]->data[2*i + buffp[sbnum]->param_set.npts*2*record] > max){
-	  max = buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record];
-	  i_max = i;
-	}
-	else i = buffp[sbnum]->param_set.npts;
-      }
-    if (xpt > 0)
-      for (i=xpt-1;i>=0;i--){
-	if (buffp[sbnum]->data[2*i + buffp[sbnum]->param_set.npts*2*record] > max){
-	  max = buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record];
-	  i_max = i;
-	}
-	else i = -1;
-      }
-      
-    //so we should have the max:
-    //    printf("found max of %f at %i\n",max,i_max);
-
-    // now look for the width.
-    // look to the right till we get below half max
-    i_left=xpt;
-    i_right=xpt;
-    if (xpt < buffp[sbnum]->param_set.npts-1)
-      for(i=xpt+1;i<buffp[sbnum]->param_set.npts;i++){
-	if (buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record] < max/2.){
-	  i_right = i;
-	  i = buffp[sbnum]->param_set.npts;
-	}
-      }
-    if (xpt > 0)
-      for (i=xpt-1;i>=0;i--){
-	if (buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record] < max/2.){
-	  i_left = i;
-	  i = -1;
-	}
-      }
-    //    printf("left and right limits: %i %i\n",i_left,i_right);
-    // so we've got a rough width, let's do a little better
-    width = 0;
-    x_left = xpt;
-    x_right = xpt;
-    if (i_left != xpt){
-      m = (buffp[sbnum]->data[2*(i_left+1)+buffp[sbnum]->param_set.npts*2*record]-
-	   buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]);
-      b= buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]-m*i_left;
-      x_left = (max/2.-b)/m;
-      //      printf("using %f for left edge\n",x_left);
-      width += (xpt-x_left)
-	*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
-    }
-  
-    if (i_right != xpt){
-      m = (buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-
-	   buffp[sbnum]->data[2*(i_right-1)+buffp[sbnum]->param_set.npts*2*record]);
-      b= buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-m*i_right;
-      x_right = (max/2.-b)/m;
-      //      printf("using %f for right edge\n",x_right);
-      
-      width += (x_right-xpt)*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
     
-    }
-    //    printf("so width is: %f\n",width);
-    // stick half in each of lorentz and gaus
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.components),fit_data.num_components+1);
+      // now set the values in it
+      sw = buffp[sbnum]->param_set.sw;
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.center[fit_data.num_components-1]),-xval*sw+sw/2);
+      
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[fit_data.num_components-1]),FALSE);
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[fit_data.num_components-1]),TRUE);
+      
+      // now need the width and amplitude
+      // we used exactly the center that the user selected.  Find a nearby maximum and then get a width.
+      
+      xpt = pix_to_x(buffp[sbnum],event->x);
+      //    printf("got point %i\n",xpt);
+      i_max = xpt;
+      record = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record));
+      
+      max = buffp[sbnum]->data[xpt*2 + buffp[sbnum]->param_set.npts*2*record];
+      
+      if (xpt < buffp[sbnum]->param_set.npts-1)
+	for (i=xpt+1;i<buffp[sbnum]->param_set.npts;i++){
+	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->param_set.npts*2*record] > max){
+	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record];
+	    i_max = i;
+	  }
+	  else i = buffp[sbnum]->param_set.npts;
+	}
+      if (xpt > 0)
+	for (i=xpt-1;i>=0;i--){
+	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->param_set.npts*2*record] > max){
+	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record];
+	    i_max = i;
+	  }
+	  else i = -1;
+	}
+      
+      //so we should have the max:
+      //    printf("found max of %f at %i\n",max,i_max);
+      
+      // now look for the width.
+      // look to the right till we get below half max
+      i_left=xpt;
+      i_right=xpt;
+      if (xpt < buffp[sbnum]->param_set.npts-1)
+	for(i=xpt+1;i<buffp[sbnum]->param_set.npts;i++){
+	  if (buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record] < max/2.){
+	    i_right = i;
+	    i = buffp[sbnum]->param_set.npts;
+	  }
+	}
+      if (xpt > 0)
+	for (i=xpt-1;i>=0;i--){
+	  if (buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record] < max/2.){
+	    i_left = i;
+	    i = -1;
+	  }
+	}
+      //    printf("left and right limits: %i %i\n",i_left,i_right);
+      // so we've got a rough width, let's do a little better
+      width = 0;
+      x_left = xpt;
+      x_right = xpt;
+      if (i_left != xpt){
+	m = (buffp[sbnum]->data[2*(i_left+1)+buffp[sbnum]->param_set.npts*2*record]-
+	     buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]);
+	b= buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]-m*i_left;
+	x_left = (max/2.-b)/m;
+	//      printf("using %f for left edge\n",x_left);
+	width += (xpt-x_left)
+	  *buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
+      }
+      
+      if (i_right != xpt){
+	m = (buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-
+	     buffp[sbnum]->data[2*(i_right-1)+buffp[sbnum]->param_set.npts*2*record]);
+	b= buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-m*i_right;
+	x_right = (max/2.-b)/m;
+	//      printf("using %f for right edge\n",x_right);
 	
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[fit_data.num_components-1]),width);
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[fit_data.num_components-1]),width);
-    
-    // and then the amplitude.  The integral is height * width(in points)/sqrt(npts)*2
-    // give it an extra * 1.5 for good luck.
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.amplitude[fit_data.num_components-1]),
-			      2.*1.5*max*(x_right-x_left)/sqrt(buffp[sbnum]->param_set.npts));
-
+	width += (x_right-xpt)*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
+	
+      }
+      //    printf("so width is: %f\n",width);
+      // stick half in each of lorentz and gaus
+      
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[fit_data.num_components-1]),width);
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[fit_data.num_components-1]),width);
+      
+      // and then the amplitude.  The integral is height * width(in points)/sqrt(npts)*2
+      // give it an extra * 1.5 for good luck.
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.amplitude[fit_data.num_components-1]),
+				2.*1.5*max*(x_right-x_left)/sqrt(buffp[sbnum]->param_set.npts));
+    }
+    else popup_msg("Can only add points on a row",TRUE);
 
 
   }
@@ -5756,25 +5774,28 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	pnum = 0; 
 	for (i=0;i<fit_data.num_components;i++){
 	  // \302\261 will encode a +/- character in UTF-8!
-	  if (out_len < max_len)
-	    out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f +/- %-8.2f % 8g +/- %-8g",i,
-				x[pnum],stddev[pnum],x[pnum+1]*fit_data.amp_scale,stddev[pnum+1]*fit_data.amp_scale) ;
-	  pnum+=2;
-	  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE && out_len < max_len){
-	    out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",x[pnum],stddev[pnum]) ;
-	    pnum +=1 ;
-	  }
-	  else if (out_len < max_len)
-	    out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",0.,0.)-1;
-	  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE && out_len < max_len){
-	    out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %- 8.2f",x[pnum],stddev[pnum]);
-	    pnum +=1 ;
-	  }
-	  else if (out_len < max_len)
-	    out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",0.,0.);
-	  if (out_len > 0) 
-	    out_len += snprintf(&out_string[out_len],max_len-out_len,"\n");
+	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE
+	     || gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE){
 
+	    if (out_len < max_len)
+	      out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f +/- %-8.2f % 8g +/- %-8g",i,
+				  x[pnum],stddev[pnum],x[pnum+1]*fit_data.amp_scale,stddev[pnum+1]*fit_data.amp_scale) ;
+	    pnum+=2;
+	    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE && out_len < max_len){
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",x[pnum],stddev[pnum]) ;
+	      pnum +=1 ;
+	    }
+	    else if (out_len < max_len)
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",0.,0.)-1;
+	    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE && out_len < max_len){
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %- 8.2f",x[pnum],stddev[pnum]);
+	      pnum +=1 ;
+	    }
+	    else if (out_len < max_len)
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",0.,0.);
+	    if (out_len > 0) 
+	      out_len += snprintf(&out_string[out_len],max_len-out_len,"\n");
+	  }
 	}
 
 	// now figure out the goodness of fit.
@@ -6204,7 +6225,7 @@ void queue_expt(GtkAction *action, dbuff *buff){
 
 
   if (data_shm->mode != NORMAL_MODE)
-    popup_msg("Warning, currently acquisition is set to save to acq_temp!!",TRUE);
+    popup_msg("Warning: currently acquisition is set to save to acq_temp!!",TRUE);
 
 
 
