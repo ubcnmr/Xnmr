@@ -142,6 +142,8 @@ GdkColor colours[NUM_COLOURS+EXTRA_COLOURS]; // matches in xnmr.h
 GdkGC *colourgc;
 phase_data_struct phase_data;
 add_sub_struct add_sub;
+fitting_struct fit_data;
+
 int phase_npts=0;
 GtkWidget *phase_dialog,*freq_popup,*fplab1,*fplab2,*fplab3,*fplab4,*fplab5;
 
@@ -155,8 +157,10 @@ GtkWidget *panwindow;
 char from_do_destroy_all=0; // global flags to figure out what to do on exit.
 
 
+extern int main(int argc,char *argv[]);
 
 int main(int argc,char *argv[])
+//int MAIN__(int argc,char *argv[])
 {
 
   int i,ic;
@@ -187,15 +191,11 @@ int main(int argc,char *argv[])
   //block_signal();
 
   /* initialize the gtk stuff */
-
   g_thread_init(NULL); // we don't really use threads, except to catch signals
   gdk_threads_init();
   // mutex to ensure that routines added with idle_add don't collide.
-
   gtk_init(&argc, &argv);
-
   /* look for command line arguments  that gtk didn't want*/
-
   do{
     ar=getopt_long(argc,argv,"n",cmds,&longindex);
     if (ar == 'n') {
@@ -205,7 +205,6 @@ int main(int argc,char *argv[])
   }while (ar !=EOF );
 
   gtk_rc_parse("/usr/share/Xnmr/config/xnmrrc");
-
   path_strcpy(command,getenv("HOME"));
   path_strcat(command,"/.xnmrrc");
 	 
@@ -340,7 +339,6 @@ int main(int argc,char *argv[])
   add_sub.dialog = gtk_dialog_new();
   label=gtk_label_new("Add/Subtract");
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),label,FALSE,FALSE,0);
-  gtk_widget_show(label);
 
 
   // The buffer line:
@@ -353,6 +351,8 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
   label=gtk_label_new("Destination");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+  
 
   hbox=gtk_hbox_new(TRUE,2);
   gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),hbox,FALSE,FALSE,0);
@@ -472,6 +472,225 @@ int main(int argc,char *argv[])
   add_sub.shown = 0;
 
 
+  // now build the fitting window
+
+
+
+  fit_data.dialog = gtk_dialog_new();
+  gtk_window_set_resizable(GTK_WINDOW(fit_data.dialog),0);
+
+  label = gtk_label_new("Fitting");
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),label,FALSE,FALSE,0);
+
+  // the label line:
+
+  hbox=gtk_hbox_new(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),hbox,FALSE,FALSE,0);
+
+  label=gtk_label_new("Data Source");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+  label=gtk_label_new("Best Fit Destination");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+  fit_data.close = gtk_button_new_with_label("Close");
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.close,FALSE,FALSE,2);
+  g_signal_connect(G_OBJECT(fit_data.close),"clicked",G_CALLBACK(fitting_buttons),NULL);
+
+  // buffer line:
+  hbox=gtk_hbox_new(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),hbox,FALSE,FALSE,0);
+
+  label=gtk_label_new("Buffer");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+  fit_data.s_buff = gtk_combo_box_new_text();
+  g_signal_connect(G_OBJECT(fit_data.s_buff),"changed",
+		   G_CALLBACK(fit_data_changed),NULL);
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.s_buff,FALSE,FALSE,2);
+
+  label=gtk_label_new("Buffer");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+  
+  fit_data.d_buff = gtk_combo_box_new_text();
+  g_signal_connect(G_OBJECT(fit_data.d_buff),"changed",
+		   G_CALLBACK(fit_data_changed),NULL);
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.d_buff,FALSE,FALSE,2);
+
+  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_buff),"New");
+
+  label=gtk_label_new("  \t");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+  // record line
+  hbox=gtk_hbox_new(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),hbox,FALSE,FALSE,0);
+
+  label=gtk_label_new("record");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+  
+  fit_data.s_record = gtk_combo_box_new_text();
+  //  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.s_record),"Each");
+  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.s_record),"0");
+  g_signal_connect(G_OBJECT(fit_data.s_record),"changed",
+		   G_CALLBACK(fit_data_changed),NULL);
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.s_record,FALSE,FALSE,2);
+
+
+  label=gtk_label_new("record");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+  fit_data.d_record = gtk_combo_box_new_text();
+  //  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_record),"Each");
+  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_record),"Append");
+  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_record),"0");
+  g_signal_connect(G_OBJECT(fit_data.d_record),"changed",
+		   G_CALLBACK(fit_data_changed),NULL);
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.d_record,FALSE,FALSE,2);
+
+  label=gtk_label_new("  \t");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+
+
+  // next line:
+
+  hbox=gtk_hbox_new(FALSE,2);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),hbox,FALSE,FALSE,0);
+
+
+  label = gtk_label_new("# Components:");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+  
+
+
+  
+  adjust = gtk_adjustment_new(0,0,MAX_FIT,1,1,0);
+  fit_data.components=gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0,0);
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.components,FALSE,FALSE,2);
+  g_signal_connect(G_OBJECT(fit_data.components),"value_changed",G_CALLBACK(fit_data_changed),NULL);
+
+  label = gtk_label_new("       Enable\nProcess Broadening");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+
+  fit_data.enable_proc_broad = gtk_check_button_new();
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.enable_proc_broad,FALSE,FALSE,2);
+  
+
+
+  fit_data.start_clicking = gtk_button_new_with_label("Add components");
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.start_clicking,FALSE,FALSE,2);
+  g_signal_connect(G_OBJECT(fit_data.start_clicking),"clicked",G_CALLBACK(fitting_buttons),NULL);
+
+  fit_data.precalc = gtk_button_new_with_label("Precalc");
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.precalc,FALSE,FALSE,2);
+  g_signal_connect(G_OBJECT(fit_data.precalc),"clicked",G_CALLBACK(fitting_buttons),NULL);
+
+
+  fit_data.run_fit = gtk_button_new_with_label("Run Fit");
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.run_fit,FALSE,FALSE,2);
+  g_signal_connect(G_OBJECT(fit_data.run_fit),"clicked",G_CALLBACK(fitting_buttons),NULL);
+
+  //  the labels for the start values
+  vbox=gtk_vbox_new(TRUE,0);
+  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->action_area),vbox,FALSE,FALSE,0);
+  
+
+  hbox=gtk_hbox_new(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(vbox),hbox,FALSE,FALSE,0);
+
+  label=gtk_label_new("Num");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+
+  label=gtk_label_new("center freq");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+
+  label=gtk_label_new("amplitude");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+
+  label=gtk_label_new("Gaussian width");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+
+  label=gtk_label_new("Enable Gaussian");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+
+  label=gtk_label_new("Lorentzian width");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+
+  label=gtk_label_new("Enable Lorentzian");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,0);
+
+
+
+
+  gtk_widget_show_all(GTK_WIDGET(GTK_DIALOG(fit_data.dialog)->vbox));
+  gtk_widget_show_all(GTK_WIDGET(vbox));
+
+  // start with zero components, let the user choose how to add them.
+  fit_data.num_components = 0;
+  fit_data.s_rec = 1;
+  fit_data.d_rec = 1;
+
+  // but build them all, just don't show them:
+  for (i=0;i<MAX_FIT;i++){
+    char stt[5];
+
+    fit_data.hbox[i] = gtk_hbox_new(TRUE,2);
+    gtk_box_pack_start(GTK_BOX(vbox),fit_data.hbox[i],FALSE,FALSE,0);
+    
+    sprintf(stt,"%i",i+1);
+    label=gtk_label_new(stt);
+    gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),label,FALSE,FALSE,0);
+    gtk_widget_show(label);
+
+
+  //center
+    adjust = gtk_adjustment_new(0.0,-1e7,1e7,100,1000,0);
+    fit_data.center[i] = gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0.2,1);
+    gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.center[i],FALSE,FALSE,2);
+    gtk_widget_show(GTK_WIDGET(fit_data.center[i]));
+
+    // amplitude
+    adjust = gtk_adjustment_new(0.0,-1e12,1e12,100,1000,0);
+    fit_data.amplitude[i] = gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0.2,1);
+    gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.amplitude[i],FALSE,FALSE,2);
+    gtk_widget_show(GTK_WIDGET(fit_data.amplitude[i]));
+    
+    // gauss width
+    adjust = gtk_adjustment_new(0.0,0.0,1e6,10,100,0);
+    fit_data.gauss_wid[i] = gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0.2,1);
+    gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.gauss_wid[i],FALSE,FALSE,2);
+    gtk_widget_show(GTK_WIDGET(fit_data.gauss_wid[i]));
+
+
+    // enable Gauss
+    fit_data.enable_gauss[i] = gtk_check_button_new();
+    gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.enable_gauss[i],FALSE,FALSE,2);
+    gtk_widget_show(GTK_WIDGET(fit_data.enable_gauss[i]));
+
+
+    // lorentz width
+    adjust = gtk_adjustment_new(0.0,0.0,1e6,10,100,0);
+    fit_data.lorentz_wid[i] = gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0.2,1);
+    gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.lorentz_wid[i],FALSE,FALSE,2);
+    gtk_widget_show(GTK_WIDGET(fit_data.lorentz_wid[i]));
+
+
+    // enable Lorentz
+    fit_data.enable_lorentz[i] = gtk_check_button_new();
+    gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.enable_lorentz[i],FALSE,FALSE,2);
+    gtk_widget_show(GTK_WIDGET(fit_data.enable_lorentz[i]));
+
+
+
+  }
+
+
+ 
+  g_signal_connect(G_OBJECT(fit_data.dialog),"delete_event",G_CALLBACK(hide_fit),NULL);
+  fit_data.shown = 0;
+
+
 
 
 
@@ -484,6 +703,11 @@ int main(int argc,char *argv[])
   gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record1),0);
   gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record2),0);
   gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),0);
+
+  gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.s_buff),0);
+  gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_buff),0);
+  gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.s_record),0);
+  gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_record),0);
 
 
 

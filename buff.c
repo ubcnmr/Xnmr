@@ -11,6 +11,13 @@
 
 
 
+/* to do:  
+   1 finish fitting routine
+   2 fix up s/n so it finds the nearby peak...
+*/
+   
+
+
 
 /*
   File saving and loading:
@@ -73,7 +80,8 @@ int num_buffs;
 int active_buff;
 dbuff *buffp[MAX_BUFFERS];
 int array_popup_showing;
-int peak=-1, pt1=-1,pt2; // for s2n, integrate
+int peak=-1, s_pt1=-1,s_pt2; // for s2n, integrate
+int i_pt1,i_pt2; 
 
 GtkWidget* s2n_dialog;
 GtkWidget* int_dialog;  
@@ -129,6 +137,7 @@ dbuff *create_buff(int num){
     {"/_Analysis/_Set sf1", NULL, set_sf1,0, NULL},
     {"/_Analysis/R_MS", NULL, calc_rms,0, NULL},
     {"/_Analysis/_Add & subtract",NULL,add_subtract,0,NULL},
+    {"/_Analysis/_Fitting",NULL,fitting,0,NULL},
     {"/_Baseline", NULL, NULL,0,"<Branch>"},
     {"/_Baseline/_Pick Spline Points", NULL, baseline_spline,PICK_SPLINE_POINTS, NULL},
     {"/_Baseline/_Show Spline Fit", NULL,baseline_spline,SHOW_SPLINE_FIT,NULL},
@@ -342,9 +351,9 @@ dbuff *create_buff(int num){
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
 	buff->data[2*i+2*buff->param_set.npts*j]
-	  =cos(0.02*i*count)*exp(-i/200.)/(j+1);
+	  =cos(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.2/RAND_MAX-0.1;
 	buff->data[2*i+1+2*buff->param_set.npts*j]
-	  =sin(0.02*i*count)*exp(-i/200.)/(j+1);
+	  =sin(0.02*i*20)*exp(-i/100.)/(j+1)+ random()*0.2/RAND_MAX-0.1;
 
       }
 
@@ -702,6 +711,9 @@ dbuff *create_buff(int num){
     gtk_combo_box_insert_text(GTK_COMBO_BOX(add_sub.s_buff1),inum,s);
     gtk_combo_box_insert_text(GTK_COMBO_BOX(add_sub.s_buff2),inum,s);
     gtk_combo_box_insert_text(GTK_COMBO_BOX(add_sub.dest_buff),inum+1,s);
+    gtk_combo_box_insert_text(GTK_COMBO_BOX(fit_data.s_buff),inum,s);
+    gtk_combo_box_insert_text(GTK_COMBO_BOX(fit_data.d_buff),inum+1,s);
+    
     add_sub.index[inum] = num;
     
 
@@ -998,9 +1010,6 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
  }
  gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,
 		   i2-i1+1);
-
-
-
 
 
 }
@@ -1316,6 +1325,9 @@ gint destroy_buff(GtkWidget *widget,gpointer data)
       gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_buff1),i);
       gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_buff2),i);
       gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.dest_buff),i+1);
+      gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.s_buff),i);
+      gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.d_buff),i+1);
+
     }
   }
 
@@ -1741,9 +1753,12 @@ void do_s2n(int peak, int pt1,int pt2, dbuff *buff)
 {
 
 char string[UTIL_LEN];
-int count=0,i;
-float avg=0,avg2=0,s2n;
- 
+ int count=0,i,maxi;
+ float avg=0,avg2=0,s2n;
+ float s,n; 
+ float max;
+
+ // check to make sure the points are valid.
 if (pt1 > buff->param_set.npts || pt2 > buff->param_set.npts || peak > buff->param_set.npts) return; 
 if (pt1 <0 || pt2 < 0 || peak < 0) return; 
 
@@ -1755,16 +1770,49 @@ if (pt1 <0 || pt2 < 0 || peak < 0) return;
  }
  avg = avg/count;
  avg2 = avg2/count;
- 
+
+ // get the selected point.
+ s =  buff->data[buff->param_set.npts*2*buff->disp.record+2*peak];
+ max = s;
+ maxi = peak;
+
+ // now look to see if there are bigger points nearby.
+ if (peak < buff->param_set.npts - 1){
+   for (i=peak+1;i<buff->param_set.npts;i++){
+     s = buff->data[buff->param_set.npts*2*buff->disp.record+2*i];
+     if (s > max){
+       maxi = i;
+       max = s;
+     }  
+     else 
+       i = buff->param_set.npts+1;
+   }
+   
+ }
+		   
+ if (peak > 0){
+   for (i = peak-1;i>=0;i--){
+     s = buff->data[buff->param_set.npts*2*buff->disp.record+2*i];
+     if (s > max){
+       maxi = i;
+       max = s;
+     }
+       else 
+	 i = -1;
+   }
+ }
+
+ s = max;
+ n = sqrt(avg2 - avg*avg);
+
  //      printf("npts: %i, record: %i\n",buff->param_set.npts,buff->disp.record);
  //      printf("avg: %f, avg2: %f, count: %i\n",avg,avg2,count);
  
- s2n = buff->data[buff->param_set.npts*2*buff->disp.record+2*peak]/
-   sqrt(avg2 - avg*avg);
+ s2n = s/n;
  
  draw_canvas (buff);
- snprintf(string,UTIL_LEN,"S/N = %g",s2n );
- printf("%s\n",string);
+ snprintf(string,UTIL_LEN,"S/N = %g\nS = %g, N= %g",s2n,s,n );
+ printf("Using point %i with value %f\n",maxi,max);
  popup_msg(string);
  
 
@@ -1789,19 +1837,19 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
       // now in here we should search around a little for a real peak
 
 
-      printf("pixel: %i, x: %i\n",(int) event->x,peak);
+      //      printf("pixel: %i, x: %i\n",(int) event->x,peak);
       draw_vertical(buff,&colours[BLUE],0.,(int) event->x);
 
       break;
     case 2:
       gtk_label_set_text(GTK_LABEL(s2n_label),"Other edge of noise");
-      pt1 = pix_to_x(buff,event->x);
+      s_pt1 = pix_to_x(buff,event->x);
 
       draw_vertical(buff,&colours[BLUE],0.,(int) event->x);
       break;
     case 1:
       gtk_widget_destroy(s2n_dialog);
-      pt2 = pix_to_x(buff, event->x);
+      s_pt2 = pix_to_x(buff, event->x);
       // now in here we need to calculate the s2n and display it
 
 
@@ -1814,7 +1862,7 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
       g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
                         G_CALLBACK( s2n_press_event), buff);
       doing_s2n = 0;
-      do_s2n(peak,pt1,pt2,buff);
+      do_s2n(peak,s_pt1,s_pt2,buff);
       // calculate the s2n
       break;
     }
@@ -1828,7 +1876,7 @@ void signal2noiseold( dbuff *buff, int action, GtkWidget *widget )
     popup_msg("No old s2n values to use");
     return;
   }
-  do_s2n(peak,pt1,pt2 ,buff);
+  do_s2n(peak,s_pt1,s_pt2 ,buff);
 }
 
 
@@ -1897,7 +1945,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  if (pt1 < 0 || pt2 < 0) return; 
  
  if (strcmp(buff->path_for_reload,"") == 0){
-   popup_msg("Can't export integration, no reload path?");
+   printf("Can't export integration, no reload path?\n");
    //    return;
    export = 0;
  }
@@ -2005,15 +2053,15 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
     {
     case 2:
       gtk_label_set_text(GTK_LABEL(int_label),"Now the other edge");
-      pt1 = pix_to_x(buff,event->x);
-      printf("pt1: %i\n", pt1);
+      i_pt1 = pix_to_x(buff,event->x);
+      printf("integrate: pt1: %i ", i_pt1);
 
       draw_vertical(buff,&colours[BLUE],0.,(int) event->x);
       break;
     case 1:
       gtk_widget_destroy(int_dialog);
-      pt2 = pix_to_x(buff, event->x);
-      printf("pt2: %i\n", pt2);
+      i_pt2 = pix_to_x(buff, event->x);
+      printf("pt2: %i\n", i_pt2);
       // now in here we need to calculate the integral and display it
 
 
@@ -2028,7 +2076,7 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
       //      printf("about to do_integrate\n");
       doing_int = 0;
-      do_integrate(pt1,pt2,buff);
+      do_integrate(i_pt1,i_pt2,buff);
       // calculate the integral
       break;
     }
@@ -2040,11 +2088,11 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 void integrateold( dbuff *buff, int action, GtkWidget *widget )
 {
 
-  if (pt1 == -1) {
+  if (i_pt1 == -1) {
     popup_msg("No old bounds to use");
     return;
   }
-  do_integrate(pt1,pt2,buff);
+  do_integrate(i_pt1,i_pt2,buff);
 }
 
 
@@ -3079,6 +3127,18 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
     }
   }
 
+  // and then fitting:
+  i = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
+  if (add_sub.index[i] == buff->buffnum){
+    fit_data_changed(fit_data.s_buff,NULL);
+  }
+  i = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_buff));
+  if (i>0){
+    if (add_sub.index[i-1] == buff->buffnum){
+      fit_data_changed(fit_data.d_buff,NULL);
+    }
+  }
+  
 
 
    return 0;
@@ -4736,7 +4796,8 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 
 void add_subtract(dbuff *buff, int action, GtkWidget *widget ){
 
-  // need to maintain lists of buffers - should probably do it at buffer creation and kill time.
+  // need to maintain lists of buffers -
+  // should probably do it at buffer creation and kill time.
 
   
 
@@ -4750,7 +4811,6 @@ void add_subtract(dbuff *buff, int action, GtkWidget *widget ){
 
   
 
-  printf("in add_subtract stub\n");
 }
 
 void add_sub_changed(GtkWidget *widget,gpointer data){
@@ -5145,3 +5205,390 @@ gint hide_add_sub(GtkWidget *widget,gpointer data){
 }
 
 
+void fitting(dbuff *buff, int action, GtkWidget *widget ){
+
+    // default is current buffer and record
+    gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.s_buff),buff->buffnum);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.s_record),buff->disp.record);
+
+    if (buff->npts2 == 1) { //if its a 1D buffer, default to same buffer, append
+      gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_buff),buff->buffnum+1);
+      gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_record),0);
+    }
+    else{
+      gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_buff),buff->buffnum);
+      gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_record),0);
+    }
+
+  if (fit_data.shown == 0){ // ok - so fill in default 'from' and 'to'
+
+
+    gtk_widget_show(fit_data.dialog);
+    fit_data.shown = 1;
+  }
+  else
+    gdk_window_raise( fit_data.dialog->window); // but not fill in here
+
+
+
+}
+void dummy(); // extra function for n2f
+void dummy(){}
+void n2f_(int *n,int *p,float *x,void (*calc_spectrum_residuals),int *iv,int *liv,int *lv,float *v,
+     int *ui,float *ur,void (*dummy));
+
+void fitting_buttons(GtkWidget *widget, gpointer data ){
+
+  int sbnum,dbnum,i,j;
+
+  if (widget  == fit_data.close){ //close button
+    gtk_widget_hide(fit_data.dialog);
+    fit_data.shown = 0;
+    return;
+  }
+
+
+  // sort out buffer numbers.
+
+  i = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
+  j = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_buff));
+
+  if (i>=0) sbnum = add_sub.index[i];
+  else{
+    popup_msg("Invalid source buffer");
+    return;
+  }
+  if (j>=1) dbnum = add_sub.index[j-1];
+  else dbnum = -1; // indicates new buffer.
+
+
+
+  if (widget == fit_data.start_clicking){
+    
+    popup_msg("Graphical addition of components not implemented yet!");
+
+  }
+
+  if (widget == fit_data.run_fit || widget == fit_data.precalc){ // ok, do the fit
+
+    // so, we need to:  call n2f with:  the data, a list of parameters
+    int 
+      n // number of data points
+      ,p  // number of parameters
+      ,liv // length of IV
+      ,lv; // length of V
+
+    // max number of parameters is 5 * MAX_FIT, liv must be at least 82+p
+    int 
+      *iv,// integer workspace
+      *ui=NULL; //passed to calcr
+    
+    float 
+      x[5*MAX_FIT], // the parameters
+      *v; // floating point workspace
+    //      *ur; // passed to calcr (will be calculated spectrum) = spect
+
+
+
+      int i,pnum;
+      float *spect; // where our spectrum will go
+
+      if (fit_data.num_components == 0){
+	popup_msg("Can't fit with no components!");
+	return;
+      }
+
+      // ok, need to organize our parameters:
+      // they are: freq, ((amp gaus, amp lorentz) or total amp), gauss width, lorentz width
+      
+      pnum = 0;
+      for( i=0 ; i<fit_data.num_components;i++){
+
+	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE
+	   || gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE){
+
+	  x[pnum]=gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.center[i]));
+	  pnum ++;
+
+	  x[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.amplitude[i]));
+	  pnum++;
+
+	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE){
+	    x[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[i]));
+	    pnum++;
+	  }
+	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE){
+	    x[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[i]));
+	    pnum++;
+	  }
+	}
+      } // that's all i components
+
+
+      if (pnum == 0){
+	popup_msg("No Active components to fit!");
+	return;
+      }
+
+      // set up remaining details:
+
+      // this n may change if we implement a freq range capability - should only use points displayed on screen!
+      n = buffp[sbnum]->param_set.npts *2.; // we're going to fit the imaginary part too!
+      p = pnum;
+      
+      
+      // allocate memory for fitting routine.
+
+      liv = 82+5*MAX_FIT;
+      iv = malloc(liv*sizeof(int));
+      lv = 105 + p*(n+2*p+17)+2*n;
+      v = malloc(lv*sizeof(float));
+      // use the original npts here because n might vary.
+      spect = malloc(buffp[sbnum]->param_set.npts*2*sizeof(float));
+
+
+      iv[0] = 0; // uses defaults for iv and v
+      
+      // that should do it, go do the fit.
+      if ( widget == fit_data.run_fit){ // only actually do the fit if we want it done.
+	n2f_(&n,&p,x,&calc_spectrum_residuals,iv,&liv,&lv,v,ui,spect,&dummy);
+      }
+
+      // calc the final spectrum
+      printf("doing final spectrum calc:\n");
+      calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);
+
+      // in here we need to give the user the output,
+      // stick the calc'd spectrum where its supposed to go
+      // only if its a run_fit.
+      
+
+      /*
+      for(i=0;i<n/2;i++)
+	printf("%i %f %f\n",i,spect[2*i],spect[2*i+1]);
+      */
+
+      //only do the display if we're actually viewing the correct data.
+      if (buffp[sbnum]->disp.dispstyle == SLICE_ROW &&
+	  gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record)) == buffp[sbnum]->disp.record ){
+	printf("drawing the calc'd trace\n");
+	draw_canvas(buffp[sbnum]);
+	draw_row_trace(buffp[sbnum],0,0,spect,n/2,&colours[BLUE],0);
+	//	draw_row_trace(buffp[sbnum],0,0,spect,n/2,&colours[GREEN],1);
+
+	gtk_widget_queue_draw_area(buffp[sbnum]->win.canvas,1,1,buffp[sbnum]->win.sizex,buffp[sbnum]->win.sizey);
+      }
+
+
+
+      
+      free(v);
+      free(iv);
+      free(spect);
+  }
+  
+
+}
+
+
+void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,float *ur,void *uf)
+{
+  // n is number of data points
+  // p is number of parameters
+  // x is the parameters
+  // nf is ?  I think this might be the number of function calls made so far.
+  // r is where the residuals go
+  // ui, is an int pointer passed through
+  // ur is a float pointer passed through put our calc'd spectrum there.
+  // and uf is a user function passed through.
+
+  int i,pnum,sbnum,do_gauss,do_lorentz;
+  float scale,spare;
+  //  printf("in calc_spectrum_residuals, got %i data points and %i parameters\n",*n,*p);
+  
+  //initialize data array.
+  for (i=0;i<*n;i++) ur[i] = 0.;
+
+  // need the source buffer
+  i = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
+  sbnum = add_sub.index[i];
+
+  pnum = 0;
+  for( i=0 ; i<fit_data.num_components;i++){
+    // for each line, we need to calculate either a Gaussian, or a Lorentzian, or combination
+    do_gauss = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i]));
+    do_lorentz = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i]));
+					    
+
+    if(do_gauss == TRUE && do_lorentz == TRUE){
+      //      printf("line %i, doing both only\n",i);
+      add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],x[pnum+3],ur,*n/2,buffp[sbnum]->param_set.dwell/1e6);
+      pnum += 4;
+      }
+    else if (do_gauss == TRUE){
+      //      printf("line %i, doing gauss only\n",i);
+      add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],0.,ur,*n/2,buffp[sbnum]->param_set.dwell/1e6);
+      pnum += 3;
+      }
+    else if (do_lorentz == TRUE){
+      //      printf("line %i, doing lorentz only\n",i);
+      add_gauss_lorentz_line(x[pnum],x[pnum+1],0.,x[pnum+2],ur,*n/2,buffp[sbnum]->param_set.dwell/1e6);
+      pnum += 3;
+    }
+    else printf("for line: %i, didn't add a line\n",i);
+
+    
+  }
+  //  printf("got %i parameters, used: %i\n",*p,pnum);
+
+  // in here we'll now do the process broadenings if requested
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_proc_broad)) == TRUE){
+    float factor,temp;
+    factor = buffp[sbnum]->process_data[EM].val;
+    printf("got enable process broadening\n");
+    if (buffp[sbnum]->process_data[EM].status == SCALABLE_PROCESS_ON){ // do the mult
+      printf("doing exp mult with value: %f\n",factor);
+      for( i=0; i<buffp[sbnum]->param_set.npts; i++ ){
+	temp = exp(-1.0 * factor * i * buffp[sbnum]->param_set.dwell/1000000 * M_PI);
+	ur[2*i] *= temp; 
+	ur[2*i+1] *= temp; 
+      }
+    }
+    if (buffp[sbnum]->process_data[GM].status == SCALABLE_PROCESS_ON){
+      factor = buffp[sbnum]->process_data[GM].val;
+      printf("doing the gaussian mult with value: %f\n",factor);
+      for( i=0; i<buffp[sbnum]->param_set.npts; i++ ) {
+	temp = i*buffp[sbnum]->param_set.dwell/1000000 * M_PI * factor / 1.6651;
+	ur[2*i] *= exp( -1 * temp * temp );
+	ur[2*i+1] *= exp( -1 * temp * temp );
+      }
+    }	
+  }// end process broadening
+
+
+  // then ft
+  ur[0] /= 2;
+  scale = sqrt((float) *n/2);
+  four1(ur-1,*n/2,-1);
+  for(i=0;i<*n/2;i++){
+    spare=ur[i]/scale;
+    ur[i]= ur[i+ *n/2 ]/scale;
+    ur[i + *n/2]=spare;
+  }
+  
+  // then subtract off the experiment
+  // here we'll have to change when we only look at what's viewed.
+
+  for (i=0;i<*n;i++){
+    r[i] = ur[i] - buffp[sbnum]->data[i+
+      2*buffp[sbnum]->param_set.npts*gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record))];
+  }
+
+
+
+
+
+
+}
+
+
+
+void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz_wid,float *spect,int np,float dwell)
+{
+  int i;
+  float prefactor;
+  //  printf("add_lorentz_line: center: %f, amp: %f, width: %f, dwell %f\n",center,amp,wid,dwell);
+
+  for(i=0;i<np;i++){
+    prefactor = amp*exp(-i*dwell*lorentz_wid)*exp(-i*dwell*gauss_wid/1.6651*i*dwell*gauss_wid/1.6651);
+    spect[2*i] += prefactor * cos(-center*2*M_PI*dwell*i);
+    spect[2*i+1] += prefactor * sin(-center*2*M_PI*dwell*i);
+  }
+}
+
+gint hide_fit(GtkWidget *widget,gpointer data){
+  fitting_buttons(fit_data.close,NULL);
+  return TRUE;
+
+}
+
+void fit_data_changed(GtkWidget *widget,gpointer data){
+  int i,j;
+  int  snum,dnum;
+  char s[5];
+
+  i= gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
+  j= gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_buff));
+
+  if (i == -1 || j == -1 ) return; // got no selection can happen during program shutdown 
+
+  snum = add_sub.index[i];
+  if (j == 0) dnum = -1; // that means dest is a new buffer
+  else dnum = add_sub.index[j-1];
+
+
+  
+  //  printf("in fit_data_changed\n");
+
+  if (widget == fit_data.components){
+    i = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.components));
+
+    if (fit_data.num_components > i){ // have to delete some
+      for(j = fit_data.num_components-1 ;j>=i;j--){
+	gtk_widget_hide(GTK_WIDGET(fit_data.hbox[j]));
+      }
+    }
+    else 
+      if (fit_data.num_components < i){ //have to show some more
+	for (j=fit_data.num_components;j<i;j++){
+	  gtk_widget_show(GTK_WIDGET(fit_data.hbox[j]));
+	}
+      }
+    fit_data.num_components = i;
+    return;
+  }
+  if(widget == fit_data.s_buff){
+    // source buffer number changed, fix the number of records
+    if (buffp[snum]->npts2 < fit_data.s_rec){ // too many
+
+      for(i= fit_data.s_rec-1;i>= buffp[snum]->npts2;i--){
+	gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.s_record),i);
+      }
+    }
+    else 
+      if (buffp[snum]->npts2 > fit_data.s_rec){ // too few
+	for (i=fit_data.s_rec;i<buffp[snum]->npts2;i++){
+	  sprintf(s,"%i",i);
+	  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.s_record),s);
+	}
+      }
+    fit_data.s_rec = buffp[snum]->npts2;
+    return;
+  }
+  if(widget == fit_data.d_buff){
+    printf("dest buffer changed!\n");
+    int new_num = 1; // if its to a 'new' buffer, assume just one record in it
+    if (dnum >= 0 ) new_num = buffp[dnum]->npts2;
+    if (new_num < fit_data.d_rec){ // too many
+
+      for(i= fit_data.d_rec-1;i>= new_num;i--){
+	gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.d_record),i+1);
+      }
+    }
+    else 
+      if (new_num > fit_data.d_rec){ // too few
+	for (i=fit_data.d_rec;i<new_num;i++){
+	  sprintf(s,"%i",i);
+	  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_record),s);
+	}
+      }
+    fit_data.d_rec = new_num;
+    return;
+  }
+  if (widget == fit_data.s_record || widget == fit_data.d_record){
+    printf("one of the records changed\n");
+    return;
+  }
+  printf("in fit_data_changed but don't know what changed?\n");
+
+}

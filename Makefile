@@ -8,7 +8,7 @@
 #CC = icc
 #CFLAGS =   -g -O2 -ffloat-store -Wall  `gtk-config --cflags` 
 #CFLAGS =   -O3 -fomit-frame-pointer -Wall  `gtk-config --cflags` 
-CFLAGS =    -O3 -march=pentium3 -fomit-frame-pointer -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
+CFLAGS =     -fomit-frame-pointer -march=pentium3  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 #CFLAGS =    -O3 -axP -ipo  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 
 all: Xnmr acq libxnmr.so Xnmr_preproc
@@ -50,10 +50,14 @@ acq: acq.o pulse_hardware.o param_utils.o dsp.o adepp.o ad9850.o
 	@echo "Don't forget to make acq suid!!!"
 	@echo ""
 
+Xnmr: xnmr.o buff.o four1.o panel.o process_f.o param_f.o xnmr_ipc.o param_utils.o spline.o\
+ splint.o nrutil.o 
+	$(CC) $(CFLAGS)  xnmr.o   buff.o four1.o panel.o process_f.o param_f.o\
+ xnmr_ipc.o param_utils.o spline.o splint.o nrutil.o \
+-o Xnmr `pkg-config --libs gthread-2.0 gtk+-2.0` -lm -lportP -lf2c  -Xlinker -defsym -Xlinker MAIN__=main
 
-
-Xnmr: xnmr.o buff.o four1.o panel.o process_f.o param_f.o xnmr_ipc.o param_utils.o spline.o splint.o nrutil.o
-	$(CC) $(CFLAGS)  xnmr.o buff.o four1.o panel.o process_f.o param_f.o xnmr_ipc.o param_utils.o spline.o splint.o nrutil.o -o Xnmr -lm `pkg-config --libs gthread-2.0 gtk+-2.0` 
+# the -Xlinker -defsym -Xlinker MAIN__=main   passes: '-defsym MAIN__=main' to the linker, let us use 
+# fortran and C together.  The -lportP has the nonlinear fitting routine, and lf2c is necessary for fortran
 
 xnmr.o: xnmr.c xnmr.h panel.h buff.h param_f.h xnmr_ipc.h p_signals.h
 	$(CC) $(CFLAGS) -c xnmr.c

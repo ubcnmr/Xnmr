@@ -87,6 +87,7 @@ notes: phase_sweep starts off at -5 deg, so you'll want to left shift to there b
  #include <errno.h> 
  #include <stdlib.h>
  #include <sys/stat.h>
+ #include <sys/resource.h>
  #include <math.h>
  #include <glib.h>
 
@@ -1339,9 +1340,21 @@ int is_a_float_device(int device_id)
    char s[PATH_LENGTH];
    FILE *fs;
    struct msgbuf message; 
+   struct rlimit my_lim;
 
-   err = mlockall( MCL_FUTURE ); // this is already done in acq before it  - doesn't cross exec though.
-   if (err !=0 ) perror("pulse.c: error on mlockall");
+  if (getrlimit(RLIMIT_MEMLOCK,&my_lim) == 0){
+    my_lim.rlim_cur = RLIM_INFINITY;
+    my_lim.rlim_max = RLIM_INFINITY;
+    if ( setrlimit(RLIMIT_MEMLOCK,&my_lim) != 0){
+      perror("pulse: setrlimit");
+    }
+    else{ // only do the memlock if we were able to set our limit.
+      printf("doing the mlockall\n");
+      if (mlockall( MCL_CURRENT | MCL_FUTURE ) !=0 )
+	perror("mlockall");
+    }
+  }
+
 
    //  exec's into the pulse program, but after the fork.  Can't do it
    //  here because we aren't necessarily root. - This is a problem - the mem lock doesn't work across the fork for acq...

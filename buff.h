@@ -21,6 +21,9 @@
 #define BUFF_KEY "buffer key"
 #define PATH_KEY "path key"
 
+// maximum number of peaks for fitting.
+#define MAX_FIT 20
+
 /* display styles */
 
 #define SLICE_ROW 0
@@ -58,6 +61,13 @@ typedef struct {
   char shown ;
     } add_sub_struct;
 
+typedef struct{
+  GtkWidget *dialog,*s_buff,*d_buff,*s_record,*d_record,*components,
+    *start_clicking,*end_clicking,*run_fit,*precalc,*close,*enable_proc_broad,
+  *center[MAX_FIT],*amplitude[MAX_FIT],*gauss_wid[MAX_FIT],
+    *lorentz_wid[MAX_FIT],*enable_gauss[MAX_FIT],*enable_lorentz[MAX_FIT],*hbox[MAX_FIT];
+  int shown,num_components,s_rec,d_rec;
+} fitting_struct;
 
 
 /* global variables */
@@ -161,6 +171,7 @@ void clone_from_acq(dbuff *buff, int action, GtkWidget *widget );
 void set_sf1(dbuff *buff, int action, GtkWidget *widget);
 void calc_rms(dbuff *buff, int action, GtkWidget *widget);
 void add_subtract(dbuff *buff, int action, GtkWidget *widget);
+void fitting(dbuff *buff, int action, GtkWidget *widget);
 
 void reset_dsp_and_synth(dbuff *buff, int action, GtkWidget *widget);
 
@@ -178,7 +189,15 @@ void make_active(dbuff *buff);
 gint channel_button_change(GtkWidget *widget,dbuff *buff);
 
 void add_sub_changed(GtkWidget *widget,gpointer data);
+void fit_data_changed(GtkWidget *widget,gpointer data);
 void add_sub_buttons(GtkWidget *widget,gpointer data);
+void fitting_buttons(GtkWidget *widget,gpointer data);
 gint hide_add_sub(GtkWidget *widget,gpointer data);
+gint hide_fit(GtkWidget *widget,gpointer data);
+
+void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *lty,float *ty,void *uf);
+void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz_wid,float *spect,int np,float dwell);
+
 #endif
+
 

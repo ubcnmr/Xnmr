@@ -2,9 +2,9 @@
 // it will wait for interrupts !!!
 // it will also generate "simulated" data
 //
-//#define NOHARDWARE
-//#define NO_PORT_INTERRUPT
-//#define NO_RT_SCHED
+#define NOHARDWARE
+#define NO_PORT_INTERRUPT
+#define NO_RT_SCHED
 
 
 
@@ -71,6 +71,7 @@
 #include <glib.h>
 #include <syslog.h> // for system logger.
 #include <sys/io.h>
+#include <sys/resource.h> // for setrlimit for memlock
 #include "shm_data.h"
 #include "shm_prog.h"          //indirectly dependant on h_config.h
 #include "p_signals.h"
@@ -151,6 +152,7 @@ int init_shm()
 {
 
   int existed = 0; // stores if prog shared mem already existed
+  struct rlimit my_lim;
 
   data_shm = 0;  prog_shm = 0;
   data_shm_id = shmget( DATA_SHM_KEY, sizeof( struct data_shm_t ),0);
@@ -219,8 +221,18 @@ int init_shm()
 
   //Lock the memory pages as securely as possible
 
-  mlockall( MCL_FUTURE );
-
+  if (getrlimit(RLIMIT_MEMLOCK,&my_lim) == 0){
+    my_lim.rlim_cur = RLIM_INFINITY;
+    my_lim.rlim_max = RLIM_INFINITY;
+    if ( setrlimit(RLIMIT_MEMLOCK,&my_lim) != 0){
+      perror("acq: setrlimit");
+    }
+    else{ // only do the memlock if we were able to set our limit.
+      printf("doing the mlockall\n");
+      if (mlockall( MCL_CURRENT | MCL_FUTURE ) !=0 )
+	perror("mlockall");
+    }
+  }
   data_shm->acq_pid = getpid();
 
   return 0;

@@ -289,6 +289,8 @@ gint do_exp_mult( GtkWidget* widget, double* val )
     return 0;
   }
 
+  // this is repeated in the fitting routine!
+
   for( j=0; j<buff->npts2; j++ )
     for( i=0; i<buff->param_set.npts; i++ ){
       buff->data[2*i+j*2*buff->param_set.npts] *= exp( -1.0 * factor * i * buff->param_set.dwell/1000000 * M_PI ); 
@@ -334,6 +336,7 @@ gint do_gaussian_mult( GtkWidget* widget, double * val)
     popup_msg("do_gaussian_mult panic! buff is null!");
     return 0;
   }
+  // this is repeated in the fitting routine!
 
   for( j=0; j<buff->npts2; j++ )
     for( i=0; i<buff->param_set.npts; i++ ) {

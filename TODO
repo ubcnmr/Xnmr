@@ -2,9 +2,9 @@ still to do:
 
 
 - queueing experiments, sigh...
-- in Gtk+-2.0, old text params don't get copied correctly? (reproducability?)
 - fractional left shift
 - left shift in 2nd dim.
+- fitting!
 
 
 With Gtk+-2.0 can get rid of text fields for freq - should redo params
@@ -66,6 +66,7 @@ still to do in the far future (maybe?):
 
 
 done:
+- in Gtk+-2.0, old text params don't get copied correctly? (reproducability?)
 - check for oen when going to sleep to wait for ppo in noisy mode.
 - deal with shm problem - if we have a running Xnmr. then start another Xnmr 
 	without the noacq option (so it can clone from acq). Then the first
