@@ -353,7 +353,8 @@ int load_p_string( char* params, unsigned int acqs_2d, parameter_set_t* param_se
 	    break;
 	    
 	  case 1:
-	    sfetch_double( params, param_set->parameter[i].name, &param_set->parameter[i].f_val,0 );
+	    if (sfetch_double( params, param_set->parameter[i].name, &param_set->parameter[i].f_val,0 ) == 0)
+	      param_set->parameter[i].f_val /= param_set->parameter[i].unit;
 	    param_set->parameter[i].size = acqs_2d;
 	    param_set->parameter[i].type = 'F';
 	    param_set->parameter[i].f_val_2d = g_malloc( acqs_2d * sizeof(double) );

@@ -1574,6 +1574,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
         break; 
 
       case 'F': 
+        gtk_adjustment_set_value( GTK_ADJUSTMENT( popup_data.num_adj ), popup_data.param->size ); 
         for( i=0; i<popup_data.size; i++ ) { 
 	  GTK_ADJUSTMENT( popup_data.adj[i] )->value = popup_data.param->f_val_2d[i]; 
 	  GTK_ADJUSTMENT( popup_data.adj[i] )->upper = popup_data.param->f_max; 

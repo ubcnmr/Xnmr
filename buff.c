@@ -4015,7 +4015,7 @@ void clone_from_acq(dbuff *buff, int action, GtkWidget *widget )
     
     
   }
-  // the if {} here added Sept 28, 200<1 CM to prevent the load_param_fil
+  // the if {} here added Sept 28, 200<1 CM to prevent the load_param_file
   // from loading multiple times if it doesn't have to - its
   // slow over remote connections.
   if ( strcmp(buff->param_set.exec_path,data_shm->pulse_exec_path) != 0){
