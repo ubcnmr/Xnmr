@@ -4645,8 +4645,9 @@ void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spl
 
   for (i = 0 ; i < num_spline_points ; i++ ){
     xvals[i] = ((int) (spline_points[i]*(buff->param_set.npts-1)+0.5) ) ;
-    if (xvals[i] < 2 || xvals[i]>buff->param_set.npts-3)
+    if (xvals[i] < 2 || xvals[i]>buff->param_set.npts-3){
       yvals[i]=buff->data[ 2*xvals[i]+buff->disp.record*buff->param_set.npts*2];
+    }
     else{
       yvals[i] = 0;
       for (j=xvals[i]-2;j<xvals[i]+3;j++)
@@ -4744,9 +4745,7 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
 
 void do_spline(GtkAction *action, dbuff *buff){
   int i;
-  float x,y;
   float *temp_data;
-  int xvals[NUM_SPLINE];
 
       if (buff->disp.dispstyle != SLICE_ROW){
 	popup_msg("Spline only works on rows for now",TRUE);
@@ -4771,23 +4770,6 @@ void do_spline(GtkAction *action, dbuff *buff){
 	base.undo_buff[i] = buff->data[i];
       base.redo_buff = buff->buffnum;
       
-      /*
-      // first need to build our array.
-      for (i = 0 ; i < base.num_spline_points ; i++ ){
-	xvals[i] = ((int) (base.spline_points[i]*(buff->param_set.npts-1)+0.5) ) ;
-	if (xvals[i] < 2 || xvals[i]>buff->param_set.npts-3)
-	  base.yvals[i]=buff->data[ 2*xyals[i]
-				    +buff->disp.record*buff->param_set.npts*2];
-	else{
-	  base.yvals[i] = 0;
-	  for (j=xvals[i]-2;j<xvals[i]+3;j++)
-	    base.yvals[i] += buff->data[2*j+buff->disp.record*buff->param_set.npts*2];
-	  base.yvals[i] /= 5.;
-	}
-	//	printf("%f %f\n",base.spline_points[i],yvals[i]);
-      }
-      spline(base.spline_points-1,base.yvals-1,base.num_spline_points,0.,0.,base.y2vals-1);
-      */      
 
       temp_data = g_malloc(2*8*buff->param_set.npts);
       calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
@@ -4799,19 +4781,9 @@ void do_spline(GtkAction *action, dbuff *buff){
 
 
 
-      /* now apply the spline to the data */
-      /*      for(i=0;i<buff->param_set.npts;i++){
-	x = ((float) i)/(buff->param_set.npts-1);
-	splint(base.spline_points-1,base.yvals-1,base.y2vals-1,base.num_spline_points,x,&y);
-	
-	  buff->data[2*i+buff->disp.record*buff->param_set.npts*2] -= y;
-	  //printf("%i %f\n",i, y);
-	  }*/
-      //      printf("got all the points done, gonna redraw\n");
       // to do the imaginary part, play some tricks to generate it...
       // first, make sure npts is a power of 2.
       if  (log(buff->param_set.npts)/log(2.) == rint(log(buff->param_set.npts)/log(2.))){
-	//	temp_data = g_malloc(2*8*buff->param_set.npts);
 	for(i=0;i<buff->param_set.npts;i++){
 	  // copy data to temp buffer that's twice as long.
 	  temp_data[2*i]=buff->data[2*i+buff->disp.record*2*buff->param_set.npts];
