@@ -221,7 +221,6 @@ int init_shm()
 
   //Lock the memory pages as securely as possible
 
-<<<<<<< acq.c
   if (getrlimit(RLIMIT_MEMLOCK,&my_lim) == 0){
     my_lim.rlim_cur = RLIM_INFINITY;
     my_lim.rlim_max = RLIM_INFINITY;
@@ -234,20 +233,6 @@ int init_shm()
 	perror("mlockall");
     }
   }
-=======
-  if (getrlimit(RLIMIT_MEMLOCK,&my_lim) == 0){
-    my_lim.rlim_cur = RLIM_INFINITY;
-    my_lim.rlim_max = RLIM_INFINITY;
-    if ( setrlimit(RLIMIT_MEMLOCK,&my_lim) != 0){
-      perror("acq: setrlimit");
-    }
-    else{ // only do the memlock if we were able to set our limit.
-      printf("doing the mlockall\n");
-      if (mlockall( MCL_CURRENT | MCL_FUTURE ) !=0 )
-	perror("mlockall");
-    }
-  }
->>>>>>> 1.4
   data_shm->acq_pid = getpid();
 
   return 0;
