@@ -38,7 +38,8 @@ extern GdkCursor  *cursorclock;
 extern char no_acq;
 /* function prototypes */
 
-void open_phase(dbuff *buff,int action,GtkWidget *widget);
+//void open_phase(dbuff *buff,int action,GtkWidget *widget);
+void open_phase(GtkAction *action,dbuff *buff);
 
 gint do_phase(float *source,float *dest,float phase0,float phase1,int npts);
 
@@ -56,7 +57,7 @@ void do_destroy_all();
 
 gint hide_phase( GtkWidget *widget, GdkEvent  *event, gpointer data );
 
-gint popup_msg( char* msg,char modal );
+gint popup_msg( char* msg,char modal);
 gint popup_msg_mutex_wrap( char* msg );
 
 void draw_vertical(dbuff *buff,GdkColor  *col, float xvalf,int xvali);

@@ -1030,7 +1030,6 @@ white set up below  */
     path_strcpy(buffp[0]->path_for_reload,data_shm->save_data_path);
     set_window_title(buffp[0]);
     reload(NULL,NULL);
-
   }
   else
     draw_canvas(buffp[0]); 
@@ -1067,7 +1066,8 @@ white set up below  */
 }
 
 
-void open_phase( dbuff *buff, int action, GtkWidget *widget )
+//void open_phase( dbuff *buff, int action, GtkWidget *widget )
+void open_phase(GtkAction *action, dbuff *buff)
 {
   int buffnum,i;
   float old_low,old_up;
@@ -1399,7 +1399,8 @@ gint phase_changed(GtkObject *widget,gpointer *data)
   float lp0,lp1;
   float dp0,dp1;
   dbuff *buff;
-  int sizex,sizey,i;
+  int sizex,sizey;
+  // int i;
   GdkRectangle rect;
 
   /* make sure buffer still exists and phase window is actually open */
@@ -1429,13 +1430,13 @@ gint phase_changed(GtkObject *widget,gpointer *data)
 		 phase_data.data2,dp0,dp1,phase_npts);
       }
       else{ /* is column */
-	for(i=0;i<buff->npts2/2;i++){
+	//	for(i=0;i<buff->npts2/2;i++){
 	  /*	  phase_data.data2[2*i]=buff->data[buff->param_set.npts*2*2*i+
 					  2*buff->disp.record2];
 	  phase_data.data2[2*i+1]=buff->data[buff->param_set.npts*2*(2*i+1)
 	  +2*buff->disp.record2]; */
 	  do_phase(phase_data.data,phase_data.data2,dp0,dp1,phase_npts);
-	}
+	  //	}
       }      
       
       
@@ -1544,6 +1545,7 @@ void cursor_normal(dbuff *buff)
 
 gint destroy_all(GtkWidget *widget, gpointer data)
 {
+  // never use the widget...
   GtkWidget *dialog;
   GtkWidget *label;
   GtkWidget *yes_b;
@@ -1612,7 +1614,6 @@ gint hide_phase( GtkWidget *widget, GdkEvent  *event, gpointer   data )
 }
 
 gint popup_msg( char* msg ,char modal)
-
 {
   GtkWidget* dialog;
   GtkWidget* button;
@@ -1633,8 +1634,12 @@ gint popup_msg( char* msg ,char modal)
   gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(dialog)->vbox) ), label, FALSE, FALSE, 5 );
 
   //  gtk_widget_set_uposition(dialog,(int) 50,(int) 200);
-  gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(buffp[current]->win.window));
+  if (modal == TRUE)
+    gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(buffp[current]->win.window));
+  else
+    gtk_window_set_transient_for(GTK_WINDOW(dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(dialog),GTK_WIN_POS_CENTER_ON_PARENT);
+
 
   gtk_widget_show_all (dialog);
 

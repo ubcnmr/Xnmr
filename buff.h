@@ -38,6 +38,7 @@
 #define SHOW_SPLINE_FIT 2
 #define CLEAR_SPLINE_POINTS 3
 #define UNDO_SPLINE 4
+
 typedef struct {
   float ophase0,ophase1;
   float last_phase1;
@@ -85,23 +86,38 @@ extern GtkWidget *panwindow;
 
 /* function prototypes */
 dbuff *create_buff();
-void file_open(dbuff *buff,int action,GtkWidget *widget);
-void file_close(dbuff *buff,int action,GtkWidget *widget);
-void file_export(dbuff *buff,int action,GtkWidget *widget);
-void file_save(dbuff *buff,int action,GtkWidget *widget);
-void file_save_as(dbuff *buff,int action,GtkWidget *widget);
-//void file_save_as(GtkAction *action,dbuff *buff);
-void file_new(dbuff *buff,int action,GtkWidget *widget);
-//void file_new(GtkAction *action,dbuff *buff);
-void file_exit(dbuff *buff,int action,GtkWidget *widget);
-void file_append(dbuff *buff,int action,GtkWidget *widget);
+//void file_open(dbuff *buff,int action,GtkWidget *widget);
+void file_open(GtkAction *action,dbuff *buff);
+//void file_close(dbuff *buff,int action,GtkWidget *widget);
+void file_close(GtkAction *action,dbuff *buff);
+//void file_export(dbuff *buff,int action,GtkWidget *widget);
+void file_export(GtkAction *action,dbuff *buff);
+//void file_save(dbuff *buff,int action,GtkWidget *widget);
+void file_save(GtkAction *action,dbuff *buff);
+//void file_save_as(dbuff *buff,int action,GtkWidget *widget);
+void file_save_as(GtkAction *action,dbuff *buff);
+//void file_new(dbuff *buff,int action,GtkWidget *widget);
+void file_new(GtkAction *action,dbuff *buff);
+//void file_exit(dbuff *buff,int action,GtkWidget *widget);
+void file_exit(GtkAction *action, dbuff *buff);
+//void file_append(dbuff *buff,int action,GtkWidget *widget);
+void file_append(GtkAction *action, dbuff *buff);
 
 
-void do_scales(dbuff *buff,int action,GtkWidget *widget);
+//void do_scales(dbuff *buff,int action,GtkWidget *widget);
+void store_scales(GtkAction *action,dbuff *buff);
+void apply_scales(GtkAction *action,dbuff *buff);
+void user_scales(GtkAction *action,dbuff *buff);
+gint do_user_scales(GtkWidget *widget, float *range);
 gint do_user_scales(GtkWidget *widget, float *range);
 gint do_wrapup_user_scales(GtkWidget *widget, dbuff *buff);
 gint do_update_scales(GtkWidget *widget, dbuff *buff);
-void toggle_disp(dbuff *buff,int action,GtkWidget *widget);
+//void toggle_disp(dbuff *buff,int action,GtkWidget *widget);
+void toggle_real(GtkAction *action,dbuff *buff);
+void toggle_imag(GtkAction *action,dbuff *buff);
+void toggle_mag(GtkAction *action,dbuff *buff);
+void toggle_base(GtkAction *action,dbuff *buff);
+
 gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff);
 gint configure_event(GtkWidget *widget,GdkEventConfigure *event,
 			 dbuff *buff);
@@ -161,22 +177,37 @@ void update_param_win_title(parameter_set_t *param_set);
 gint put_name_in_buff(dbuff *buff,char *fname);
 
 
-void signal2noise(dbuff *buff,int action,GtkWidget *widget);
+//void signal2noise(dbuff *buff,int action,GtkWidget *widget);
+void signal2noise(GtkAction *action,dbuff *buff);
 void s2n_press_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff);
-void signal2noiseold( dbuff *buff, int action, GtkWidget *widget );
-void integrate(dbuff *buff,int action,GtkWidget *widget);
+//void signal2noiseold( dbuff *buff, int action, GtkWidget *widget );
+void signal2noiseold(GtkAction *action, dbuff *buff);
+//void integrate(dbuff *buff,int action,GtkWidget *widget);
+void integrate(GtkAction *action, dbuff *buff);
 void integrate_press_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff);
-void integrateold( dbuff *buff, int action, GtkWidget *widget );
+//void integrateold( dbuff *buff, int action, GtkWidget *widget );
+void integrateold(GtkAction *action, dbuff *buff);
 void integrate_from_file( dbuff *buff, int action, GtkWidget *widget );
-void clone_from_acq(dbuff *buff, int action, GtkWidget *widget );
-void set_sf1(dbuff *buff, int action, GtkWidget *widget);
-void calc_rms(dbuff *buff, int action, GtkWidget *widget);
-void add_subtract(dbuff *buff, int action, GtkWidget *widget);
-void fitting(dbuff *buff, int action, GtkWidget *widget);
+//void clone_from_acq(dbuff *buff, int action, GtkWidget *widget );
+void clone_from_acq(GtkAction *action,dbuff *buff);
+//void set_sf1(dbuff *buff, int action, GtkWidget *widget);
+void set_sf1(GtkAction *action,dbuff *buff);
+//void calc_rms(dbuff *buff, int action, GtkWidget *widget);
+void calc_rms(GtkAction *action,dbuff *buff);
+//void add_subtract(dbuff *buff, int action, GtkWidget *widget);
+void add_subtract(GtkAction *action,dbuff *buff);
+//void fitting(dbuff *buff, int action, GtkWidget *widget);
+void fitting(GtkAction *action,dbuff *buff);
 
-void reset_dsp_and_synth(dbuff *buff, int action, GtkWidget *widget);
+//void reset_dsp_and_synth(dbuff *buff, int action, GtkWidget *widget);
+void reset_dsp_and_synth(GtkAction *action,dbuff *buff);
 
 void baseline_spline(dbuff *buff, int action, GtkWidget *widget);
+void pick_spline_points(GtkAction *action,dbuff *buff);
+void do_spline(GtkAction *action,dbuff *buff);
+void clear_spline(GtkAction *action,dbuff *buff);
+void undo_spline(GtkAction *action,dbuff *buff);
+void show_spline_fit(GtkAction *action,dbuff *buff);
 
 
 char get_ch1(dbuff *buff);
