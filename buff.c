@@ -2110,7 +2110,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  
  char fileN[PATH_LENGTH]; 
  FILE *fstream=NULL;
- char string[UTIL_LEN],arr_name[PARAM_NAME_LEN];
+ char string[2*UTIL_LEN],arr_name[PARAM_NAME_LEN];
  int count,i,j,arr_num_for_int,arr_type=3;
  float integral,f1,f2;
  int export = 1;
@@ -2207,7 +2207,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
      }//if arrayed over integer
    }
    if (j==buff->disp.record){
-     snprintf(string,UTIL_LEN,"Integral = %g\n%i points, from %i to %i",integral,abs(pt2-pt1)+1,MIN(pt1,pt2),MAX(pt1,pt2));
+     snprintf(string,UTIL_LEN*2,"Integral = %g\n%i points, from %i to %i",integral,abs(pt2-pt1)+1,MIN(pt1,pt2),MAX(pt1,pt2));
      popup_msg(string,TRUE);
    }
    
