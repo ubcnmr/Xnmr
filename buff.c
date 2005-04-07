@@ -5018,6 +5018,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   int sbnum1,sbnum2,dbnum;
   char s[5];
 
+  printf("in add_sub_changed\n");
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff2));
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_buff));
@@ -5228,7 +5229,7 @@ if the number of records on the input records doesn't match for "each each", err
   // last error checking before we go:
   if (i==0 || j == 0){ // there's at least one each
     if (k != 0){
-      popup_msg("output must be each in an input is each",TRUE);
+      popup_msg("output must be each if an input is each",TRUE);
       return;
     }
     if (i==0 && j == 0) if (buffp[sbnum1]->npts2 !=buffp[sbnum2]->npts2){
@@ -5272,7 +5273,8 @@ if the number of records on the input records doesn't match for "each each", err
 
   }
 
-
+  // set the ft_flag to whatever the first source buff says:
+  buffp[dbnum]->flags = buffp[sbnum1]->flags;
 
 
 
