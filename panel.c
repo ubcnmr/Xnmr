@@ -143,7 +143,7 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
       printf("in kill, num_queued is messed up\n");
   }
   queue.num_queued -= count;
-  printf("killed: %i experiments from the queue\n",count);
+  //  printf("killed: %i experiments from the queue\n",count);
   set_queue_label();
   
   queue.num_queued = 0;

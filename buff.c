@@ -5018,7 +5018,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   int sbnum1,sbnum2,dbnum;
   char s[5];
 
-  printf("in add_sub_changed\n");
+  //  printf("in add_sub_changed\n");
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff2));
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_buff));
@@ -5053,6 +5053,13 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   if (widget == add_sub.s_buff1){
     // first buffer changed, fix the number of records:
     if (buffp[sbnum1]->npts2 < add_sub.s_rec_c1){ // too many
+
+      if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record1)) - 2 > buffp[sbnum1]->npts2 - 1){
+	//	printf("resetting srec1\n");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record1),2);
+      }
+
+
       for (i= add_sub.s_rec_c1-1; i >= buffp[sbnum1]->npts2;i--){
 	//	printf("deleting record: %i\n",i);
 	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_record1),i+2);
@@ -5071,6 +5078,14 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   else if (widget == add_sub.s_buff2){
     // second buffer changed, fix the number of records
     if (buffp[sbnum2]->npts2 < add_sub.s_rec_c2){// too many
+
+      // see if our current record is going to disappear:
+
+      if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record2)) - 2 > buffp[sbnum2]->npts2 - 1){
+	//	printf("resetting srec2\n");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record2),2);
+      }
+
       for (i= add_sub.s_rec_c2-1; i >= buffp[sbnum2]->npts2;i--){
 	//	printf("deleting record: %i\n",i);
 	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_record2),i+2);
@@ -5093,6 +5108,13 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
     if (dbnum >= 0) new_num = buffp[dbnum]->npts2;
     if (new_num < add_sub.dest_rec_c){
       for (i= add_sub.dest_rec_c-1; i >= new_num;i--){ // too many
+
+	if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record)) - 2 > buffp[dbnum]->npts2 - 1){
+	  //	  printf("resetting destrec\n");
+	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),2);
+	}
+
+
 	//	printf("deleting record: %i\n",i);
 	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.dest_record),i+2);
       }
@@ -5108,6 +5130,8 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   }
 
   
+
+
   else if (widget == add_sub.s_record1){ // source 1 record # changed
     // if one source entry goes to each then all source entries go to each.
     if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record1)) == 0)
