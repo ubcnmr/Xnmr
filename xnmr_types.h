@@ -133,14 +133,15 @@ typedef struct {
 #define EM 3
 #define GM 4
 #define ZF 5
-#define FT 6
-#define BC2 7
-#define PH 8
+#define ZI 6
+#define FT 7
+#define BC2 8
+#define PH 9
 
-#define BC2D1 9
-#define EM2D 10
-#define ZF2D 11
-#define FT2D 12
+#define BC2D1 10
+#define EM2D 11
+#define ZF2D 12
+#define FT2D 13
 #define BC2D2 14
 
 #endif

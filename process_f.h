@@ -52,6 +52,9 @@ gint do_offset_cal_2D_a_and_display( GtkWidget *widget, double *unused);
 gint do_cross_correlate( GtkWidget *widget, double *val);
 gint do_cross_correlate_and_display( GtkWidget *widget, double *val);
 
+gint do_zero_imag(GtkWidget *widget, double *spare);
+gint do_zero_imag_and_display(GtkWidget *widget, double *spare);
+
 gint do_ft(GtkWidget *widget, double *spare);
 gint do_ft_and_display(GtkWidget *widget, double *spare);
 

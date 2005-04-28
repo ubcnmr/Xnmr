@@ -174,6 +174,55 @@ gint do_offset_cal_a( GtkWidget *widget, double *unused )
 }
 
 
+gint do_zero_imag_and_display( GtkWidget *widget, double *unused )
+{
+  dbuff *buff;
+  gint result;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  result = do_zero_imag( widget, unused );
+
+  draw_canvas( buff );
+   return result;
+}
+
+gint do_zero_imag(GtkWidget *widget, double *unused)
+
+{
+
+  dbuff *buff;
+  int i,j;
+
+  if( widget == NULL ) {
+    buff = buffp[ upload_buff ];
+    //printf("do_ft- on buffer %i\n",upload_buff );
+  }
+  else {
+    buff = buffp[ current ];
+    //printf("do_ft- on buffer %i\n",current );
+  }
+  if (buff == NULL){
+    popup_msg("do_zero_imag panic! buff is null!",TRUE);
+    return 0;
+  }
+
+
+  for(i=0;i<buff->npts2;i++){
+    for(j=0;j<buff->param_set.npts;j++)
+      buff->data[2*j+1+i*buff->param_set.npts*2] = 0.;
+  }
+
+
+  
+
+  return TRUE;
+  
+}
+
 gint do_ft_and_display( GtkWidget *widget, double *unused )
 {
   dbuff *buff;
@@ -787,6 +836,20 @@ GtkWidget* create_process_frame()
   gtk_widget_show(button);
 
 
+
+  /*
+   * ZI zero imaginary
+   */
+  nu=ZI;
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu,nu+1);
+  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle),  (void*) nu);
+  gtk_widget_show(process_button[nu].button);
+  button = gtk_button_new_with_label( "Zero Imag" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_zero_imag_and_display), NULL);
+  process_button[nu].func = do_zero_imag;
+  gtk_widget_show(button);
 
   /*
    * FT
