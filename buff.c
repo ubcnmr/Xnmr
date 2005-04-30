@@ -5018,7 +5018,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   int sbnum1,sbnum2,dbnum;
   char s[5];
 
-  //  printf("in add_sub_changed\n");
+    printf("in add_sub_changed\n");
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff2));
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_buff));
@@ -5031,23 +5031,20 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   else dbnum = add_sub.index[k-1];
   
 
-  //  printf("buffers: %i %i ",add_sub.index[i],add_sub.index[j]);
-  //  if (k==0) printf("new\n");
-  //  else
-  //    printf("%i\n",add_sub.index[k-1]);
+   printf("buffers: %i %i ",add_sub.index[i],add_sub.index[j]);
+   if (k==0) printf("new\n");
+   else printf("%i\n",add_sub.index[k-1]);
 
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record2));
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record));
 
-  //  printf("got actives: %i %i %i\n",i,j,k);
+  printf("got actives: %i %i %i\n",i,j,k);
 
   f1 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult1));
   f2 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult2));
   
-  //  printf(" got multipliers: %lf %lf\n",f1,f2);
-
-  
+  printf(" got multipliers: %lf %lf\n",f1,f2);
 
 
   if (widget == add_sub.s_buff1){
@@ -5107,17 +5104,25 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
     int new_num = 1; // if its to a 'new' buffer, assume just one record in it.
     if (dbnum >= 0) new_num = buffp[dbnum]->npts2;
     if (new_num < add_sub.dest_rec_c){
-      for (i= add_sub.dest_rec_c-1; i >= new_num;i--){ // too many
-
-	if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record)) - 2 > buffp[dbnum]->npts2 - 1){
-	  //	  printf("resetting destrec\n");
+      // if we're pointing to a record that isn't going to exist, fix it:
+      if (dbnum == -1) { // can't look at the dest buff if it doesn't exist yet.
+	if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record))-2 > 0){
 	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),2);
+	  printf("set dest record to 2\n");
 	}
+      }
+      else if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record)) - 2 > buffp[dbnum]->npts2 - 1){
+	//	  printf("resetting destrec\n");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),2);
+      }
 
+
+      for (i= add_sub.dest_rec_c-1; i >= new_num;i--){ // too many
 
 	//	printf("deleting record: %i\n",i);
 	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.dest_record),i+2);
       }
+
     }
     else if(new_num > add_sub.dest_rec_c){ // too few
       for (i=add_sub.dest_rec_c;i<new_num;i++){
@@ -5129,8 +5134,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
     add_sub.dest_rec_c = new_num;
   }
 
-  
-
+ 
 
   else if (widget == add_sub.s_record1){ // source 1 record # changed
     // if one source entry goes to each then all source entries go to each.
