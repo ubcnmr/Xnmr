@@ -3290,6 +3290,8 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
 
   if( npts2 <= 1 ) {
     buff->disp.dispstyle = SLICE_ROW;
+    gtk_label_set_text(buff->win.slice_2d_lab,"Slice");
+    gtk_label_set_text(buff->win.row_col_lab,"Row");
   }  
 
   // deal with add_sub stuff
