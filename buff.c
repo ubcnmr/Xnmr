@@ -134,6 +134,7 @@ dbuff *create_buff(int num){
     { "SaveAs",GTK_STOCK_SAVE_AS,"Save _As","<control>D","Save File As",G_CALLBACK(file_save_as)},
     { "Append",NULL,"Append","<control>A","Append to previous",G_CALLBACK(file_append)},
     { "Export",NULL,"_Export",NULL,"Export to ascii",G_CALLBACK(file_export)},
+    { "Export Binary",NULL,"Export _Binary",NULL,"Export binary",G_CALLBACK(file_export_binary)},
     { "Close",GTK_STOCK_CLOSE,"_Close",NULL,"Close Buffer",G_CALLBACK(file_close)},
     { "Exit",GTK_STOCK_QUIT,"E_xit",NULL,"Exit Xnmr",G_CALLBACK(file_exit)},
     { "Real",NULL,"_Real","<alt>R","Show Real trace",G_CALLBACK(toggle_real)},
@@ -172,6 +173,7 @@ dbuff *create_buff(int num){
    "    <menuitem action='SaveAs'/>"
    "    <menuitem action='Append'/>"
    "    <menuitem action='Export'/>"
+   "    <menuitem action='Export Binary'/>"
    "    <separator/>"
    "    <menuitem action='Close'/>"
    "    <menuitem action='Exit'/>"
@@ -689,7 +691,7 @@ dbuff *create_buff(int num){
     gtk_box_pack_start(GTK_BOX(vbox1),button,FALSE,FALSE,0);
 
 
-    buff->win.slice_2d_lab=gtk_label_new("2D");
+    buff->win.slice_2d_lab=gtk_label_new("Slice");
     button=gtk_button_new();
     gtk_widget_show(button);
     g_signal_connect(G_OBJECT(button),"clicked",
@@ -1550,7 +1552,7 @@ void file_save(GtkAction *action,dbuff *buff)
     return;
   }
   if (check_overwrite( buff, buff->param_set.save_path) == TRUE){
-    printf("in file_save, got check_overwrite TRUE\n");
+    //    printf("in file_save, got check_overwrite TRUE\n");
     do_save(buff,buff->param_set.save_path);
   }
   else printf("not saving\n");
@@ -3381,10 +3383,17 @@ gint do_load( dbuff* buff, char* path )
   //this resets the acq_npts in the buff struct, so fix it 
   buff->acq_npts=new_acq_npts;
 
-  if( buff->npts2 > 1 )
+  if( buff->npts2 > 1 ){
     buff->disp.dispstyle = RASTER;
-  else
+    gtk_label_set_text(GTK_LABEL(buff->win.slice_2d_lab),"2D");
+
+    // fix up button labels
+  }
+  else{
     buff->disp.dispstyle = SLICE_ROW;
+    gtk_label_set_text(GTK_LABEL(buff->win.slice_2d_lab),"Slice");
+    gtk_label_set_text(GTK_LABEL(buff->win.row_col_lab),"Row");
+  }
 
 
   // ct was added late to the param file, it may or may not be there.
@@ -3782,7 +3791,7 @@ void set_window_title(dbuff *buff)
 void file_export(GtkAction *action,dbuff *buff)
 {
 
-  int i1,i2,j1,j2,i,j,npts;
+  int i1,i2,j1,j2,i,j,npts,hd=0;
   double dwell2,sw2;
   char fileN[PATH_LENGTH];
   FILE *fstream;
@@ -3796,6 +3805,18 @@ void file_export(GtkAction *action,dbuff *buff)
     return;
   }
 
+
+
+  //get dwell in second dimension if available
+  hd = pfetch_float(&buff->param_set,"dwell2",&dwell2,0);
+  if (hd == 1)
+    sw2 =1/dwell2;
+  else
+    hd=  pfetch_float(&buff->param_set,"sw2",&sw2,0);
+  if (hd == 1)
+    dwell2=1/sw2;
+
+
   npts = buff->param_set.npts;
 
   path_strcpy(fileN,buff->path_for_reload);
@@ -3807,7 +3828,6 @@ void file_export(GtkAction *action,dbuff *buff)
     return;
   }
   
-
 
   // routine exports what is viewable on screen now.
 
@@ -3842,15 +3862,53 @@ void file_export(GtkAction *action,dbuff *buff)
     i1=(int) (buff->disp.yy1 * (buff->npts2-1)+.5);
     i2=(int) (buff->disp.yy2 * (buff->npts2-1)+.5);
 
+
+    if (buff->is_hyper && i1 %2 == 1) i1 -= 1;
+    if(buff->is_hyper && i2 %2 ==1) i2-=1;
+
+
     if (i1==i2) {
       if (i2 >0 ) 
 	i1=i2-1;
       else 
 	i2=i1+1;
     }
+
+
+    // write the header so we know which lines are which
+    fprintf(fstream,"#point ");
+    if( hd !=0){ // we have a dwell
+      if (buff->flags & FT_FLAG2)
+	fprintf(fstream,"freq ");
+      else
+	fprintf(fstream,"time ");
+    }
+    if (buff->is_hyper)
+      fprintf(fstream,"real imag\n");
+    else
+      fprintf(fstream,"value\n");
+
+    for(i=i1;i<=i2;i+= 1+buff->is_hyper){
+      fprintf(fstream,"%i ",i);
+      if (hd != 0){
+	if (buff->flags &FT_FLAG2)
+	  fprintf(fstream,"%f ",-(((float)i)*sw2/buff->npts2-(float)sw2/2.));
+	else
+	  fprintf(fstream,"%f ",((float)i)*dwell2/(1+buff->is_hyper));
+
+      }
+      if (buff->is_hyper)
+	fprintf(fstream,"%f %f\n",buff->data[i*j+2* buff->disp.record2],
+		buff->data[(i+1)*j+2* buff->disp.record2]);
+      else
+	fprintf(fstream,"%f\n",buff->data[i*j+2*buff->disp.record2]);
+
+    }
+      
+    /*
+
+
     if (buff->is_hyper){
-      if (i1 %2 ==1 ) i1-=1;
-      if (i2 %2 ==1 ) i2-=1;
       fprintf(fstream,"#point, real, imag\n");
       for(i = i1 ; i <= i2 ; i+=2 )
 	fprintf(fstream,"%i %f %f\n",i,
@@ -3862,6 +3920,7 @@ void file_export(GtkAction *action,dbuff *buff)
 	fprintf(fstream,"%i %f\n",i,
 		buff->data[i*j+2*buff->disp.record2]);
     } 
+    */
    }
   else { // must be two-d
 
@@ -3875,25 +3934,41 @@ void file_export(GtkAction *action,dbuff *buff)
     if (buff->is_hyper && j1 %2 == 1) j1 -= 1;
     if(buff->is_hyper && j2 %2 ==1) j2-=1;
 
-    //get dwell in second dimension
 
-    i = pfetch_float(&buff->param_set,"dwell2",&dwell2,0);
-    if (i == 1)
-      sw2 =1/dwell2;
+    fprintf(fstream,"#x point, ");
+    if (buff->flags &FT_FLAG)
+      fprintf(fstream,"freq, y point, ");
     else
-      i=  pfetch_float(&buff->param_set,"sw2",&sw2,0);
-    if (i == 1)
-      dwell2=1/sw2;
-    else{
-      
-      printf("Error getting dwell2 in export_file %i\n",i);
-      //fclose(fstream);
-      //return;
+      fprintf(fstream,"time, y point, ");
+    if (hd != 0){
+      if (buff->flags & FT_FLAG2)
+	fprintf(fstream,"freq, ");
+      else
+	fprintf(fstream,"time, ");
+    }
+    fprintf(fstream,"real, imag\n");
+
+    
+    for(j=j1;j<=j2;j+=1+buff->is_hyper){
+      for(i=i1;i<=i2;i++){
+	fprintf(fstream,"%i ",i);
+	if (buff->flags & FT_FLAG)
+	  fprintf(fstream,"%f %i ",-(float)buff->param_set.sw*((float)i-(float)npts/2.)/(float)npts,j);
+	else
+	  fprintf(fstream,"%f %i ",buff->param_set.dwell*i/1e6,j);
+	if (hd != 0){
+	  if(buff->flags & FT_FLAG2)
+	    fprintf(fstream,"%f ",-(((float)j)*sw2/buff->npts2-(float)sw2/2.));
+	  else
+	    fprintf(fstream,"%f ",((float)j)*dwell2/(1+buff->is_hyper));
+	}
+	fprintf(fstream,"%f %f\n",buff->data[j*2*npts+2*i],buff->data[j*2*npts+2*i+1]);
+      }
+      fprintf(fstream,"\n");
     }
 
-
     // if its hyper complex, print only the real records 
-
+	/*
     if (i==0) {   //2-D experiment with no dwell2...
       if ( buff->flags & FT_FLAG){
 	fprintf(fstream,"#x point, Hz, y point, Hz, real, imag\n");
@@ -3935,8 +4010,8 @@ void file_export(GtkAction *action,dbuff *buff)
 	  fprintf(fstream,"\n");
 	}	
       }
-    }
-	  
+      }
+	*/  
 
 
   }
@@ -3946,6 +4021,134 @@ return;
 
 
 }
+
+///////////////
+void file_export_binary(GtkAction *action,dbuff *buff)
+{
+
+  int i1,i2,j1,j2,i,j,npts,ny,m,hd=0;
+  double dwell2,sw2;
+  char fileN[PATH_LENGTH];
+  FILE *fstream;
+  float *lbuff;
+
+  CHECK_ACTIVE(buff);
+
+  // first juggle the filename
+
+  if (strcmp(buff->path_for_reload,"") == 0){
+    popup_msg("Can't export, no reload path?",TRUE);
+    return;
+  }
+
+  if (buff->npts2 <2  ||  buff->disp.dispstyle != RASTER){
+    popup_msg("Export binary only works for 2D data",TRUE);
+    return;
+  }
+
+  npts = buff->param_set.npts;
+
+  path_strcpy(fileN,buff->path_for_reload);
+  path_strcat(fileN,"export.bin");
+  printf("using filename: %s\n",fileN);
+  fstream = fopen(fileN,"wb");
+  if ( fstream == NULL){
+    popup_msg("Error opening file for export",TRUE);
+    return;
+  }
+  
+
+  // routine exports what is viewable on screen now.
+
+
+    i1=(int) (buff->disp.xx1 * (npts-1) +.5);
+    i2=(int) (buff->disp.xx2 * (npts-1) +.5);
+    
+    j1=(int) (buff->disp.yy1 * (buff->npts2-1)+.5);
+    j2=(int) (buff->disp.yy2 * (buff->npts2-1)+.5);
+    
+    if (buff->is_hyper && j1 %2 == 1) j1 -= 1;
+    if(buff->is_hyper && j2 %2 ==1) j2-=1;
+    
+    //get dwell in second dimension
+    
+    hd = pfetch_float(&buff->param_set,"dwell2",&dwell2,0);
+    if (hd == 1)
+      sw2 =1/dwell2;
+    else
+      hd=  pfetch_float(&buff->param_set,"sw2",&sw2,0);
+    if (hd == 1)
+      dwell2=1/sw2;
+
+
+    ny = (j2-j1)/(1+buff->is_hyper)+1;
+
+    lbuff = malloc(4*(ny+1)); 
+
+    // ok the first line is: number of point along y, then the y values
+     lbuff[0] = (float) ny;
+
+
+
+    // now load up the y values.  We have four cases: with and without FT, and with and without dwell2:
+    m=1;
+    if (hd == 0){ // no dwell2, freq domain and time domain are the same, just point number
+	for(j=j1;j<=j2;j+= 1+buff->is_hyper){
+	  lbuff[m] = (float) j; // just the point number
+	  m+=1;
+	}
+    }
+    else{ // we have a dwell2
+      if (buff->flags & FT_FLAG2){ // freq domain
+	for(j=j1;j<=j2;j+=1+buff->is_hyper){
+	  lbuff[m] = -(((float)j)*sw2/buff->npts2-(float)sw2/2.);
+	  m+=1;
+	}
+      }
+	      
+      else{ //time domain
+	for(j=j1;j<=j2;j+=1+buff->is_hyper){
+	  lbuff[m] = ((float)j)*dwell2/(1+buff->is_hyper);
+	  m+=1;
+	}
+      }
+    }  
+
+    //write out the first line:
+    fwrite(lbuff,4,ny+1,fstream);
+      
+    // now do the data:
+    
+    for (i=i1;i<=i2;i+=1){
+      
+      if (buff->flags & FT_FLAG)
+	lbuff[0]=-(float)buff->param_set.sw*((float)i-(float)npts/2.)/(float)npts;
+      else
+	lbuff[0]=(float)buff->param_set.dwell*i/1e6;
+      m=1;
+      for(j=j1;j<=j2;j+=1+buff->is_hyper){
+	lbuff[m] = buff->data[j*2*npts+2*i];
+	m+=1;
+      }
+      fwrite(lbuff,4,ny+1,fstream);
+    }
+    
+    
+    
+    free(lbuff);
+
+    fclose(fstream);
+    return;
+
+
+}
+
+///////////////////////
+
+
+
+
+
 
 
 void file_append(GtkAction *action, dbuff *buff)
@@ -5018,7 +5221,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   int sbnum1,sbnum2,dbnum;
   char s[5];
 
-    printf("in add_sub_changed\n");
+  //    printf("in add_sub_changed\n");
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff2));
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_buff));
@@ -5031,20 +5234,20 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   else dbnum = add_sub.index[k-1];
   
 
-   printf("buffers: %i %i ",add_sub.index[i],add_sub.index[j]);
-   if (k==0) printf("new\n");
-   else printf("%i\n",add_sub.index[k-1]);
+  //   printf("buffers: %i %i ",add_sub.index[i],add_sub.index[j]);
+  //   if (k==0) printf("new\n");
+  //   else printf("%i\n",add_sub.index[k-1]);
 
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record2));
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record));
 
-  printf("got actives: %i %i %i\n",i,j,k);
+  //  printf("got actives: %i %i %i\n",i,j,k);
 
   f1 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult1));
   f2 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult2));
   
-  printf(" got multipliers: %lf %lf\n",f1,f2);
+  //  printf(" got multipliers: %lf %lf\n",f1,f2);
 
 
   if (widget == add_sub.s_buff1){
@@ -5290,15 +5493,16 @@ if the number of records on the input records doesn't match for "each each", err
   if (dbnum == -1){
     my_current = current;
     file_new(NULL,NULL);
+
     dbnum = current;
     if (dbnum == my_current) // didn't create buffer, too many?
       return;
+   
     gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_buff),add_sub.index[dbnum]+1);
     if (k == 1){
       k = 2; // if it would have been append, set to first record.
       gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),2);
     }
-
   }
 
   // set the ft_flag to whatever the first source buff says:
@@ -5387,7 +5591,7 @@ if the number of records on the input records doesn't match for "each each", err
     }
     
     if (i==1){
-      printf("first source is sum all\n");
+      //      printf("first source is sum all\n");
       temp_data1 = g_malloc(npts*8);
       memset(temp_data1,0,npts*8);
       for (k=0;k<npts*2;k++)
@@ -5397,7 +5601,7 @@ if the number of records on the input records doesn't match for "each each", err
     }
     else data1 = &buffp[sbnum1]->data[(i-2)*npts*2];
     if (j==1){
-      printf("second source is sum all\n");
+      //      printf("second source is sum all\n");
       temp_data2 = g_malloc(npts*8);
       memset(temp_data2,0,npts*8);
       for (k=0;k<npts*2;k++)
@@ -5408,10 +5612,18 @@ if the number of records on the input records doesn't match for "each each", err
     else data2=&buffp[sbnum2]->data[(j-2)*npts*2];
     for (k=0;k<npts*2;k++)
       buffp[dbnum]->data[k+dest_rec*npts*2] = f1 * data1[k] + f2 * data2[k];
-    printf("did two simple adds\n");
+    //    printf("did two simple adds\n");
     if (i == 1) g_free(temp_data1);
     if (j == 1) g_free(temp_data2);
   }
+  
+
+  if (buffp[dbnum]->npts2 > 1){
+    buffp[dbnum]->disp.dispstyle = RASTER;
+    gtk_label_set_text(GTK_LABEL(buffp[dbnum]->win.slice_2d_lab),"2D");
+  }
+
+
   draw_canvas(buffp[dbnum]);
 
 

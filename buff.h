@@ -109,6 +109,7 @@ void file_open(GtkAction *action,dbuff *buff);
 void file_close(GtkAction *action,dbuff *buff);
 //void file_export(dbuff *buff,int action,GtkWidget *widget);
 void file_export(GtkAction *action,dbuff *buff);
+void file_export_binary(GtkAction *action,dbuff *buff);
 //void file_save(dbuff *buff,int action,GtkWidget *widget);
 void file_save(GtkAction *action,dbuff *buff);
 //void file_save_as(dbuff *buff,int action,GtkWidget *widget);
