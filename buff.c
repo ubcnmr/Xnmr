@@ -435,9 +435,9 @@ dbuff *create_buff(int num){
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
 	buff->data[2*i+2*buff->param_set.npts*j]
-	  =cos(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-0.1;
+	  =cos(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-.025;
 	buff->data[2*i+1+2*buff->param_set.npts*j]
-	  =sin(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-0.1;
+	  =sin(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-.025;
 
       }
 
@@ -3224,6 +3224,7 @@ gint slice_2D_routine(GtkWidget *widget,dbuff *buff){
    if(strncmp(gtk_label_get_text(GTK_LABEL(buff->win.row_col_lab)),"Row",3)==0) 
      buff->disp.dispstyle=SLICE_ROW;
    else buff->disp.dispstyle=SLICE_COL;
+   printf("test2\n");
    gtk_label_set_text(GTK_LABEL(buff->win.slice_2d_lab),"Slice");
  }
  else if (buff->npts2 > 1){
@@ -3283,16 +3284,18 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
 
     }
 
+    // if there's only one point, make sure we're looking at a slice, row.
+    if( npts2 <= 1 && data_old !=NULL) {
+      gtk_label_set_text(GTK_LABEL(buff->win.slice_2d_lab),"Slice");
+      gtk_label_set_text(GTK_LABEL(buff->win.row_col_lab),"Row");
+    }
+   
+
     g_free(data_old);
     buff->param_set.npts = npts1;
     buff->npts2 = npts2;
   }
 
-  if( npts2 <= 1 ) {
-    buff->disp.dispstyle = SLICE_ROW;
-    gtk_label_set_text(buff->win.slice_2d_lab,"Slice");
-    gtk_label_set_text(buff->win.row_col_lab,"Row");
-  }  
 
   // deal with add_sub stuff
   i = gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff1));

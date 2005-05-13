@@ -58,6 +58,10 @@ gint do_zero_imag_and_display(GtkWidget *widget, double *spare);
 gint do_ft(GtkWidget *widget, double *spare);
 gint do_ft_and_display(GtkWidget *widget, double *spare);
 
+gint do_bft(GtkWidget *widget, double *spare);
+gint do_bft_and_display(GtkWidget *widget, double *spare);
+
+
 gint do_exp_mult( GtkWidget* widget, double *val);
 gint do_exp_mult_and_display( GtkWidget* widget, double *val);
 

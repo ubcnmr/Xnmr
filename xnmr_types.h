@@ -135,14 +135,18 @@ typedef struct {
 #define ZF 5
 #define ZI 6
 #define FT 7
-#define BC2 8
-#define PH 9
+#define BFT 8
+#define BC2 9
+#define PH 10
 
-#define BC2D1 10
-#define EM2D 11
-#define ZF2D 12
-#define FT2D 13
-#define BC2D2 14
+// this is the number of the first 2D processing function:
+#define P2D 11
+#define BC2D1 11
+#define EM2D 12
+#define ZF2D 13
+#define FT2D 14
+#define BC2D2 15
+
 
 #endif
 

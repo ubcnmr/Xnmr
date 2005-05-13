@@ -19,7 +19,7 @@
 
 #include <gtk/gtk.h>
 #include <math.h>
-
+#include <string.h>
 
 process_button_t process_button[ MAX_PROCESS_FUNCTIONS ];
 process_data_t* active_process_data;
@@ -302,6 +302,105 @@ gint do_ft(GtkWidget *widget, double *unused)
 
   
   cursor_normal(buff);
+  return TRUE;
+  
+}
+
+
+
+gint do_bft_and_display( GtkWidget *widget, double *unused )
+{
+  dbuff *buff;
+  gint result;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  result = do_bft( widget, unused );
+
+  draw_canvas( buff );
+   return result;
+}
+
+gint do_bft(GtkWidget *widget, double *unused)
+
+{
+  /* do fourier transform in one dimension */
+  dbuff *buff;
+  int i,j;
+  //  float spare;
+  double spared;
+  float scale;
+  float *data;
+
+  if( widget == NULL ) {
+    buff = buffp[ upload_buff ];
+    //printf("do_ft- on buffer %i\n",upload_buff );
+  }
+  else {
+    buff = buffp[ current ];
+    //printf("do_ft- on buffer %i\n",current );
+  }
+  if (buff == NULL){
+    popup_msg("do_bft panic! buff is null!",TRUE);
+    return 0;
+  }
+
+  /*********
+
+  if(buff->win.press_pend>0) {
+    printf("ft: press_pend>0, quitting\n");
+    return TRUE;  //standard exit
+  }
+
+  **********/
+
+  buff->flags ^= FT_FLAG; //toggle the ft flag
+  
+  /* do a zero fill with a factor of 1 to make 
+     sure we have a power of two as npts */
+  spared=1.0;
+  do_zero_fill(widget,&spared);
+  cursor_busy(buff);
+  //    scale=sqrt((float) buff->param_set.npts);
+  if (buff->flags & FT_FLAG){
+    //    printf("FT_FLAG is true\n");
+    scale = buff->param_set.npts/2.0;
+  }
+  else{
+    //    printf("FT_FLAG is false\n");
+    scale = 2.0;
+  }
+  data = g_malloc(4* buff->param_set.npts*2*2);
+
+  for(i=0;i<buff->npts2;i++){
+    /* do ft for each 1d spectrum */
+    // copy data out 
+    memset(data,0,4*buff->param_set.npts*4);
+
+    for (j=0;j<buff->param_set.npts;j++){
+      data[j*4]=buff->data[i*2*buff->param_set.npts + j*2];
+      data[j*4+3] = -1.0*buff->data[i*2*buff->param_set.npts +j*2+1];
+    }
+    four1(data-1,buff->param_set.npts*2,-1);
+    //    four1(&buff->data[i*2*buff->param_set.npts]-1,buff->param_set.npts,-1);
+    for(j=0;j<buff->param_set.npts;j++){
+      buff->data[i*2*buff->param_set.npts+j*2]=data[2*j+buff->param_set.npts]/scale;
+      buff->data[i*2*buff->param_set.npts+j*2+1]=data[2*j+buff->param_set.npts+1]/scale;
+    }
+    /*    for(j=0;j<buff->param_set.npts;j++){
+      spare=buff->data[j+i*2*buff->param_set.npts]/scale;
+      buff->data[j+i*2*buff->param_set.npts]=
+	buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts]/scale;
+      buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts]=spare;
+      }*/
+  }
+
+  
+  cursor_normal(buff);
+  g_free(data);
   return TRUE;
   
 }
@@ -865,6 +964,22 @@ GtkWidget* create_process_frame()
   process_button[nu].func = do_ft;
   gtk_widget_show(button);
 
+
+  /*  Bruker FT */
+  nu=BFT;
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu,nu+1);
+  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle),  (void*) nu);
+  gtk_widget_show(process_button[nu].button);
+  button = gtk_button_new_with_label( "Bruker FT" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_bft_and_display), NULL);
+  process_button[nu].func = do_bft;
+  gtk_widget_show(button);
+
+
+
+
   /*
    * Another Baseline correct
    */  
@@ -1263,11 +1378,11 @@ GtkWidget* create_process_frame_2d()
 
   nu=BC2D1;
   process_button[nu].button = gtk_check_button_new();
-  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT( process_button[nu].button ), "toggled", G_CALLBACK( process_button_toggle ),  (void*) nu);
   gtk_widget_show( process_button[nu].button );
   button = gtk_button_new_with_label( "Baseline Correct" );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_offset_cal_2D_a_and_display), NULL);
   process_button[nu].func = do_offset_cal_2D;
   gtk_widget_show(button);
@@ -1280,16 +1395,16 @@ GtkWidget* create_process_frame_2d()
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu-P2D,nu-P2D+1);
   gtk_widget_show( button );
 
   process_button[nu].button = gtk_check_button_new();
-  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle), 
       (void*) nu);
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Exp Mult 2D" );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_exp_mult_2d_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
   process_button[nu].func = do_exp_mult_2d;
   gtk_widget_show(button);
@@ -1305,16 +1420,16 @@ GtkWidget* create_process_frame_2d()
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 1 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu-P2D,nu-P2D+1);
   gtk_widget_show( button );
 
   process_button[nu].button = gtk_check_button_new();
-  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle), 
       (void*) nu);
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Zero Fill 2D" );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_zero_fill_2d_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
   process_button[nu].func = do_zero_fill_2d;
   gtk_widget_show(button);
@@ -1327,11 +1442,11 @@ GtkWidget* create_process_frame_2d()
 
   nu=FT2D;
   process_button[nu].button = gtk_check_button_new();
-  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle),  (void*) nu);
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "FT2D" );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_ft_2d_and_display), NULL);
   process_button[nu].func = do_ft_2d;
   gtk_widget_show(button);
@@ -1342,11 +1457,11 @@ GtkWidget* create_process_frame_2d()
    */  
   nu=BC2D2;
   process_button[nu].button = gtk_check_button_new();
-  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT( process_button[nu].button ), "toggled", G_CALLBACK( process_button_toggle ),  (void*) nu);
   gtk_widget_show( process_button[nu].button );
   button = gtk_button_new_with_label( "Baseline Correct" );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-9,nu-8);
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_offset_cal_2D_and_display), NULL);
   process_button[nu].func = do_offset_cal_2D;
   gtk_widget_show(button);
