@@ -3224,7 +3224,6 @@ gint slice_2D_routine(GtkWidget *widget,dbuff *buff){
    if(strncmp(gtk_label_get_text(GTK_LABEL(buff->win.row_col_lab)),"Row",3)==0) 
      buff->disp.dispstyle=SLICE_ROW;
    else buff->disp.dispstyle=SLICE_COL;
-   printf("test2\n");
    gtk_label_set_text(GTK_LABEL(buff->win.slice_2d_lab),"Slice");
  }
  else if (buff->npts2 > 1){
@@ -3288,6 +3287,8 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
     if( npts2 <= 1 && data_old !=NULL) {
       gtk_label_set_text(GTK_LABEL(buff->win.slice_2d_lab),"Slice");
       gtk_label_set_text(GTK_LABEL(buff->win.row_col_lab),"Row");
+      buff->disp.dispstyle = SLICE_ROW;
+      //      printf("just set display style to slice, and to row\n");
     }
    
 
