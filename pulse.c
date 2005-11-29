@@ -37,6 +37,9 @@
 notes: phase_sweep starts off at -5 deg, so you'll want to left shift to there before exporting
 
 
+   November 28, 2005.  Preliminary support for gradients added.  At this point, we assume that the hardware channel that
+   is not assigned to RF1 or RF2 is assigned to the gradient.
+
 
 
   Currently, the way things work:
@@ -139,14 +142,16 @@ int prog_shm_id;
 int msgq_id; 
 int finished; 
 
-int tran_table[8]; 
+int tran_table[9]; 
 int ampa=-1,ampb=-1,ampc=-1,phasea=-1,phaseb=-1,phasec=-1;
 int clka=-1,clkb=-1,clkc=-1;
 int ic=-1,qc=-1,_ampc=-1;
 int ib=-1,qb=-1,_ampb=-1;
 int ia=-1,qa=-1,_ampa=-1;
 
-
+int grad_channel = 7; /// this is going to tell write_device_wrap which channel the gradient is attached to.
+// its a 1 for a, 2 for b, 4 for c.
+int gradx = -1,grady = -1,gradz = -1,grad_clk = -1;
 
 
 // variables for going back to a spot in time...
@@ -575,9 +580,8 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
    //       printf("to device: %i\n",device_id);
  }
  
- if ( device_id == PP_OVER ) prog_shm->got_ppo = 1; // to ensure there is a ppo someplace
+ if ( device_id == PP_OVER ) prog_shm->got_ppo = 1; // to ensure there is a ppo 
 
- 
  for (i=start_event_no;i<=end_event_no;i++){
    if ( device_id == ampc ){
      val = lookup_ampc(fval);
@@ -640,6 +644,24 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
      
    }
    
+   else if (device_id == GRADX){
+     val = lookup_amp(fval);
+     is_amp_phase |= grad_channel;
+     write_device(gradx,val,i);
+     write_device(grad_clk,0,i);
+   }
+   else if (device_id == GRADY){
+     val = lookup_amp(fval);
+     is_amp_phase |= grad_channel;
+     write_device(grady,val,i);
+     write_device(grad_clk,0,i);
+   }
+   else if (device_id == GRADZ){
+     val = lookup_amp(fval);
+     is_amp_phase |= grad_channel;
+     write_device(gradz,val,i);
+     write_device(grad_clk,0,i);
+   }
    
    else{ // just an ordinary device setting.
      write_device( device_id, intval,i); 
@@ -661,6 +683,7 @@ int is_a_float_device(int device_id)
   if (device_id == phasea || device_id == ampa) return 1;
   if (device_id == phaseb || device_id == ampb) return 2;
   if (device_id == phasec || device_id == ampc) return 4;
+  if (device_id == GRADX || device_id == GRADY ||device_id == GRADZ) return grad_channel;
   return 0;
 
 }
@@ -1512,16 +1535,16 @@ int is_a_float_device(int device_id)
       
       
       if ( (clkc == -1) || (phasec == -1) || (ic == -1)||(qc == -1)||(ampc == -1)||(_ampc == -1)){
-	printf("write_device_wrap: couldn't find one of my channel C devices, check h_config.h\n");
+	printf("pulse_program_init: couldn't find one of my channel C devices, check h_config.h\n");
 	exit(0);
       }
       if ( (clkb == -1) || (phaseb == -1) || (ib == -1)||(qb == -1)||(ampb == -1)||(_ampb == -1)){
-	printf("write_device_wrap: couldn't find one of my channel B devices, check h_config.h\n");
+	printf("pulse_program_init: couldn't find one of my channel B devices, check h_config.h\n");
 	printf("%i %i %i %i %i %i \n",clkb,phaseb,ib,qb,ampb,_ampb);
 	exit(0);
       }
       if ( (clka == -1) || (phasea == -1) || (ia == -1)||(qa == -1)||(ampa == -1)||(_ampa == -1)){
-	printf("write_device_wrap: couldn't find one of my channel A devices, check h_config.h\n");
+	printf("pulse_program_init: couldn't find one of my channel A devices, check h_config.h\n");
 	exit(0);
       }
       
@@ -1533,6 +1556,7 @@ int is_a_float_device(int device_id)
 	tran_table[PHASE1-RF_OFFSET]=PHASEA;
 	tran_table[AMP1-RF_OFFSET]=AMPA;
 	tran_table[RF1_BLNK-RF_OFFSET]=RFA_BLNK;
+	grad_channel -= 1;
       }
       else if (data_shm->ch1 == 'B'){
 	//     printf("pulse.c found ch1 = B\n");
@@ -1540,6 +1564,7 @@ int is_a_float_device(int device_id)
 	tran_table[PHASE1-RF_OFFSET]=PHASEB;
 	tran_table[AMP1-RF_OFFSET]=AMPB;
 	tran_table[RF1_BLNK-RF_OFFSET]=RFB_BLNK;
+	grad_channel -= 2;
       }
       else if (data_shm->ch1 == 'C'){
 	//     printf("pulse.c found ch1 = C\n");
@@ -1547,6 +1572,7 @@ int is_a_float_device(int device_id)
 	tran_table[PHASE1-RF_OFFSET]=PHASEC;
 	tran_table[AMP1-RF_OFFSET]=AMPC;
 	tran_table[RF1_BLNK-RF_OFFSET]=RFC_BLNK;
+	grad_channel -= 4;
       }
       else {
 	printf("no valid channel 1 channel found!\n");
@@ -1558,6 +1584,7 @@ int is_a_float_device(int device_id)
 	tran_table[PHASE2-RF_OFFSET]=PHASEA;
 	tran_table[AMP2-RF_OFFSET]=AMPA;
 	tran_table[RF2_BLNK-RF_OFFSET]=RFA_BLNK;
+	grad_channel -= 1;
       }
       else if (data_shm->ch2 == 'B'){
 	//     printf("pulse.c found ch2 = B\n");
@@ -1565,6 +1592,7 @@ int is_a_float_device(int device_id)
 	tran_table[PHASE2-RF_OFFSET]=PHASEB;
 	tran_table[AMP2-RF_OFFSET]=AMPB;
 	tran_table[RF2_BLNK-RF_OFFSET]=RFB_BLNK;
+	grad_channel -= 2;
       }
       else if (data_shm->ch2 == 'C'){
 	//     printf("pulse.c found ch2 = C\n");
@@ -1572,12 +1600,38 @@ int is_a_float_device(int device_id)
 	tran_table[PHASE2-RF_OFFSET]=PHASEC;
 	tran_table[AMP2-RF_OFFSET]=AMPC;
 	tran_table[RF2_BLNK-RF_OFFSET]=RFC_BLNK;
+	grad_channel -= 4;
       }
       else {
 	printf("no valid channel 2 channel found!\n");
 	exit(0);
       }
-      
+      printf("grad_channel is: %i \n",grad_channel);
+      if (grad_channel == 1){
+	grad_clk = clka;
+	gradx = _ampa;
+	grady = ia;
+	gradz = qa;
+	tran_table[GRAD_ON-RF_OFFSET] = RFA;
+      }
+      else if (grad_channel == 2){
+	grad_clk = clkb;
+	gradx = _ampb;
+	grady = ib;
+	gradz = qb;
+	tran_table[GRAD_ON-RF_OFFSET] = RFB;
+      }
+      else if (grad_channel == 4){
+	grad_clk = clkc;
+	gradx = _ampc;
+	grady = ic;
+	gradz = qc;
+	tran_table[GRAD_ON-RF_OFFSET] = RFC;
+      }
+      else {
+	printf("didn't find a grad channel!\n");
+	exit(0);
+      }
       //   printf("event, got device numbers: %i %i %i\n",clk3,phase3,i3);
     } // that was the setup we do first time only.
     
@@ -2192,9 +2246,10 @@ int shift_events(int start){
 
 void deal_with_previous(int event_no,int is_amp_phase,int device_id, int intval,float fval) {
   //  need to look back at the clock value of the previous two events.
-  // there are six possibilities: 00 11 01 _1 _0 10 __ 
+  // there are seven possibilities: 00 11 01 _1 _0 10 __ 
   // 00, 11, 01, _1, _0 are all fine.  10 needs have the 0 event split, 
   // and __ needs to have a new event added
+  // _ means the event doesn't exist (?)
 
   unsigned char chip,bit;
   int temp_device_id=-1 ;

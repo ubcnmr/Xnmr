@@ -19,7 +19,7 @@
  *  Pulse Hardware information
  */
 
-#define NUM_DEVICES 42
+#define NUM_DEVICES 45
 #define MAX_EVENTS 32768
 #define NUM_CHIPS 21
 #define CLOCK_SPEED 20000000
@@ -98,12 +98,15 @@
 #define PHASEB           39 // -1     0  0  0  0
 #define AMPA             40 // -1     0  0  0  0
 #define PHASEA           41 // -1     0  0  0  0
-
-
-
+#define GRADX            42 // -1     0  0  0  0
+#define GRADY            43 // -1     0  0  0  0
+#define GRADZ            44 // -1     0  0  0  0
 
 
 #undef H_CONFIG_PARSE
+
+
+
 
 // the I,Q, and _AMP lines must latch! - so if we only set one of them, the others
 // don't get reset unexpectedly?
@@ -112,6 +115,15 @@
 // these are bogus ones that pulse.c will translate for us
 // according to users toggle button channel assignment
 // don't change these numbers!
+// these devices get translated to RFA, AMPA, IA, QA etc.
+// write_device wrap recognizes those and does the right thing with them
+
+// everything above starting with RFA is hardcoded somehow in pulse.c.  The RFA, CLKA, _AMPA, IA, QA point to the real 
+// devices are generally aren't used in pulse programs.  AMPA, PHASEA and GRADX are pseudo devices that
+// write_device_wrap recognizes and deals with.
+// the devices below get mapped at pulse-program run-time to the appropriate pseudo-devices or real devices above.
+
+
 #define RF_OFFSET 200
 #define RF1      200
 #define PHASE1   201
@@ -122,7 +134,7 @@
 #define PHASE2   205
 #define AMP2     206
 #define RF2_BLNK 207
-
+#define GRAD_ON  208
 
 
 /*

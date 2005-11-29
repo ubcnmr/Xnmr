@@ -3,9 +3,9 @@
 // it will wait for interrupts !!!
 // it will also generate "simulated" data
 //
-//#define NOHARDWARE
-//#define NO_PORT_INTERRUPT
-//#define NO_RT_SCHED
+#define NOHARDWARE
+#define NO_PORT_INTERRUPT
+#define NO_RT_SCHED
 
 
 
