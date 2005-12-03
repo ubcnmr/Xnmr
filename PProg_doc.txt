@@ -89,3 +89,15 @@ From head of pulse.c
 notes: phase_sweep starts off at -5 deg, so you'll want to left shift
 to there before exporting 
 
+December 2, 2005
+
+Support for gradient driver added.  Uses infrastructure for amp and phase 
+of rf.   Pulse progs set gradient amplitudes with {GRADX,1.0} or GRADY, or 
+GRADZ, and the value is between -1.0 and 1.0.  {GRAD_ON,1} turns on all
+three gradients.  For now, the gradients are programmed through one pair of
+pulse programmer cables that would have gone to one of the rf channels.
+Xnmr figures out at pulse program start time which rf channel this takes the
+place of, by looking at which rf channel is not selected for use with the 
+1A, 1B, 1C, 2A, 2B, 2C radio buttons.
+
+
