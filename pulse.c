@@ -1606,26 +1606,26 @@ int is_a_float_device(int device_id)
 	printf("no valid channel 2 channel found!\n");
 	exit(0);
       }
-      printf("grad_channel is: %i \n",grad_channel);
+      //      printf("grad_channel is: %i \n",grad_channel);
       if (grad_channel == 1){
 	grad_clk = clka;
-	gradx = _ampa;
+	gradx = qa;
 	grady = ia;
-	gradz = qa;
+	gradz = _ampa;
 	tran_table[GRAD_ON-RF_OFFSET] = RFA;
       }
       else if (grad_channel == 2){
 	grad_clk = clkb;
-	gradx = _ampb;
+	gradx = qb;
 	grady = ib;
-	gradz = qb;
+	gradz = _ampb;
 	tran_table[GRAD_ON-RF_OFFSET] = RFB;
       }
       else if (grad_channel == 4){
 	grad_clk = clkc;
-	gradx = _ampc;
+	gradx = qc;
 	grady = ic;
-	gradz = qc;
+	gradz = _ampc;
 	tran_table[GRAD_ON-RF_OFFSET] = RFC;
       }
       else {
