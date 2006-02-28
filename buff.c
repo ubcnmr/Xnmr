@@ -5406,10 +5406,11 @@ void add_sub_buttons(GtkWidget *widget,gpointer data){
     popup_msg("Invalid destination buffer",TRUE);
     return;
   }
-    
-  if (allowed_to_change(k) == FALSE){
-    popup_msg("Destination Buffer is Acquiring or Queued",TRUE);
-    return;
+  if (dbnum != -1){  //not new, means its existing. Make sure we can change it
+    if (allowed_to_change(dbnum) == FALSE){
+      popup_msg("Destination Buffer is Acquiring or Queued",TRUE);
+      return;
+    }
   }
 
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record1));
@@ -5481,9 +5482,10 @@ if the number of records on the input records doesn't match for "each each", err
     return;
   }
 
-  // inputs can't overlap with output can't overlap
-  if (dbnum == sbnum1 || dbnum == sbnum2){
-    popup_msg("output buffer can't be an input buffer",TRUE);
+  // inputs can't overlap with output
+  // unless we have append on output
+  if ((dbnum == sbnum1 || dbnum == sbnum2) && k !=1 ){
+    popup_msg("Inputs and output overlap",TRUE);
     return;
   }
 
