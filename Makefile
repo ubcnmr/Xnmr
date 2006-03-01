@@ -6,11 +6,10 @@
 
 
 #CC = icc
-#CFLAGS =   -g -O2 -ffloat-store -Wall  `gtk-config --cflags` 
-#CFLAGS =   -O3 -fomit-frame-pointer -Wall  `gtk-config --cflags` 
-#CFLAGS =     -O3 -fomit-frame-pointer -march=pentium4  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
-#CFLAGS =     -O3 -march=pentium3  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
-CFLAGS =     -O3 -march=pentium4  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
+CFLAGS =     -O2 -march=pentium4  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
+#O3 causes serious problems with rtai!
+
+# for icc:
 #CFLAGS =    -O3 -axP -ipo  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 
 all: Xnmr acq libxnmr.so Xnmr_preproc
@@ -45,14 +44,16 @@ ad9850.o: ad9850.c ad9850.h
 clean:
 	rm -f *.o acq Xnmr core libxnmr.a libxnmr.so Xnmr_preproc
 
+#  added -I/usr/realtime/include/ for rtai
 acq.o: acq.c acq.h shm_data.h shm_prog.h h_config.h p_signals.h pulse_hardware.h param_utils.h dsp.h ad9850.h
-	$(CC) $(CFLAGS) -c acq.c
+	$(CC) -I/usr/realtime/include/ $(CFLAGS) -c acq.c
 
 pulse_hardware.o: pulse_hardware.c pulse_hardware.h shm_prog.h h_config.h param_utils.h p_signals.h
 	$(CC) -O1 $(CFLAGS) -c pulse_hardware.c
 
+# added -L/usr/realtime/lib and -lpthread for rtai
 acq: acq.o pulse_hardware.o param_utils.o dsp.o adepp.o ad9850.o
-	$(CC) $(CFLAGS) -o acq acq.o pulse_hardware.o param_utils.o dsp.o adepp.o ad9850.o `pkg-config --libs gtk+-2.0` -lm
+	$(CC) $(CFLAGS) -L/usr/realtime/lib -o acq acq.o pulse_hardware.o param_utils.o dsp.o adepp.o ad9850.o `pkg-config --libs gtk+-2.0` -lm -lpthread 
 	@echo ""
 	@echo "Don't forget to make acq suid!!!"
 	@echo ""

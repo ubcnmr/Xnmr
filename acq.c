@@ -4,10 +4,14 @@
 // it will also generate "simulated" data
 //
 //#define NOHARDWARE
-//#define NO_PORT_INTERRUPT
 //#define NO_RT_SCHED
 
 
+// for rtai interrupts, uncomment both.
+// for old-style interrupts, comment both
+
+//#define OLD_PORT_INTERRUPT 
+#define RTAI_INTERRUPT
 
 // we should read the first two of these out of /proc/pci
 
@@ -15,9 +19,30 @@
 #define DSP_PORT 0xb400
 #define AD9850_PORT 0x378
 
+
 //#define MAX_ZERO_REDOS 20
 #define MAX_ZERO_REDOS 0
 // disable max_zero_redos while auto phase sync feature removed (July 11, 2002 CM)
+
+
+#ifdef RTAI_INTERRUPT
+#include <rtai_lxrt.h>
+#include <rtai_sem.h>
+#include <rtai_usi.h>
+#define PARPORT_IRQ 7
+
+static SEM *dspsem;  // semaphore for interrupt handler to communicate
+static volatile int ovr=0;
+RT_TASK *maint;
+volatile int thread=0;
+volatile int sig_rec = 0;
+volatile int end_handler=0;
+volatile int intcnt = 0;
+volatile RTIME t1,t2;
+#endif
+
+
+
 
 
 /*  acq.c
@@ -108,6 +133,63 @@ char msg_wait_flag = 0;
 
 volatile char done = NOT_DONE; 
 int euid,egid;
+
+
+
+
+
+#ifdef RTAI_INTERRUPT
+static void *timer_handler(void *args)
+{
+	RT_TASK *handler;
+	//	int priority;
+
+	
+	//	priority = sched_get_priority_max(SCHED_FIFO);
+
+ 	if (!(handler = rt_task_init_schmod(nam2num("HANDLR"), 0, 0, 0, SCHED_FIFO, 0xF))) {
+		printf("CANNOT INIT HANDLER TASK > HANDLR <\n");
+		exit(1);
+	}
+	rt_allow_nonroot_hrt();
+	mlockall(MCL_CURRENT | MCL_FUTURE);
+	//	printf("handler thread about to go to hard real time\n");
+	rt_make_hard_real_time();
+	ovr = 0;
+
+	//	printf("about to start waiting for irq's\n");
+	rt_request_irq_task(PARPORT_IRQ, handler, RT_IRQ_TASK, 1);
+	rt_startup_irq(PARPORT_IRQ);
+	rt_enable_irq(PARPORT_IRQ);
+
+	//	rtai_cli(); // uncomment to run handler with interrupts disabled.
+
+	while (!end_handler && (ovr != RT_IRQ_TASK_ERR) ) {
+	  ovr = rt_irq_wait(PARPORT_IRQ);
+	  t1 = rt_get_cpu_time_ns();
+	  // some of this should be cleaned up, left from example code
+	  if (end_handler) break;
+	  if (ovr == RT_IRQ_TASK_ERR) break; // this is in case of an overrun, which we should never have.
+	  rt_sem_signal(dspsem);		// notify main()
+	  rt_ack_irq(PARPORT_IRQ);
+	  rt_pend_linux_irq(PARPORT_IRQ);
+	}
+	//	rtai_sti();
+	rt_disable_irq(PARPORT_IRQ);
+	rt_shutdown_irq(PARPORT_IRQ);
+	rt_release_irq_task(PARPORT_IRQ);
+
+	rt_make_soft_real_time();
+	rt_task_delete(handler);
+	end_handler = 0;
+	//	printf("cleaned up handler nicely\n");
+	return 0;
+}
+
+
+#endif
+
+
 
 void cant_open_file(){
   int result;
@@ -261,6 +343,10 @@ void ui_signal_handler()
 {
   struct msgbuf message;
   //  printf( "acq: ui_signal_handler invoked\n" );
+
+#ifdef RTAI_INTERRUPT
+  sig_rec = 1;
+#endif
 
   switch( data_shm->ui_sig_acq_meaning ) {
     
@@ -435,7 +521,7 @@ int start_pprog()
 
     if (fs != NULL){
       fclose(fs);
-       //      printf("launching pprog using: %s\n",s);
+      //      printf("launching pprog using: %s\n",s);
       execl( s, NULL );
     }
 
@@ -532,12 +618,14 @@ void post_pprog_timeout()
     // was catching the SIGTERM and running shut_down ??
     //    printf("about to waitpid\n");
     waitpid(pid,NULL,0);
+    //    printf("returned from waitpid\n");
     data_shm->pprog_pid = -1; //carl added
     
   }
 
   done = ERROR_DONE;
-  
+  //  printf("post_pprog_timeout: set done to error_done\n");
+
   //  printf( "acq: Error, invalid pulse program or timeout occurred\n" );
   if (errcode == 0){
     //    printf("in post_pprog timeout with errcode 0\n");
@@ -589,7 +677,10 @@ int run()
   pid_t pid;
   struct msgbuf message;
   struct itimerval time, old;
-  int int_fd,result;
+  int result;
+#ifdef OLD_PORT_INTERRUPT
+  int int_fd;
+#endif
   int ruid,euid,rgid,egid;
   double freq;
   int sweep,extra_mult;
@@ -609,7 +700,9 @@ int run()
   char path[PATH_LENGTH],fileN[PATH_LENGTH],fileN2[PATH_LENGTH];
   float f;
   char end_1d_loop=0,end_2d_loop=0;
+#ifndef NOHARDWARE
   int zeros[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+#endif
 
   if (block_buffer != NULL){
     printf("acq: on enter, block_buffer was not NULL\n");
@@ -701,8 +794,9 @@ int run()
   // start_pprog used to be here
   
   // open the parallel port interrupt device:
-#ifndef NO_PORT_INTERRUPT
+#ifdef OLD_PORT_INTERRUPT
   int_fd = open( "/dev/PP_irq0", O_RDONLY );
+  printf("on open of /dev/PP_irq0, got fd: %i\n",int_fd);
 #endif
 
 #ifndef NOHARDWARE
@@ -713,8 +807,6 @@ int run()
     send_sig_ui(PERMISSION_ERROR);
     return 0;
   }
-#else
-  int_fd=zeros[0];
 #endif
 
   /*
@@ -749,10 +841,15 @@ else{
       done = ERROR_DONE;
     }
     else {
-      for (i = 0;i < data_shm->num_acqs_2d * data_shm->npts *2 ; i++ )
-	block_buffer[i]=0;
+      memset(block_buffer,0,data_shm->num_acqs_2d*data_shm->npts*2*sizeof(long long));
+	     /*      for (i = 0;i < data_shm->num_acqs_2d * data_shm->npts *2 ; i++ )
+		     block_buffer[i]=0; */
     }
   }
+  // also zero out the shared memory...  this is also done later, but 
+  // its nice to send 0's back to the user right away.
+  memset(data_shm->data_image,0,data_shm->npts*2*sizeof(long long));
+
   current_block = 0;
   data_shm->last_acqn_2d=0;
 
@@ -875,59 +972,63 @@ else{
       setitimer( ITIMER_REAL, &time, &old );
       
       //      printf("starting to wait for pprog in pre-calc, done = %i\n",done);
-      if( wait_for_pprog_msg() <0) 
-	  post_pprog_timeout(); //waits till a message comes back from pprog.
+      if( wait_for_pprog_msg() <0)  //waits till a message comes back from pprog.
+	post_pprog_timeout();
       
       if (done < 0){  //this may seem a little weird - reset the timer only if we're done.  Otherwise, we're
 	//about to set it again immediately anyway.
 	//reset the timer
-
+	//	printf("clearing timer after startup failure\n");
 	time.it_interval.tv_sec = 0;
 	time.it_interval.tv_usec = 0;
 	time.it_value.tv_sec = 0;
 	time.it_value.tv_usec = 0;
 	setitimer( ITIMER_REAL, &time, &old );
+	//	printf("cleared timer after startup failure\n");
+
       }
 
-
-      data_shm->force_synth = 0; // we only force frequencies on the first run of the dry run
-      // and on the first real run (which may be a dummy scan).
-      
-      
-      // so presumably, we now have the pulse program calculated
-      //figure how long it is
-
-      if (prog_shm->is_noisy == 0) extra_mult = 0;
-
-      if ( j == 0 )
-	data_shm->time_remaining +=  pp_time(); // on the first run through, only keep this time
-      else if (j == 1 ){ // assume second run is the same as all the rest.
-	data_shm->time_remaining +=  pp_time()*( data_shm->num_acqs-1 + extra_mult );
-	if (data_shm->acqn_2d == 0 && prog_shm->is_noisy == 0 ) {  // take account of dummy scans
-	  data_shm->time_remaining += pp_time()* dummy_scans;
+      if (done == NOT_DONE){
+	data_shm->force_synth = 0; // we only force frequencies on the first run of the dry run
+	// and on the first real run (which may be a dummy scan).
+	
+	
+	// so presumably, we now have the pulse program calculated
+	//figure how long it is
+	
+	if (prog_shm->is_noisy == 0) extra_mult = 0;
+	
+	if ( j == 0 )
+	  data_shm->time_remaining +=  pp_time(); // on the first run through, only keep this time
+	else if (j == 1 ){ // assume second run is the same as all the rest.
+	  data_shm->time_remaining +=  pp_time()*( data_shm->num_acqs-1 + extra_mult );
+	  if (data_shm->acqn_2d == 0 && prog_shm->is_noisy == 0 ) {  // take account of dummy scans
+	    data_shm->time_remaining += pp_time()* dummy_scans;
+	  }
 	}
-      }
-      else printf("in acq, calc'ing pp length, got j = %i\n",j);
-      //printf("after calc'ing: %d, total time is: %f\n",data_shm->acqn_2d,data_shm->time_remaining/20e6);
-      
-      if (j == 1){ // increment the 2d loop
-	data_shm->acqn_2d += 1;
-	if (data_shm->acqn_2d == data_shm->num_acqs_2d){
-	  data_shm->time_remaining -= (long long) ppo_time(); // we don't wait for the ppo on the last scan.
-	  data_shm->acqn_2d = 0;
-	  data_shm->force_synth = 1;
+	else printf("in acq, calc'ing pp length, got j = %i\n",j);
+	//printf("after calc'ing: %d, total time is: %f\n",data_shm->acqn_2d,data_shm->time_remaining/20e6);
+	
+	if (j == 1){ // increment the 2d loop
+	  data_shm->acqn_2d += 1;
+	  if (data_shm->acqn_2d == data_shm->num_acqs_2d){
+	    data_shm->time_remaining -= (long long) ppo_time(); // we don't wait for the ppo on the last scan.
+	    data_shm->acqn_2d = 0;
+	    data_shm->force_synth = 1;
+	  }
 	}
-      }
-      data_shm->acqn = ( j+1 )%2;
+	data_shm->acqn = ( j+1 )%2;
+      
 
       message.mtype = P_PROGRAM_CALC;
       message.mtext[0] = P_PROGRAM_CALC;
-      //    printf("acq: about to send message to calc next prog\n");
+      //      printf("acq: about to send message to calc next prog\n");
       msgsnd ( msgq_id, &message, 1, 0 );
       //    printf("acq: sent message to calc next prog\n");
+      }
     }
   }
-
+  
   //  printf("Acq: pre-calc complete\n");
 
   // this is done above in the pre-calc
@@ -976,10 +1077,9 @@ else{
 	  
 	  
 	}
-	
-	
+		
 	if( done >= 0 ) {
-	  //	printf("starting to wait for pprog in real-calc\n");
+	//	printf("starting to wait for pprog in real-calc\n");
 	  if( wait_for_pprog_msg() <0) 
 	    post_pprog_timeout(); //waits till a message comes back from pprog.
 	  //      printf("acq: came back from waiting for msg\n");
@@ -1022,6 +1122,15 @@ else{
 	    if (result != SCHED_FIFO) printf("acq: scheduler of pprog is not SCHED_FIFO: %i\n",result);
 #endif
 	    data_shm->force_synth = 0;
+
+#ifdef RTAI_INTERRUPT
+	    thread = rt_thread_create(timer_handler, NULL, 10000);  // create thread
+	    if (thread == 0) printf("creating timer_handler thread, got null\n");
+	    usleep(100); // wait for thread to go real time.
+	    //	    printf("done creating rtai handler thread\n");
+
+#endif
+
 	    
 	    
 	  }
@@ -1060,7 +1169,9 @@ else{
 	
 	if (first_time == 1 && done >=0 ){
 	  first_time = 0;
-	  
+	  // give the user some zeros for feedback
+	  send_sig_ui( NEW_DATA_READY );
+
 #ifndef NOHARDWARE
 	  pulse_hardware_load_timer();
 #endif
@@ -1164,14 +1275,29 @@ else{
 	  //received
 	  
 	  if( done >= 0 ) {
-	    //	  printf( "acq: waiting for an interrupt\n" );
-#ifndef NO_PORT_INTERRUPT
+#ifdef OLD_PORT_INTERRUPT
+	    printf( "acq: waiting for an interrupt\n" );
 	    while( read( int_fd, buffer, 1 ) <= 0 && done >=0)
 	      {
-		//	    perror( "acq: PP_irq read broken" );
+		perror( "acq: PP_irq read broken" );
+		fflush(stdout);
 	      }
-	    //	  printf( "acq: interrupt received\n" );
+	    printf( "acq: interrupt received\n" );
 #endif
+#ifdef RTAI_INTERRUPT
+	    do{
+	      //	      printf("about to wait for sem\n");
+	      sig_rec = 0;
+	      rt_sem_wait(dspsem); // how to tell if this was real, or a signal - use sig_rec
+	      t2 = rt_get_cpu_time_ns();
+	      if (t2-t1 > 45000)
+		printf("interrupt delivered in %i ns\n",(int) (t2-t1));
+	      // ok, got the interrupt
+	      //	      	      printf("got sem\n");
+	    } while((done >= 0) && (sig_rec == 1));
+		  
+#endif
+
 	  }
 	  //      if (done == ERROR_DONE) printf("acq woken from read to find ERROR_DONE\n");
 	  
@@ -1250,12 +1376,15 @@ else{
 	    reset_data = 0;
 	    // either set the shared memory to 0, or recall the correct block from the block buffer
 	    if (block_size > 0){
-	      for (i=0;i<data_shm->npts*2;i++)
-		data_shm->data_image[i] = block_buffer[i + data_shm->last_acqn_2d * data_shm->npts*2];
+	      memcpy(data_shm->data_image,&block_buffer[data_shm->last_acqn_2d*data_shm->npts*2],
+		     data_shm->npts*2*sizeof(long long));
+	      /*	      for (i=0;i<data_shm->npts*2;i++)
+			      data_shm->data_image[i] = block_buffer[i + data_shm->last_acqn_2d * data_shm->npts*2]; */
 	    }
 	    else{
-	      for( i=0; i<data_shm->npts*2; i++ )
-		data_shm->data_image[i] = 0;
+	      memset(data_shm->data_image,0,data_shm->npts*2*sizeof(long long));
+	      /*	      for( i=0; i<data_shm->npts*2; i++ )
+			      data_shm->data_image[i] = 0; */
 	    }
 	  }
 	  accumulate_data( buffer );
@@ -1273,16 +1402,18 @@ else{
 	//      printf("at end of 1d loop, done = %i, acqn: %li\n",done,data_shm->acqn);
 	if( done >= 0 ) send_sig_ui( NEW_DATA_READY );
 	//      printf("coming up to end acq's 1d loop, just told ui, new data\n");
-#ifdef NO_PORT_INTERRUPT
+#ifndef OLD_PORT_INTERRUPT
+#ifndef RTAI_INTERRUPT
 	{	    if (end_2d_loop == 1 && end_1d_loop == 1)
 	  {
 	    printf("not sleeping\n");
 	  }
 	else{
-	  //	      printf("in acq with NO_PORT_INTERRUPT, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
+	  //	      printf("in acq with no port interrupts, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
 	  usleep( pp_time()/(CLOCK_SPEED/1000000));
 	}
 	}
+#endif
 #endif
 	
       
@@ -1303,7 +1434,7 @@ else{
 	   block_buffer[data_shm->last_acqn_2d*data_shm->npts *2 +i] = data_shm->data_image[i];
 	
 	
-	//      printf( "acq appending file: %s\n", fileN );
+	//	printf( "acq appending file: %s\n", fileN );
 	
 	// need to change to fseek 
 	fstream = fopen( fileN, "r+" );
@@ -1410,7 +1541,8 @@ else{
 #endif
 	      data_shm->force_synth = 0;
 	      
-	      
+
+ 
 	    }
 	
 	  // check to see if there was a pulse_program event_error:
@@ -1448,6 +1580,9 @@ else{
 	  
 	  if (first_time == 1 && done >=0 ){
 	    first_time = 0;
+	    // give the user some 0's for feedback
+	    send_sig_ui( NEW_DATA_READY );
+
 	  }
   
 #ifndef NOHARDWARE
@@ -1597,13 +1732,25 @@ else{
 	      // there is a race here - the interrupt could happen between the last call and when we get
 	      // to wait for it.  But checking here helps reduce this.
 	      //	  printf( "acq: waiting for an interrupt\n" );
-#ifndef NO_PORT_INTERRUPT
+#ifdef OLD_PORT_INTERRUPT
 	      while( read( int_fd, buffer, 1 ) <= 0 && done >=0)
 		{
 		  //	    perror( "acq: PP_irq read broken" );
 		}
 	      //	  printf( "acq: interrupt received\n" );
 #endif
+#ifdef RTAI_INTERRUPT
+	    do{
+	      printf("abou`<t to wait for sem\n");
+	      sig_rec = 0;
+	      rt_sem_wait(dspsem); // how to tell if this was real, or a signal
+	      printf("got sem\n");
+	    } while((done >= 0) && (sig_rec == 1));
+	    printf("think we finished a scan %i %i\n",done,sig_rec);
+		  
+#endif
+
+
 	    }
 	    //      if (done == ERROR_DONE) printf("acq woken from read to find ERROR_DONE\n");
 
@@ -1698,20 +1845,22 @@ else{
 	  // only tell ui if ppo time is more than 905ms or we're at the end of a 1d loop.
 	  if( done >= 0 && (current_ppo_time > 90e-3*CLOCK_SPEED || end_1d_loop == 1) ) send_sig_ui( NEW_DATA_READY );
 	  //      printf("coming up to end acq's 1d loop, just told ui, new data\n");
-#ifdef NO_PORT_INTERRUPT
+#ifndef OLD_PORT_INTERRUPT
+#ifndef RTAI_INTERRUPT
 	  {	    if (end_2d_loop == 1 && end_1d_loop == 1)
 	    {
 	      printf("not sleeping\n");
 	    }
 	  else{
-	    //	      printf("in acq with NO_PORT_INTERRUPT, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
+	    //	      printf("in acq with no port interrupts, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
 	    usleep( pp_time()/(CLOCK_SPEED/1000000));
 	  }
 	  }
 #endif
+#endif
 	
 	  
-	  } //End of 1d while loop
+	  } //End of 1d while loop noisy version
 	    //      printf("just out of acq's 1d loop\n");
 	  //	  printf("out of 1d loop\n");
 	    
@@ -1797,7 +1946,7 @@ else{
   while( msgrcv ( msgq_id, &message, 1, 0, IPC_NOWAIT ) >= 0 )
     i++;
 
-#ifndef NO_PORT_INTERRUPT
+#ifdef OLD_PORT_INTERRUPT
   close( int_fd );
 #endif
   //  scope_close_port();
@@ -1813,6 +1962,21 @@ else{
   running = 0;
   if( done >= 0 )
     send_sig_ui( ACQ_DONE );
+
+#ifdef RTAI_INTERRUPT
+  if (thread !=0){ // kill the thread only if we started it in the first place.onep
+    //    printf("killing handler thread\n");
+    
+    end_handler = 1;
+    rt_irq_signal(PARPORT_IRQ);
+    //  rt_release_irq_task(PARPORT_IRQ);
+    
+    rt_thread_join(thread);
+    thread = 0;
+  }
+#endif
+
+  //  printf("returning from run\n");
   return 0;
 
 }
@@ -1823,6 +1987,9 @@ void shut_down()
   pid_t c;
 
   //  printf( "acq starting shut down sequence\n" );
+#ifdef RTAI_INTERRUPT
+  sig_rec = 1;
+#endif
 
   if( data_shm != NULL ) {
 
@@ -1860,6 +2027,16 @@ void shut_down()
   msgctl( msgq_id, IPC_RMID, NULL );
   iopl(0);
 
+#ifdef RTAI_INTERRUPT
+  printf("deleting rt main task\n");
+  if (maint != NULL)
+    rt_task_delete(maint);
+  if (dspsem != NULL)
+    rt_sem_delete(dspsem);
+#endif
+
+
+
   printf( "acq main terminated\n" );
   exit(1);
   return;
@@ -1872,8 +2049,26 @@ int init_sched()
 
 {
 
+  //  struct timespec tp
+#ifdef RTAI_INTERRUPT
+  if(!(maint = rt_task_init(nam2num("MAIN"),1,0,0))){
+    printf("CANNOT INIT MAIN TASK rt_task_init\n");
+    return -1;
+  }
+  if (!(dspsem = rt_sem_init(nam2num("DSPSEM"), 0))) { 
+    printf("CANNOT INIT SEMAPHORE > DSPSEM <\n");
+    return -1;
 
-  //  struct timespec tp;
+    // no idea if these are necessary...
+    rt_linux_syscall_server_create(NULL);
+    rt_task_use_fpu(maint,1);
+    //    rt_make_hard_real_time(); 
+    // see:  http://cvs.gna.org/cvsweb/showroom/v3.x/user/hardsoftsw/hardsoftsw.c?rev=1.2;cvsroot=rtai
+    // also see: http://cvs.gna.org/cvsweb/showroom/v3.x/user/i386/usi/usi_process.c?rev=1.6;cvsroot=rtai
+
+  }
+
+#endif
 
 #ifndef NO_RT_SCHED
   struct sched_param sp;
@@ -1901,6 +2096,8 @@ int init_sched()
   }
   else return -1;
 #endif
+
+
   
   return 0;
 
@@ -1943,12 +2140,19 @@ int main(){
   printf("            Acq started with NOHARDWARE\n");
   printf("\n\n********************************\n\n");
 #endif
-#ifdef NO_PORT_INTERRUPT
+#ifdef OLD_PORT_INTERRUPT
+  printf("            Acq started with OLD_PORT_INTERRUPT \n");
+#endif
+#ifdef RTAI_INTERRUPT
+  printf("            Acq started with RTAI_INTERRUPT \n");
+#endif
+#ifndef RTAI_INTERRUPT
+#ifndef OLD_PORT_INTERRUPT
   printf("\n\n********************************\n\n");
-  printf("            Acq started with NO_PORT_INTERRUPT \n");
+  printf("            Acq started with no interrupts \n");
   printf("\n\n********************************\n\n");
 #endif
-
+#endif
   init_shm();
   init_signals();
   init_msgs();

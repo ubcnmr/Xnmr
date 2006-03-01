@@ -431,13 +431,23 @@ dbuff *create_buff(int num){
     count++;
 
     // put some data into the buffer.
-
+    /*
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
 	buff->data[2*i+2*buff->param_set.npts*j]
 	  =cos(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-.025;
 	buff->data[2*i+1+2*buff->param_set.npts*j]
 	  =sin(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-.025;
+
+      }
+    */
+
+    for(j=0;j<buff->npts2;j++)
+      for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
+	buff->data[2*i+2*buff->param_set.npts*j]
+	  =cos(0.02*i*20)*exp(-i/800.)/(j+1);
+	buff->data[2*i+1+2*buff->param_set.npts*j]
+	  =sin(0.02*i*20)*exp(-i/800.)/(j+1);
 
       }
 
@@ -3785,7 +3795,7 @@ void set_window_title(dbuff *buff)
 {
   char s[PATH_LENGTH];
   
- snprintf(s,PATH_LENGTH,"Buffer: %i, %s",buff->buffnum,buff->path_for_reload);
+ snprintf(s,PATH_LENGTH,"Buff: %i, %s",buff->buffnum,buff->path_for_reload);
  // printf("title for window: %s\n",s);
  gtk_window_set_title(GTK_WINDOW(buff->win.window),s);
  return;
@@ -4337,10 +4347,10 @@ gint set_cwd(char *dir)
 
 void update_param_win_title(parameter_set_t *param_set)
 {
-  char s[PATH_LENGTH],*s2;
+  char s[PATH_LENGTH+6],*s2;
 
-  
-  path_strcpy(s,param_set->save_path);
+  strcpy(s,"Xnmr: ");
+  path_strcpy(s+6,param_set->save_path);
   s2 = strrchr(s,'/');
   if (s2 != NULL){
     *s2=0;

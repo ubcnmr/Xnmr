@@ -111,8 +111,6 @@ notes: phase_sweep starts off at -5 deg, so you'll want to left shift to there b
   * 
    */
 
-
-
  struct hardware_config_t { 
    int start_bit; 
    int num_bits; 
