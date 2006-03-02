@@ -512,6 +512,7 @@ dbuff *create_buff(int num){
     gtk_window_set_gravity(GTK_WINDOW(window),GDK_GRAVITY_NORTH_WEST);
     gtk_window_move(GTK_WINDOW(window),(count-1)*50,0);
 
+    gtk_window_set_icon_from_file(GTK_WINDOW(window),"/usr/share/Xnmr/xnmr_buff_icon.png",NULL);
 
     buff->win.window=window;
     g_signal_connect (G_OBJECT(window),"delete_event", //was "destroy"
@@ -1769,7 +1770,7 @@ void user_scales(GtkAction *action,dbuff *buff){
   // place the window
   gtk_window_set_transient_for(GTK_WINDOW(inputbox),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(inputbox),GTK_WIN_POS_CENTER_ON_PARENT);
-  
+
   gtk_widget_show_all(inputbox);
   buff->scales_dialog = inputbox;
  

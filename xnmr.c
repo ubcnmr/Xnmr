@@ -80,10 +80,13 @@ ln -s /usr/src/Xnmr/current/pulse.h /usr/share/Xnmr/include/pulse.h
 rm /usr/share/Xnmr/config/h_config.h
 rm /usr/share/Xnmr/config/pulse_hardware.h
 rm /usr/share/Xnmr/config/xnmrrc
+rm /usr/share/Xnmr/xnmr_icon.png
 
 ln -s /usr/src/Xnmr/current/h_config.h /usr/share/Xnmr/config/h_config.h
 ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
 ln -s /usr/src/Xnmr/current/xnmrrc /usr/share/Xnmr/config/xnmrrc
+
+ln -s /usr/src/Xnmr/current/xnmr__buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
 
   pulse_hardware.h  in /usr/share/Xnmr/config/
   h_config.h        
@@ -326,6 +329,7 @@ int main(int argc,char *argv[])
 
   //  gtk_window_set_position(GTK_WINDOW(panwindow),GTK_WIN_POS_NONE);
   gtk_window_set_gravity(GTK_WINDOW(panwindow),GDK_GRAVITY_NORTH_WEST);
+  gtk_window_set_icon_from_file(GTK_WINDOW(panwindow),"/usr/share/Xnmr/xnmr_buff_icon.png",NULL);
 
   // want size of buffer window to set placement of panel window.
   // so postpone placing this window
