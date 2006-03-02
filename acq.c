@@ -3,7 +3,7 @@
 // it will wait for interrupts !!!
 // it will also generate "simulated" data
 //
-//#define NOHARDWARE
+#define NOHARDWARE
 //#define NO_RT_SCHED
 
 
@@ -11,7 +11,7 @@
 // for old-style interrupts, comment both
 
 //#define OLD_PORT_INTERRUPT 
-#define RTAI_INTERRUPT
+//#define RTAI_INTERRUPT
 
 // we should read the first two of these out of /proc/pci
 
@@ -20,9 +20,6 @@
 #define AD9850_PORT 0x378
 
 
-//#define MAX_ZERO_REDOS 20
-#define MAX_ZERO_REDOS 0
-// disable max_zero_redos while auto phase sync feature removed (July 11, 2002 CM)
 
 
 #ifdef RTAI_INTERRUPT
@@ -72,7 +69,7 @@ volatile RTIME t1,t2;
  *
  *
  * Feb 2002 Attempting deal with all zeros from receiver - redo a scan. CM
- *
+ * - removed permanently Mar 1, 2006
  *
  *
  */
@@ -133,7 +130,6 @@ char msg_wait_flag = 0;
 
 volatile char done = NOT_DONE; 
 int euid,egid;
-
 
 
 
@@ -693,7 +689,6 @@ int run()
   int block_size,dummy_scans,num_dummy;
   static long long *block_buffer= NULL; //static to help prevent mem leaks.  Shouldn't need to be.
   int current_block,old_start_pos=0;
-  int redo_zeros=0;
 
 
   FILE* fstream;
@@ -701,8 +696,8 @@ int run()
   float f;
   char end_1d_loop=0,end_2d_loop=0;
 #ifndef NOHARDWARE
-  int zeros[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-#endif
+  int zeros[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+#endif 
 
   if (block_buffer != NULL){
     printf("acq: on enter, block_buffer was not NULL\n");
@@ -1240,18 +1235,12 @@ else{
 	}
 	
 
-	do{ // repeating loop for receiver zeros...
 	  
 	  //start pulse programmer
 	  if( done >= 0 ) {
 	    //	printf( "acq: starting pulse programmer hardware\n" );
 #ifndef NOHARDWARE
 	    
-	    if (redo_zeros > 0 )  { 
-	      reset_ad9850();
-	      i = setup_dsp( sweep,DSP_PORT,freq ,dgain, dsp_ph, 1); //force_setup = 1
-	      setup_ad9850(); // this should do the resync of the AD9850 with AD6620
-	    }
 	    
 	    i = pulse_hardware_start(0);
 #else
@@ -1270,7 +1259,6 @@ else{
 	    }
 	    
 	  }
-	  if (redo_zeros > 0) syslog(LOG_WARNING,"Got all zeros, redo_zeros = %i, max is %i\n",redo_zeros,MAX_ZERO_REDOS);
 	  //wait for interrupt - note that a return value of -1 indicates that an interrupt was not
 	  //received
 	  
@@ -1306,10 +1294,8 @@ else{
 	    //	  printf( "acq doing acquisition %u of dimension %u\n", data_shm->acqn, data_shm->acqn_2d );
 	    
 	    //	printf("%f %f %f\n",current_total_time/20e6,current_ppo_time/20e6,prev_ppo_time/20e6);
-	    if (redo_zeros == 0){
-	      data_shm->time_remaining -= ( (long long)current_total_time - current_ppo_time + prev_ppo_time);
-	      prev_ppo_time = current_ppo_time;
-	    } // don't subtract off the time if we're repeating for all zeros.
+	    data_shm->time_remaining -= ( (long long) current_total_time - current_ppo_time + prev_ppo_time);
+	    prev_ppo_time = current_ppo_time;
 	    
 	    //	printf("time remaining: %f,\n",data_shm->time_remaining/20e6);
 #ifndef NOHARDWARE
@@ -1341,10 +1327,11 @@ else{
 	      send_sig_ui( FIFO_READ_ERROR );
 	    }
 	    
+
 #ifndef NOHARDWARE
 	    if (memcmp(buffer,zeros,20*4) == 0){ // then darn, all we got back from the receiver are 0's.
 	      printf("acq: got first 10 points as all zeros\n");
-	    // look the hard way
+	      // look the hard way
 	      for( i = 0 ; i < data_shm->npts*2 ; i++ )
 		if (buffer[i] != 0){
 		  printf("acq: in further zero checking, found pt: %i\n",i);
@@ -1353,23 +1340,15 @@ else{
 	      if (i != data_shm->npts*2+6 ){ 
 		// yes +6 because we added 5 above, then leaving the loop added one more!
 		printf("acq: at scan ct: %li, next acqn: %li, acqn2d: %i.  Got zeros from receiver\n",data_shm->ct,data_shm->acqn,data_shm->acqn_2d);
+		done = ERROR_DONE;
+		send_sig_ui(FIFO_ZERO_ERROR);
 		//	      printf("last successful scan was the one before this one\n");
-		redo_zeros += 1;
 	      }
-	      else redo_zeros = 0; // not all 0's
 	    }
-	    else redo_zeros = 0; //not all 0's
 	    
 #endif
-
-	    
 	  } // update time remaining and read in data.
-	}while ( redo_zeros > 0 && redo_zeros < MAX_ZERO_REDOS+1 && done >= 0);      
-	
-	if (redo_zeros >= MAX_ZERO_REDOS+1){
-	  done = ERROR_DONE;
-	  send_sig_ui(FIFO_ZERO_ERROR);
-	}	
+
 	
 	if( done >= 0 ){
 	  if (reset_data == 1){
@@ -1378,13 +1357,9 @@ else{
 	    if (block_size > 0){
 	      memcpy(data_shm->data_image,&block_buffer[data_shm->last_acqn_2d*data_shm->npts*2],
 		     data_shm->npts*2*sizeof(long long));
-	      /*	      for (i=0;i<data_shm->npts*2;i++)
-			      data_shm->data_image[i] = block_buffer[i + data_shm->last_acqn_2d * data_shm->npts*2]; */
 	    }
 	    else{
 	      memset(data_shm->data_image,0,data_shm->npts*2*sizeof(long long));
-	      /*	      for( i=0; i<data_shm->npts*2; i++ )
-			      data_shm->data_image[i] = 0; */
 	    }
 	  }
 	  accumulate_data( buffer );
@@ -1394,8 +1369,7 @@ else{
 	if (dummy_scans > 0 && (data_shm->mode == NORMAL_MODE || data_shm->mode == NORMAL_MODE_NOSAVE) ) {
 	  dummy_scans--;
 	  reset_data = 1;
-	  //	  data_shm->ct -= 1;
-	}      
+	}    
 	
 	//signal UI that new data is ready 
 	
@@ -1404,14 +1378,15 @@ else{
 	//      printf("coming up to end acq's 1d loop, just told ui, new data\n");
 #ifndef OLD_PORT_INTERRUPT
 #ifndef RTAI_INTERRUPT
-	{	    if (end_2d_loop == 1 && end_1d_loop == 1)
-	  {
-	    printf("not sleeping\n");
+	{	  
+	  if (end_2d_loop == 1 && end_1d_loop == 1)
+	    {
+	      printf("not sleeping\n");
+	    }
+	  else{
+	    //	      printf("in acq with no port interrupts, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
+	    usleep( pp_time()/(CLOCK_SPEED/1000000));
 	  }
-	else{
-	  //	      printf("in acq with no port interrupts, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
-	  usleep( pp_time()/(CLOCK_SPEED/1000000));
-	}
 	}
 #endif
 #endif
@@ -1741,7 +1716,7 @@ else{
 #endif
 #ifdef RTAI_INTERRUPT
 	    do{
-	      printf("abou`<t to wait for sem\n");
+	      printf("about to wait for sem\n");
 	      sig_rec = 0;
 	      rt_sem_wait(dspsem); // how to tell if this was real, or a signal
 	      printf("got sem\n");
