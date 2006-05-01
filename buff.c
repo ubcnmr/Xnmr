@@ -11,22 +11,16 @@
 
 
 
-/* to do:  
-   1 finish fitting routine
-*/
-   
-
-
 
 /*
   File saving and loading:
 
 
 
-  file_save_as ->check_overwrite_wrapper  -> do_save   (save_as menu item)
-                  |
-                  |
-  file_save ->  check_overwrite      ->    do_save   (save menu item)
+  file_save_as ->  (check_overwrite)  -> do_save   (save_as menu item)
+                  
+                  
+  file_save ->  (check_overwrite)      ->    do_save   (save menu item)
                                         
 		     
 
@@ -40,7 +34,7 @@ reload wrapper                             (from end of acquisition)
 
 */
 
-
+#define _GNU_SOURCE
 
 #include <unistd.h>
 #include <string.h>
@@ -51,6 +45,9 @@ reload wrapper                             (from end of acquisition)
 #include <stdlib.h>
 #include <wordexp.h>
 #include <string.h>
+#include <pthread.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include "buff.h"
 #include "xnmr.h"
@@ -105,11 +102,11 @@ GtkWidget *setsf1dialog;
    (ie + and - buttons that increase the scale by 360 deg */
 /*
 gint window_focus(GtkWidget *widget,GdkEventExpose *event,dbuff *buff){
-  printf("got event for buff %i ",buff->buffnum);
+  fprintf(stderr,"got event for buff %i ",buff->buffnum);
     if ( ((GdkEventVisibility *) event)->state ==GDK_VISIBILITY_UNOBSCURED)
-    printf("says its unobscured\n");
+    fprintf(stderr,"says its unobscured\n");
   else
-  printf("is obscured\n"); 
+  fprintf(stderr,"is obscured\n"); 
   return FALSE;
 }
 */
@@ -127,6 +124,7 @@ dbuff *create_buff(int num){
     { "BaselineMenu",NULL,"_Baseline"},
     { "QueueMenu",NULL,"_Queueing"},
     { "HardwareMenu",NULL,"Hardware"},
+    { "ScriptingMenu",NULL, "Scripting"},
     // name, icon, menu label, accelerator, tooltip, callback.
     { "New",GTK_STOCK_NEW,"_New","<control>N","Open a new buffer window",G_CALLBACK(file_new)},
     { "Open",GTK_STOCK_OPEN,"_Open","<control>O","Open a file",G_CALLBACK(file_open)},
@@ -159,8 +157,10 @@ dbuff *create_buff(int num){
     { "dospline",NULL,"Do Spline",NULL,"Apply spline fit to data",G_CALLBACK(do_spline)},
     { "undospline",NULL,"Undo Spline",NULL,"Undo the last spline",G_CALLBACK(undo_spline)},
     { "clearspline",NULL,"Clear Spline Points",NULL,"Clear the spline points",G_CALLBACK(clear_spline)},
-    {"queueexpt",NULL,"Queue _Experiment",NULL,"Queue this experiment",G_CALLBACK(queue_expt)},
-    {"queuewindow",NULL,"Queue _Window",NULL,"Display the queue window",G_CALLBACK(queue_window)}
+    { "queueexpt",NULL,"Queue _Experiment",NULL,"Queue this experiment",G_CALLBACK(queue_expt)},
+    { "queuewindow",NULL,"Queue _Window",NULL,"Display the queue window",G_CALLBACK(queue_window)},
+    { "readscript",NULL,"Read from stdin",NULL,"Read from stdin",G_CALLBACK(readscript)},
+    { "socketscript",NULL,"Open Socket for script",NULL,"Open Socket for script",G_CALLBACK(socket_script)}
     };
 
  static const char *ui_description =
@@ -217,6 +217,10 @@ dbuff *create_buff(int num){
    "   <menu action='HardwareMenu'>"
    "    <menuitem action='ResetDSP'/>"
    "   </menu>"
+   "   <menu action='ScriptingMenu'>"
+   "    <menuitem action='readscript'/>"
+   "    <menuitem action='socketscript'/>"
+   "   </menu>"
    " </menubar>"
    "</ui>";
 
@@ -248,7 +252,7 @@ dbuff *create_buff(int num){
     /* set up defaults for buffer */
     buff=g_malloc(sizeof(dbuff));
     if (buff == NULL) perror("buff g_malloc:");
-    //    printf("buff create: malloc for buff, buff is: %i bytes\n",sizeof(dbuff));
+    //    fprintf(stderr,"buff create: malloc for buff, buff is: %i bytes\n",sizeof(dbuff));
     buff->scales_dialog = NULL;
     buff->overrun1 = 85*(1+256+65536+16777216);
     buff->overrun2 = 85*(1+256+65536+16777216);
@@ -350,7 +354,7 @@ dbuff *create_buff(int num){
     path_strcpy(s,getenv("HOME"));
     path_strcat(s,"/Xnmr/data/");
     put_name_in_buff(buff,s);
-    //    printf("special buff creation put %s in save\n",buff->param_set.save_path);
+    //    fprintf(stderr,"special buff creation put %s in save\n",buff->param_set.save_path);
 
 
     if( acq_in_progress != ACQ_STOPPED && num_buffs == 1 ) { //this is a currently running acq
@@ -362,13 +366,13 @@ dbuff *create_buff(int num){
       acq_param_set = &buff->param_set;
       
       // now, if there is a signal waiting that isn't just data ready, deal with it.
-      printf("started up running, signal from acq is: %i\n",data_shm->acq_sig_ui_meaning);
+      fprintf(stderr,"started up running, signal from acq is: %i\n",data_shm->acq_sig_ui_meaning);
       if ( data_shm->acq_sig_ui_meaning != NEW_DATA_READY){
-	printf("there appears to be a signal waiting from acq\n");
+	fprintf(stderr,"there appears to be a signal waiting from acq\n");
 	acq_signal_handler();
       }
 
-      //printf( "doing special buffer creation\n" );
+      //fprintf(stderr, "doing special buffer creation\n" );
       /* this is if we're the only buffer and acq is underway */
 
     } //end if already in progress
@@ -398,13 +402,13 @@ dbuff *create_buff(int num){
 	  // must also do 2d
 	  if(buff->param_set.parameter[i].type == 'F'){
 	    buff->param_set.parameter[i].f_val_2d=g_malloc(buff->param_set.parameter[i].size *sizeof(double));
-	    //	    printf("buff create, malloc for 2d\n");
+	    //	    fprintf(stderr,"buff create, malloc for 2d\n");
 	    for(k=0;k<buff->param_set.parameter[i].size;k++) 
 	      buff->param_set.parameter[i].f_val_2d[k]=buffp[current]->param_set.parameter[i].f_val_2d[k];
 	  }
 	  if(buff->param_set.parameter[i].type == 'I'){
 	    buff->param_set.parameter[i].i_val_2d=g_malloc(buff->param_set.parameter[i].size *sizeof(gint));
-	    //	    printf("buff create, malloc for 2d\n");
+	    //	    fprintf(stderr,"buff create, malloc for 2d\n");
 	    for(k=0;k<buff->param_set.parameter[i].size;k++) 
 	      buff->param_set.parameter[i].i_val_2d[k]=buffp[current]->param_set.parameter[i].i_val_2d[k];
 	  }
@@ -420,9 +424,9 @@ dbuff *create_buff(int num){
     old_update_open = no_update_open;
     no_update_open = 1;
     
-    //    printf("create_buff, about to show_parameter_frame\n");
+    //    fprintf(stderr,"create_buff, about to show_parameter_frame\n");
     show_parameter_frame( &buff->param_set );
-    //    printf("create_buff, done show_parameter_frame\n");
+    //    fprintf(stderr,"create_buff, done show_parameter_frame\n");
 
     no_update_open = old_update_open;
 
@@ -476,7 +480,7 @@ dbuff *create_buff(int num){
       mreg[0] = psrb(10,1);
       for(i=1;i<buff->param_set.npts;i++){
 	mreg[i] = psrb(10,0);
-	//	printf("%i "  ,mreg[i]);
+	//	fprintf(stderr,"%i "  ,mreg[i]);
       }
 
       for (i=0;i<buff->param_set.npts;i++){
@@ -527,7 +531,7 @@ dbuff *create_buff(int num){
     gtk_container_add(GTK_CONTAINER (window), main_vbox);
     
      sprintf(sparestring,"%iMenuActions",num);
-     //     printf("action group name: %s\n",sparestring);
+     //     fprintf(stderr,"action group name: %s\n",sparestring);
      action_group = gtk_action_group_new(sparestring);
      gtk_action_group_add_actions(action_group,entries,G_N_ELEMENTS(entries),buff);
 
@@ -790,7 +794,7 @@ dbuff *create_buff(int num){
 
     gtk_widget_show_all(window);
 
-    //    printf("returning from create_buff\n");
+    //    fprintf(stderr,"returning from create_buff\n");
 
     
     // deal with the add_subtract buffer lists:
@@ -800,7 +804,7 @@ dbuff *create_buff(int num){
     inum = num_buffs-1;
     for (i=0;i<num_buffs;i++)
       if (add_sub.index[i] >  num){ // got it - put it here
-	//	printf("got buffer for insert at: index: %i\n",i);
+	//	fprintf(stderr,"got buffer for insert at: index: %i\n",i);
 	inum = i;
 	i = num_buffs;
       }
@@ -824,9 +828,9 @@ dbuff *create_buff(int num){
 gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff)
 {
   /*
-  printf("got expose event for buff %i, dont_raise says %i, current is %i\n",buff->buffnum,doing_upload_dont_raise,current);  if (buff->buffnum != current  && doing_upload_dont_raise != buff->buffnum)
+  fprintf(stderr,"got expose event for buff %i, dont_raise says %i, current is %i\n",buff->buffnum,doing_upload_dont_raise,current);  if (buff->buffnum != current  && doing_upload_dont_raise != buff->buffnum)
     if (gtk_window_has_toplevel_focus(GTK_WINDOW(buff->win.window))) {
-      printf("raising %i, current is %i\n",buff->buffnum,current);
+      fprintf(stderr,"raising %i, current is %i\n",buff->buffnum,current);
       make_active(buff);
     }
   */
@@ -848,7 +852,7 @@ gint configure_event(GtkWidget *widget,GdkEventConfigure *event,
 {
 
   int sizex,sizey;
-  //printf("in configure\n");
+  //fprintf(stderr,"in configure\n");
   /* get the size of the drawing area */
   sizex=widget->allocation.width-2;
   sizey=widget->allocation.height-2;
@@ -875,7 +879,7 @@ void draw_canvas(dbuff *buff)
 
 
 
- // printf( "drawing canvas\n");
+ // fprintf(stderr, "drawing canvas\n");
 
 
  /* clear the canvas */
@@ -884,14 +888,14 @@ void draw_canvas(dbuff *buff)
  rect.width=buff->win.sizex;
  rect.height=buff->win.sizey;
 
- // printf("doing draw canvas\n");
+ // fprintf(stderr,"doing draw canvas\n");
  cursor_busy(buff);
  gdk_draw_rectangle(buff->win.pixmap,buff->win.canvas->style->white_gc,TRUE,
 		    rect.x,rect.y,rect.width,rect.height);
 
 
  if (colourgc == NULL){
-   //printf("in draw_canvas, gc is NULL\n");
+   //fprintf(stderr,"in draw_canvas, gc is NULL\n");
    return;
  }
 
@@ -1083,7 +1087,7 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     
   }
   else {
-    printf("in draw_oned and isn't a row or a column\n");
+    fprintf(stderr,"in draw_oned and isn't a row or a column\n");
     return;
   }
  
@@ -1324,27 +1328,26 @@ void file_open(GtkAction *action,dbuff *buff)
 
   CHECK_ACTIVE(buff);
 
-  //  filew = gtk_file_selection_new ("Load");
   filew = gtk_file_chooser_dialog_new("Open File",NULL,
 				     GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
 				     GTK_STOCK_CANCEL,GTK_RESPONSE_CANCEL,
 				     GTK_STOCK_OPEN,-GTK_RESPONSE_ACCEPT,NULL);
 
-  //  gtk_file_chooser_set_action(GTK_FILE_CHOOSER(filew),GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
+
   gtk_window_set_keep_above(GTK_WINDOW(filew),TRUE);
+  gtk_file_chooser_set_local_only(GTK_FILE_CHOOSER(filew),TRUE);
 
   if (gtk_dialog_run(GTK_DIALOG(filew)) == -GTK_RESPONSE_ACCEPT) {
     char *filename;
-    //    printf("back from file_open dialog\n");
     filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filew));
-    //    printf("got filename: %s\n",filename);
+    //    fprintf(stderr,"got filename: %s\n",filename);
     
     
     if (buff != NULL){
       
       // here we need to strip out a potential trailing /
       if (filename[strlen(filename)-1] == '/' ) filename[strlen(filename)-1] = 0;
-      //      printf("path is: %s\n",filename);
+      //      fprintf(stderr,"path is: %s\n",filename);
       
       do_load( buff, filename);
     }
@@ -1353,7 +1356,7 @@ void file_open(GtkAction *action,dbuff *buff)
     
   }
   else { 
-    printf("got no filename\n");
+    fprintf(stderr,"got no filename\n");
   }
   gtk_widget_destroy(filew);
 
@@ -1369,23 +1372,6 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
   bnum = buff->buffnum;
 
-  // sadly,  it appears as though gtk is slightly broken, delete event doesn't pass 
-  // back the data it should, so need to figure out what buff this is.
-  // nope, its not broken, I just wasn't using it correctly!
-
-  /*
-  for (i=0;i<MAX_BUFFERS;i++){
-    if (buffp[i] != NULL)
-      if (buffp[i]->win.window == widget){
-	//	printf("got delete_event from buff: %i\n",i);
-	bnum = i;
-	i = MAX_BUFFERS;
-      }
-  }
-
-  
-  buff = buffp[bnum];
-  */
   // find reasons to not quit
 
   if(buff->win.press_pend > 0 && from_do_destroy_all == 0 ){ // if we're killing everything, kill this one too.
@@ -1407,7 +1393,7 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
 
   if (  buff->scales_dialog != NULL){
-    //    printf("killing scales window for buffer %i\n",bnum);
+    //    fprintf(stderr,"killing scales window for buffer %i\n",bnum);
     do_wrapup_user_scales(GTK_WIDGET(buff->scales_dialog),buff);
       //    popup_msg("close scales dialog before closing buffer",TRUE);
     //    return TRUE;
@@ -1419,19 +1405,19 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
  
 
 
-  //  printf("upload_buff is: %i, acq_in_progress is : %i\n",upload_buff,acq_in_progress);
+  //  fprintf(stderr,"upload_buff is: %i, acq_in_progress is : %i\n",upload_buff,acq_in_progress);
 
   if ( from_do_destroy_all == 0 ){ //means from ui, not from a signal
-    //    printf("not from a destroy all\n");
+    //    fprintf(stderr,"not from a destroy all\n");
 
     // ok, if this is the acq buffer and the user selected close or x'd the window:
     if (bnum == upload_buff && acq_in_progress != ACQ_STOPPED){
-      printf("Can't close Acquisition Buffer !!\n");
+      fprintf(stderr,"Can't close Acquisition Buffer !!\n");
       popup_msg("Can't close Acquisition Buffer!!",TRUE);
       return TRUE; //not destroyed, but event handled
     }
     if (am_i_queued(bnum)){
-      printf("can't close a queued buffer!!\n");
+      fprintf(stderr,"can't close a queued buffer!!\n");
       popup_msg("Can't close a Queued buffer!",TRUE);
       return TRUE;
     }
@@ -1445,7 +1431,7 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 // deal with add_sub buffer numbers
   for (i=0;i<num_buffs;i++){
     if (add_sub.index[i] == bnum){ // got it
-      //      printf("got buffer at index: %i\n",i);
+      //      fprintf(stderr,"got buffer at index: %i\n",i);
       for (j=i;j<num_buffs;j++)
 	add_sub.index[j] = add_sub.index[j+1];
       gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_buff1),i);
@@ -1475,7 +1461,7 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
   { int i;
   //  gtk_signal_disconnect_by_data(GTK_OBJECT(buff->win.canvas),buff);
   i=g_signal_handlers_disconnect_matched(G_OBJECT(buff->win.canvas),G_SIGNAL_MATCH_DATA,0,0,NULL,NULL,buff);
-  //  printf("disconnected: %i handlers\n",i);
+  //  fprintf(stderr,"disconnected: %i handlers\n",i);
 }
   gdk_pixmap_unref(buff->win.pixmap);
 
@@ -1493,7 +1479,7 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
   if (num_buffs == 0){
     gdk_cursor_unref(cursorclock);
     gtk_main_quit();  
-    printf("called gtk_main_quit\n");
+    fprintf(stderr,"called gtk_main_quit\n");
 
  }
 
@@ -1542,7 +1528,7 @@ void file_close(GtkAction *action,dbuff *buff)
 
 
   int result;
-  //  printf("file close for buffer: %i\n",buff->buffnum);
+  //  fprintf(stderr,"file close for buffer: %i\n",buff->buffnum);
   /* kill the window */
   
   result = destroy_buff(GTK_WIDGET(buff->win.window),NULL,buff);
@@ -1557,16 +1543,16 @@ void file_save(GtkAction *action,dbuff *buff)
 {
 
   CHECK_ACTIVE(buff);
-  printf("in file_save, using path: %s\n",buff->param_set.save_path);
+  fprintf(stderr,"in file_save, using path: %s\n",buff->param_set.save_path);
   if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == '/'){
     popup_msg("Invalid file name",TRUE);
     return;
   }
   if (check_overwrite( buff, buff->param_set.save_path) == TRUE){
-    //    printf("in file_save, got check_overwrite TRUE\n");
+    //    fprintf(stderr,"in file_save, got check_overwrite TRUE\n");
     do_save(buff,buff->param_set.save_path);
   }
-  else printf("not saving\n");
+  else fprintf(stderr,"not saving\n");
   
   return;
 }
@@ -1575,50 +1561,56 @@ void file_save(GtkAction *action,dbuff *buff)
 void file_save_as(GtkAction *action, dbuff *buff)
 {
   GtkWidget *filew;
-  char path[PATH_LENGTH];
+  char *filename;
+  int val;
 
   CHECK_ACTIVE(buff);
 
-  /*  unfinished.  The chooser_dialog doesn't work well enough yet.
-  filew = gtk_file_chooser_dialog_new("Open File",NULL,
-				      GTK_FILE_CHOOSER_ACTION_SAVE,GTK_STOCK_CANCEL,
-				      GTK_RESPONSE_CANCEL,GTK_STOCK_OPEN,GTK_RESPONSE_ACCEPT
+  /*  unfinished.  The chooser_dialog doesn't work well enough yet. */
+  filew = gtk_file_chooser_dialog_new("Select Save name",NULL,
+				      GTK_FILE_CHOOSER_ACTION_CREATE_FOLDER,GTK_STOCK_CANCEL,
+				      GTK_RESPONSE_CANCEL,GTK_STOCK_SAVE,GTK_RESPONSE_ACCEPT
 				      ,NULL);
+  //  gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(filew),TRUE);
   gtk_window_set_keep_above(GTK_WINDOW(filew),TRUE);
+  gtk_file_chooser_set_local_only(GTK_FILE_CHOOSER(filew),TRUE);
 
+  /*
   if (gtk_dialog_run(GTK_DIALOG(filew)) == GTK_RESPONSE_ACCEPT){
     char *filename;
+    // look to see if it exists
+    
+    filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filew));
 
+    if (check_overwrite(buff,filename) == TRUE){
+      fprintf(stderr,"calling do_save with filename: %s\n",filename);
+      do_save(buff,filename);
+    }
     g_free(filename);
   }
+  */
 
-  gtk_widget_destroy(filew);
-  */  
-	 
+  do{
+    val = gtk_dialog_run(GTK_DIALOG(filew));
+    if (val == GTK_RESPONSE_CANCEL){
+      gtk_widget_destroy(filew);
+      return;
+    }
+    filename=gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filew));
+    if (check_overwrite(buff,filename) == TRUE){
+      fprintf(stderr,"calling do_save with filename: %s\n",filename);
+      do_save(buff,filename);
+      g_free(filename);
+      gtk_widget_destroy(filew);
+      return;
+    }
+    g_free(filename);
+  }while (1);
+      
+  
 
-  filew = gtk_file_selection_new ("Save As");
-
-  getcwd(path,PATH_LENGTH);
-  path_strcat(path,"/");
-  gtk_file_selection_set_filename ( GTK_FILE_SELECTION (filew), path);
-
-  // Connect the ok_button
-  g_signal_connect (G_OBJECT( GTK_FILE_SELECTION(filew)->ok_button), "clicked", 
-		      G_CALLBACK (check_overwrite_wrapper), GTK_FILE_SELECTION (filew)  );
-        
-  // Connect the cancel_button
-  g_signal_connect_swapped (G_OBJECT (GTK_FILE_SELECTION(filew)->cancel_button), "clicked", 
-			     G_CALLBACK( gtk_widget_destroy), G_OBJECT (filew));
-        
-  g_object_set_data( G_OBJECT( filew ), BUFF_KEY, buff );
-
-  gtk_window_set_transient_for(GTK_WINDOW(filew),GTK_WINDOW(buff->win.window));
-  gtk_window_set_position(GTK_WINDOW(filew),GTK_WIN_POS_CENTER_ON_PARENT);
-  gtk_window_set_modal(GTK_WINDOW(filew),TRUE);
-
-  gtk_widget_show( filew ); 
   return;
-  //printf("file save as\n");
+  //fprintf(stderr,"file save as\n");
 }
 
 void file_new(GtkAction *action,dbuff *buff)
@@ -1638,7 +1630,7 @@ void file_new(GtkAction *action,dbuff *buff)
 
   }
   else{
-    printf("Max buffers in use\n");
+    fprintf(stderr,"Max buffers in use\n");
     popup_msg("Too many buffers already",TRUE);
   }
 }
@@ -1718,7 +1710,7 @@ void user_scales(GtkAction *action,dbuff *buff){
 
   OK_button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
   Update= gtk_button_new_with_label("Update Scales");
-  //    printf("%i\n",(int)buff->disp.xx1);
+  //    fprintf(stderr,"%i\n",(int)buff->disp.xx1);
   
   spinner_adj1 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx1, 0.0, 1.0, .02, 0.1, 0.1);
   spinner_adj2 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx2, 0.0, 1.0, .02, 0.1, 0.1);
@@ -1780,7 +1772,7 @@ gint do_user_scales(GtkWidget *widget, float *range)
 {
   //  *range = gtk_spin_button_get_value_as_float( GTK_SPIN_BUTTON(widget) );
   *range = gtk_spin_button_get_value( GTK_SPIN_BUTTON(widget) );
-  //  printf("%f",*range);
+  //  fprintf(stderr,"%f",*range);
   return 0;
 }
 
@@ -1853,7 +1845,7 @@ gint full_routine(GtkWidget *widget,dbuff *buff)
     return TRUE;
   }
 
-  //printf("full routine\n");
+  //fprintf(stderr,"full routine\n");
   if(buff->disp.dispstyle==SLICE_ROW || buff->disp.dispstyle==RASTER){
     buff->disp.xx1=0.;
     buff->disp.xx2=1.0; 
@@ -1989,13 +1981,13 @@ if (pt1 <0 || pt2 < 0 || peak < 0) return;
  s = max;
  n = sqrt(avg2 - avg*avg);
 
- //      printf("npts: %i, record: %i\n",buff->param_set.npts,buff->disp.record);
- //      printf("avg: %f, avg2: %f, count: %i\n",avg,avg2,count);
+ //      fprintf(stderr,"npts: %i, record: %i\n",buff->param_set.npts,buff->disp.record);
+ //      fprintf(stderr,"avg: %f, avg2: %f, count: %i\n",avg,avg2,count);
  
  s2n = s/n;
  
  snprintf(string,UTIL_LEN,"S/N = %g\nS = %g, N= %g",s2n,s,n );
- printf("Using point %i with value %f\n",maxi,max);
+ fprintf(stderr,"Using point %i with value %f\n",maxi,max);
  popup_msg(string,TRUE);
  
 
@@ -2006,7 +1998,7 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 {
 
   if (doing_s2n !=1){
-    printf("in s2n_press_event, but not doing_2nd!\n");
+    fprintf(stderr,"in s2n_press_event, but not doing_2nd!\n");
     doing_s2n =0;
     return;
   }
@@ -2020,7 +2012,7 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
       // now in here we should search around a little for a real peak
 
 
-      //      printf("pixel: %i, x: %i\n",(int) event->x,peak);
+      //      fprintf(stderr,"pixel: %i, x: %i\n",(int) event->x,peak);
       draw_vertical(buff,&colours[BLUE],0.,(int) event->x);
       buff->win.press_pend=2;
 
@@ -2059,7 +2051,7 @@ void signal2noiseold(GtkAction *action, dbuff *buff)
 
 
 void int_delete(dbuff *buff,GtkWidget *widget){
-  //  printf("in int_delete\n");
+  //  fprintf(stderr,"in int_delete\n");
   buff->win.press_pend = 0;
   doing_int = 0;
   g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
@@ -2135,14 +2127,14 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  if (pt1 < 0 || pt2 < 0) return; 
  
  if (strcmp(buff->path_for_reload,"") == 0){
-   printf("Can't export integration, no reload path?\n");
+   fprintf(stderr,"Can't export integration, no reload path?\n");
    //    return;
    export = 0;
  }
  
  path_strcpy(fileN,buff->path_for_reload);
  path_strcat(fileN,"int.txt");
- //  printf("using filename: %s\n",fileN);
+ //  fprintf(stderr,"using filename: %s\n",fileN);
 
  if (export == 1) {
    fstream = fopen(fileN,"w");
@@ -2157,7 +2149,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  
  for (j=0; j<buff->param_set.num_parameters;j++){
    if (buff->param_set.parameter[j].type== 'F'){
-     //printf("%s\n",buff->param_set.parameter[j].name);
+     //fprintf(stderr,"%s\n",buff->param_set.parameter[j].name);
      arr_num_for_int=j;
      arr_type=1;
    }
@@ -2194,16 +2186,16 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
    
    
    
-   // printf("f1: %f\n", f1);
-   // printf("f2: %f\n", f2);
+   // fprintf(stderr,"f1: %f\n", f1);
+   // fprintf(stderr,"f2: %f\n", f2);
    
-   // printf("count: %i f1: %f f2: %f integral: %f\n",count, f1, f2, integral);
-   // printf("style: %i record: %i record2: %i\n", buff->disp.dispstyle, buff->disp.record, buff->disp.record2);
+   // fprintf(stderr,"count: %i f1: %f f2: %f integral: %f\n",count, f1, f2, integral);
+   // fprintf(stderr,"style: %i record: %i record2: %i\n", buff->disp.dispstyle, buff->disp.record, buff->disp.record2);
    
    //   integral *=  fabs(f1-f2) /  count;
    //   integral *= 2./sqrt(buff->param_set.npts);
    
-   printf("%f\n",integral);  //print to screen
+   fprintf(stderr,"%f\n",integral);  //print to screen
    
    //now print to file
    if (export == 1){
@@ -2226,7 +2218,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
    
  }
  if (export == 1) fclose(fstream);
- printf("\n");
+ fprintf(stderr,"\n");
 }
 
 
@@ -2237,7 +2229,7 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 
   if (doing_int !=1){
-    printf("in integrate_press_event, but not doing_2nd!\n");
+    fprintf(stderr,"in integrate_press_event, but not doing_2nd!\n");
     doing_int =0;
     return;
   }
@@ -2247,21 +2239,21 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
     case 2:
       gtk_label_set_text(GTK_LABEL(int_label),"Now the other edge");
       i_pt1 = pix_to_x(buff,event->x);
-      printf("integrate: pt1: %i ", i_pt1);
+      fprintf(stderr,"integrate: pt1: %i ", i_pt1);
 
       draw_vertical(buff,&colours[BLUE],0.,(int) event->x);
       buff->win.press_pend = 1;
       break;
     case 1:
       i_pt2 = pix_to_x(buff, event->x);
-      printf("pt2: %i\n", i_pt2);
+      fprintf(stderr,"pt2: %i\n", i_pt2);
       // now in here we need to calculate the integral and display it
 
 
       // disconnect our event
       int_delete(buff,widget);
 
-      //      printf("about to do_integrate\n");
+      //      fprintf(stderr,"about to do_integrate\n");
       do_integrate(i_pt1,i_pt2,buff);
       // calculate the integral
       break;
@@ -2309,7 +2301,7 @@ void integrate_from_file( dbuff *buff, int action, GtkWidget *widget )
 
 gint expand_routine(GtkWidget *widget,dbuff *buff)
 {
-  //  printf("expand routine\n");
+  //  fprintf(stderr,"expand routine\n");
   static char norecur = 0;
   if (norecur == 1){
     norecur = 0;
@@ -2467,7 +2459,7 @@ gint expand_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 gint expandf_routine(GtkWidget *widget,dbuff *buff)
 {
-  //printf("expandf routine\n");
+  //fprintf(stderr,"expandf routine\n");
   static char norecur = 0;
   if (norecur == 1){
     norecur = 0;
@@ -2508,7 +2500,7 @@ gint expandf_routine(GtkWidget *widget,dbuff *buff)
   /* ignore and reset the button */
   else{
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE);
-    //    printf("expand_first, resetting\n");
+    //    fprintf(stderr,"expand_first, resetting\n");
   }
 
   return TRUE;
@@ -2519,7 +2511,7 @@ expandf_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   int sizex,sizey;
   int xval;
 
-  //printf("in expandf press event\n");
+  //fprintf(stderr,"in expandf press event\n");
   sizex=buff->win.sizex;
   sizey=buff->win.sizey;
 
@@ -2537,7 +2529,7 @@ expandf_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
       +buff->disp.yy1;
     buff->disp.yy1=0;
   }
-  //printf("set xx1, xx2 to %f %f\n",buff->disp.xx1,buff->disp.xx2);
+  //fprintf(stderr,"set xx1, xx2 to %f %f\n",buff->disp.xx1,buff->disp.xx2);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.toggleb)
                                  ,FALSE);
   return TRUE;
@@ -2598,7 +2590,7 @@ gint sbutton_routine(GtkWidget *widget,dbuff *buff)
 
 gint autocheck_routine(GtkWidget *widget,dbuff *buff)
 {
-  //printf("autocheck routine\n");
+  //fprintf(stderr,"autocheck routine\n");
   CHECK_ACTIVE(buff);
 
   if (GTK_TOGGLE_BUTTON(widget)->active) draw_canvas(buff);
@@ -2776,7 +2768,7 @@ gint auto_routine(GtkWidget *widget,dbuff *buff)
 gint offset_routine(GtkWidget *widget,dbuff *buff)
 {
   CHECK_ACTIVE(buff);
-  //printf("offset routine\n");
+  //fprintf(stderr,"offset routine\n");
   if (buff->win.press_pend==0 &&GTK_TOGGLE_BUTTON(widget)->active
  && (buff->disp.dispstyle==SLICE_ROW ||buff->disp.dispstyle==SLICE_COL)){
     buff->win.toggleb = widget;
@@ -2849,7 +2841,7 @@ void make_active(dbuff *buff){
     last_current = current;
     current = buff->buffnum;
 
-    //    printf("setting from_make_active\n");
+    //    fprintf(stderr,"setting from_make_active\n");
     from_make_active = 1;
     show_parameter_frame( &buff->param_set );
     show_process_frame( buff->process_data );
@@ -2909,7 +2901,7 @@ gint press_in_win_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff)
 
     gtk_label_set_text(GTK_LABEL(fplab1),title);
 
-    //printf("rec,rec2: %i, %i\n",buff->disp.record,buff->disp.record2);
+    //fprintf(stderr,"rec,rec2: %i, %i\n",buff->disp.record,buff->disp.record2);
 
 
     // second line: magnitude - only if its appropriate
@@ -3088,7 +3080,7 @@ void show_active_border()
 
 gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
 {
-  //printf("in hyper_check \n");
+  //fprintf(stderr,"in hyper_check \n");
   static int norecur = 0;
   char title[UTIL_LEN];
 
@@ -3124,7 +3116,7 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
     if ( buff->npts2 %2 ==1){
       buff->npts2 -=1; /* throw away last record */
       buff->data=g_realloc(buff->data,2*4*buff->param_set.npts*buff->npts2);
-      //printf("points are odd, killing last\n");
+      //fprintf(stderr,"points are odd, killing last\n");
     }
     // if we're on an odd record, deal with it 
     if (buff->disp.record %2 ==1){
@@ -3132,7 +3124,7 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
       snprintf(title,UTIL_LEN,"p1: %u",buff->disp.record);
       gtk_label_set_text(GTK_LABEL(buff->win.p1_label),title);
     }
-    if(buff->is_hyper) printf("hyper was already TRUE!!!\n");
+    if(buff->is_hyper) fprintf(stderr,"hyper was already TRUE!!!\n");
     buff->is_hyper=TRUE;
     draw_canvas(buff);
     return TRUE;
@@ -3226,7 +3218,7 @@ gint row_col_routine(GtkWidget *widget,dbuff *buff){
 gint slice_2D_routine(GtkWidget *widget,dbuff *buff){
 
  
-//printf("slice routine\n");
+//fprintf(stderr,"slice routine\n");
   CHECK_ACTIVE(buff);
  
  if(buff->disp.dispstyle==RASTER){
@@ -3252,7 +3244,7 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
   int i,j;
   float *data_old;
   if( (buff->param_set.npts != npts1) ||  ( buff->npts2 != npts2 ) ) {
-    //       printf("doing buff resize to %i x %i\n",npts1,npts2);
+    //       fprintf(stderr,"doing buff resize to %i x %i\n",npts1,npts2);
 
     // only change the record we're viewing if we have to.
     // this was the cause of a long standing bug: used to only check for > 
@@ -3263,11 +3255,11 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
 
     data_old=buff->data;
     buff->data=g_malloc(2*npts1*npts2*sizeof( float ));
-    //    printf("buff resize: malloc for resize\n");
+    //    fprintf(stderr,"buff resize: malloc for resize\n");
     if (buff->data == NULL){
       char title[UTIL_LEN];
       buff->data=data_old;
-      printf("buff resize: MALLOC ERROR\n");
+      fprintf(stderr,"buff resize: MALLOC ERROR\n");
       snprintf(title,UTIL_LEN,"buff resize: MALLOR ERROR\nasked for npts %i npts2 %i",npts1,npts2);
       popup_msg(title,TRUE);
       return 0;
@@ -3299,7 +3291,7 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
       gtk_label_set_text(GTK_LABEL(buff->win.slice_2d_lab),"Slice");
       gtk_label_set_text(GTK_LABEL(buff->win.row_col_lab),"Row");
       buff->disp.dispstyle = SLICE_ROW;
-      //      printf("just set display style to slice, and to row\n");
+      //      fprintf(stderr,"just set display style to slice, and to row\n");
     }
    
 
@@ -3313,18 +3305,18 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
   i = gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff1));
   if (add_sub.index[i] == buff->buffnum){
     add_sub_changed(add_sub.s_buff1,NULL);
-    //    printf("resize: first source #records changed\n");
+    //    fprintf(stderr,"resize: first source #records changed\n");
   }
   i = gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff2));
   if (add_sub.index[i] == buff->buffnum){
     add_sub_changed(add_sub.s_buff2,NULL);
-    //    printf("resize: second source #records changed\n");
+    //    fprintf(stderr,"resize: second source #records changed\n");
   }
   i = gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_buff));
   if (i>0) {
     if (add_sub.index[i-1] == buff->buffnum){
       add_sub_changed(add_sub.dest_buff,NULL);
-      //      printf("resize: dest #records changed\n");
+      //      fprintf(stderr,"resize: dest #records changed\n");
     }
   }
 
@@ -3363,26 +3355,26 @@ gint do_load( dbuff* buff, char* path )
   unsigned long sw,acqns;
   float dwell;
 
-  //  printf( "do_load: got path: %s while current dir is: %s\n", path,getcwd(fileN,PATH_LENGTH));
+  //  fprintf(stderr, "do_load: got path: %s while current dir is: %s\n", path,getcwd(fileN,PATH_LENGTH));
 
   // put path into path spot
 
   // but only if this isn't the users temp file.
-  //  printf("in do_load: %s\n",path);
+  //  fprintf(stderr,"in do_load: %s\n",path);
   path_strcpy(s,getenv("HOME"));
   path_strcat(s,"/Xnmr/data/acq_temp");
   if (strcmp(s,path) !=0 ){
  
     // and the whole thing will go into the reload spot at the end
     put_name_in_buff(buff,path);
-    //     printf("do_load: put %s in save_path\n",buff->param_set.save_path);
+    //     fprintf(stderr,"do_load: put %s in save_path\n",buff->param_set.save_path);
   }
-  //  else printf("not putting path into save path, because its the acq_temp file\n");
+  //  else fprintf(stderr,"not putting path into save path, because its the acq_temp file\n");
   
   path_strcpy( fileN, path);
   path_strcat( fileN, "/params" );
 
-  //printf( "opening parameter file: %s\n", fileN );
+  //fprintf(stderr, "opening parameter file: %s\n", fileN );
   fstream = fopen( fileN, "r" );
 
   if( fstream == NULL ) {
@@ -3394,7 +3386,7 @@ gint do_load( dbuff* buff, char* path )
   fscanf( fstream, 
      "npts = %u\nacq_npts = %u\nna = %lu\nna2 = %u\nsw = %lu\ndwell = %f\n", 
 	  &new_npts1,&new_acq_npts,&acqns, &new_npts2 ,&sw,&dwell);
-  //  printf("do_load: np1 %u na %u np2 %u sw: %lu dwell: %f\n",new_npts1,acqns,new_npts2,sw,dwell);
+  //  fprintf(stderr,"do_load: np1 %u na %u np2 %u sw: %lu dwell: %f\n",new_npts1,acqns,new_npts2,sw,dwell);
   buff_resize( buff, new_npts1, new_npts2 );
 
   //this resets the acq_npts in the buff struct, so fix it 
@@ -3424,20 +3416,20 @@ gint do_load( dbuff* buff, char* path )
       if (strncmp(s,"ct = ",5) == 0){
 	sscanf(s,"ct = %lu\n",&buff->ct);
 	flag = 1;
-	//	printf("found ct, value = %lu\n",buff->ct);
+	//	fprintf(stderr,"found ct, value = %lu\n",buff->ct);
       }
       else if (strncmp(s,"ch1 = ",6) == 0){
 	sscanf(s,"ch1 = %c\n",&ch1);
 	flag = 1;
 	set_ch1(buff,ch1);
 	//set channel 1
-	//	printf("do_load found ch1: %c\n",ch1);
+	//	fprintf(stderr,"do_load found ch1: %c\n",ch1);
       }
       else if (strncmp(s,"ch2 = ",6) == 0){
 	sscanf(s,"ch2 = %c\n",&ch2);
 	flag = 1;
 	set_ch2(buff,ch2);
-	//	printf("do_load found ch2: %c\n",ch2);
+	//	fprintf(stderr,"do_load found ch2: %c\n",ch2);
 	//set channel 2
       }
       else{
@@ -3486,17 +3478,17 @@ gint do_load( dbuff* buff, char* path )
     
     fscanf(fstream,"PH: %f %f %f %f\n",&buff->phase0_app,&buff->phase1_app,
 	   &buff->phase20_app,&buff->phase21_app);
-    //    printf("in do_load read phases of: %f %f %f %f\n",buff->phase0_app,buff->phase1_app,
+    //    fprintf(stderr,"in do_load read phases of: %f %f %f %f\n",buff->phase0_app,buff->phase1_app,
     //	   buff->phase20_app,buff->phase21_app);
     fl1=0;
     fl2=0;
     fscanf(fstream,"FT: %i\n",&fl1);
     fscanf(fstream,"FT2: %i\n",&fl2); //why doesn't this work???
-    //    printf("in do_load, read ft_flag of: %i %i\n",fl1,fl2);
+    //    fprintf(stderr,"in do_load, read ft_flag of: %i %i\n",fl1,fl2);
     fclose( fstream );
-    //    printf("flags: %i\n",buff->flags);
+    //    fprintf(stderr,"flags: %i\n",buff->flags);
     buff->flags = fl1 | fl2 ;
-    //    printf("flags: %i\n",buff->flags);
+    //    fprintf(stderr,"flags: %i\n",buff->flags);
   }
   else{
     // assume its time domain in both dimensions.
@@ -3519,7 +3511,7 @@ gint do_load( dbuff* buff, char* path )
   
   i=fread( buff->data, sizeof( float ), buff->param_set.npts*buff->npts2*2, fstream );
   
-  //  printf("read %i points\n",i);
+  //  fprintf(stderr,"read %i points\n",i);
   fclose( fstream );
 
   // check to make sure we read in all the points.  If not, zero out what's left.
@@ -3541,31 +3533,6 @@ gint do_load( dbuff* buff, char* path )
   
 }
 
-gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs )
-{
-  char path[PATH_LENGTH];
-  dbuff* buff;
-
-  path_strcpy(path,gtk_file_selection_get_filename ( fs ));
-  buff = (dbuff*) g_object_get_data( G_OBJECT( fs ), BUFF_KEY );
-
-  //  printf("from check_overwrite_wrapper (file_save dialog): %s\n",path);
-
-  // assume this is always a data file even if has a trailing /
-
-  
-
-  if (path[strlen(path)-1] == '/') path[strlen(path)-1]=0;
-  if (check_overwrite( buff, path ) == TRUE){
-    printf("got check_overwrite true\n");
-    do_save(buff,path);
-  }
-  else printf("not saving\n");
-  
-  gtk_widget_destroy(GTK_WIDGET(fs));
-  return TRUE ;// handled
-}
-
 
   
 
@@ -3575,13 +3542,15 @@ gint check_overwrite( dbuff* buff, char* path )
 {
   GtkWidget *dialog;
   int result;
+  char mypath[PATH_LENGTH];
+  FILE *file;
   // if check_overwrite gets something with a trailing /, it should barf.
 
   if (path[strlen(path)-1] == '/'){
     popup_msg("Invalid filename",TRUE);
     return 0;
   }
-  //  printf("in check_overwrite got path: %s\n",path);
+  //  fprintf(stderr,"in check_overwrite got path: %s\n",path);
 
 
   // first see if this name is queued
@@ -3593,39 +3562,51 @@ gint check_overwrite( dbuff* buff, char* path )
 			 BUFFER_COLUMN,&bnum,-1);
       if (strncmp(path,buffp[bnum]->param_set.save_path,PATH_LENGTH) == 0){
 	popup_msg("This filename is queued.  Can't use it.\n",TRUE);
-	return 0;
+	return FALSE;
       }
       valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(queue.list),&queue.iter);
     }
   }
 
+  fprintf(stderr,"about to mkdir: %s\n",path);
+
+
+  // ok, so we try to make the directory, though this now should nearly always fail, 
+  // since the filechooser widget seems to create the directory for us on save_as.
+  // it is possible this will still fail...
 
 
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
     if( errno != EEXIST ) {
       popup_msg("check_overwrite can't mkdir?",TRUE);
-      return 0 ;
+      return FALSE ;
     }
     else{ // does exist...
-     
-      dialog = gtk_message_dialog_new(GTK_WINDOW(buff->win.window),
-				      GTK_DIALOG_DESTROY_WITH_PARENT,
-				      GTK_MESSAGE_QUESTION,
-				      GTK_BUTTONS_YES_NO,
-				      "File %s already exists.  Overwrite?",path);
-      gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
+
+      // now see if this is an Xnmr directory, should contain a data file
       
-      result = gtk_dialog_run(GTK_DIALOG(dialog));
-      if (result != GTK_RESPONSE_YES){
-	gtk_widget_destroy(dialog);
-	return FALSE; // don't overwrite
-      }	
-      else gtk_widget_destroy(dialog);
-      
+      path_strcpy(mypath,path);
+      path_strcat(mypath,"/data");
+      file = fopen(mypath,"rb");
+      if (file != NULL){
+	fclose(file);
+	dialog = gtk_message_dialog_new(GTK_WINDOW(buff->win.window),
+					GTK_DIALOG_DESTROY_WITH_PARENT,
+					GTK_MESSAGE_QUESTION,
+					GTK_BUTTONS_YES_NO,
+					"File %s already exists.  Overwrite?",path);
+	gtk_window_set_keep_above(GTK_WINDOW(dialog),TRUE);
+	
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+	if (result != GTK_RESPONSE_YES){
+	  gtk_widget_destroy(dialog);
+	  return FALSE; // don't overwrite
+	}	
+	else gtk_widget_destroy(dialog);
+      }
     }
   } 
 
-  //    do_save( buff, path );
 
   return TRUE; // do overwrite
 
@@ -3640,20 +3621,21 @@ gint do_save( dbuff* buff, char* path )
   char fileN[ PATH_LENGTH ];
   char s[ PARAMETER_LEN ];
   int temp_npts2;
-  // printf( "do_save: got path: %s while current dir is: %s\n ", path,getcwd(fileN,PATH_LENGTH));
+  //  fprintf(stderr, "do_save: got path: %s while current dir is: %s\n ", path,getcwd(fileN,PATH_LENGTH));
 
   path_strcpy( fileN, path);
   path_strcat( fileN, "/params" );
 
-  //  printf( "creating parameter file: %s\n", fileN );
+  //  fprintf(stderr, "creating parameter file: %s\n", fileN );
   fstream = fopen( fileN, "w" );
+  if (fstream == NULL) return 0;
 
   if (strlen(buff->param_set.exec_path) == 0)
     fprintf(fstream,"none\n");
   else
     fprintf( fstream, "%s\n", buff->param_set.exec_path ); 
-  //  printf("putting: %s as exec path\n",buff->param_set.exec_path);
-  //  printf("in do_save, dwell is: %f\n",buff->param_set.dwell);
+  //  fprintf(stderr,"putting: %s as exec path\n",buff->param_set.exec_path);
+  //  fprintf(stderr,"in do_save, dwell is: %f\n",buff->param_set.dwell);
   fprintf( fstream, 
      "npts = %u\nacq_npts = %u\nna = %lu\nna2 = %u\nsw = %lu\ndwell = %f\nct = %lu\n", 
 	   buff->param_set.npts, buff->acq_npts,buff->param_set.num_acqs, 
@@ -3687,7 +3669,7 @@ gint do_save( dbuff* buff, char* path )
   path_strcpy( fileN, path);
   path_strcat( fileN, "/data" );
 
-  //printf( "creating data file: %s\n", fileN );
+  //fprintf(stderr, "creating data file: %s\n", fileN );
   fstream = fopen( fileN, "w" );
   
   fwrite( buff->data, sizeof( float ), buff->param_set.npts*buff->npts2*2, fstream ); 
@@ -3705,7 +3687,7 @@ gint do_save( dbuff* buff, char* path )
   path_strcpy(buff->path_for_reload,path);
   set_window_title(buff);
     
-  return 0;
+  return 1;
 }
 
 
@@ -3778,12 +3760,12 @@ gint pix_to_y(dbuff * buff,int yval){
 
   // only get here in RASTER
   if(buff->disp.dispstyle != RASTER){
-    printf("in pix_to_y, but not in RASTER mode\n");
+    fprintf(stderr,"in pix_to_y, but not in RASTER mode\n");
     return 0;
   }
   yppt= (float) buff->win.sizey/(j2-j1+1);
   ret= (yval-1)/yppt+j1;
-  //  printf("pix_to_y: j1, j2: %i %i, yval: %i, ret: %i\n",j1,j2,yval,ret);
+  //  fprintf(stderr,"pix_to_y: j1, j2: %i %i, yval: %i, ret: %i\n",j1,j2,yval,ret);
   if (ret >= buff->npts2) ret =buff->npts2-1;
   if (ret <0) ret =0;
   return ret;
@@ -3797,7 +3779,7 @@ void set_window_title(dbuff *buff)
   char s[PATH_LENGTH];
   
  snprintf(s,PATH_LENGTH,"Buff: %i, %s",buff->buffnum,buff->path_for_reload);
- // printf("title for window: %s\n",s);
+ // fprintf(stderr,"title for window: %s\n",s);
  gtk_window_set_title(GTK_WINDOW(buff->win.window),s);
  return;
  
@@ -3838,7 +3820,7 @@ void file_export(GtkAction *action,dbuff *buff)
 
   path_strcpy(fileN,buff->path_for_reload);
   path_strcat(fileN,"export.txt");
-  //  printf("using filename: %s\n",fileN);
+  //  fprintf(stderr,"using filename: %s\n",fileN);
   fstream = fopen(fileN,"w");
   if ( fstream == NULL){
     popup_msg("Error opening file for export",TRUE);
@@ -4067,7 +4049,7 @@ void file_export_binary(GtkAction *action,dbuff *buff)
 
   path_strcpy(fileN,buff->path_for_reload);
   path_strcat(fileN,"export.bin");
-  printf("using filename: %s\n",fileN);
+  fprintf(stderr,"using filename: %s\n",fileN);
   fstream = fopen(fileN,"wb");
   if ( fstream == NULL){
     popup_msg("Error opening file for export",TRUE);
@@ -4168,7 +4150,7 @@ void file_export_binary(GtkAction *action,dbuff *buff)
 
 
 
-void file_append(GtkAction *action, dbuff *buff)
+int file_append(GtkAction *action, dbuff *buff)
 {
   char s[PATH_LENGTH],s2[PATH_LENGTH],s3[UTIL_LEN],old_exec[PATH_LENGTH];
   FILE *fstream;
@@ -4180,24 +4162,24 @@ void file_append(GtkAction *action, dbuff *buff)
   int i,int_val;
   unsigned long local_ct;
 
-  //  printf("in file_append\n");
+  //  fprintf(stderr,"in file_append\n");
   CHECK_ACTIVE(buff);
 
   if (buff->npts2 != 1){
     popup_msg("Can't append a 2d data set",TRUE);
-    return;
+    return 0;
   }
 // first need to build a filename - same algorithm as for save
   path_strcpy(s,buff->param_set.save_path);
   path_strcat(s , "/params");
 
-printf("append file, using path %s\n",s);
+  fprintf(stderr,"append file, using path %s\n",s);
 
-// make sure file exists
+  // make sure file exists
   fstream = fopen( s , "r");
   if (fstream == NULL){
     popup_msg("Couldn't open file for append",TRUE);
-    return;
+    return 0;
   }
 
 // read in the parameters
@@ -4207,13 +4189,13 @@ printf("append file, using path %s\n",s);
   fscanf( fstream, 
      "npts = %u\nacq_npts = %u\nna = %lu\nna2 = %u\nsw = %lu\ndwell = %f\n", 
 	  &npts,&acq_npts,&acqns, &npts2 ,&sw,&dwell);
-  //    printf("found npts: %i, current data has: %i\n",npts,buff->param_set.npts);
+  //    fprintf(stderr,"found npts: %i, current data has: %i\n",npts,buff->param_set.npts);
 
 
   if ( npts != buff->param_set.npts){
     popup_msg("Can't append to file of different npts",TRUE);
     fclose(fstream);
-    return;
+    return 0;
   }
   if (strcmp ( old_exec , buff->param_set.exec_path ) != 0 )
     popup_msg("Warning: \"append\" with different pulse program",TRUE);
@@ -4226,7 +4208,7 @@ printf("append file, using path %s\n",s);
   if (fgets( s2, PATH_LENGTH, fstream) != NULL){
     if (strncmp(s2,"ct = ",5) == 0){
       sscanf(s2,"ct = %lu\n",&local_ct);
-      //      printf("found ct, value = %lu\n",local_ct);
+      //      fprintf(stderr,"found ct, value = %lu\n",local_ct);
     }
     else strncat(params , s2 , PATH_LENGTH);  // if its not ct, then add the string onto p
   
@@ -4256,7 +4238,7 @@ printf("append file, using path %s\n",s);
 
   if (fstream == NULL){
     popup_msg("Can't open for append",TRUE);
-    return;
+    return 0;
   }
 
   fprintf(fstream,";\n");
@@ -4308,12 +4290,12 @@ printf("append file, using path %s\n",s);
   fstream = fopen(s,"a");
   if (fstream == NULL){
     popup_msg("Can't open data for append",TRUE);
-    return;
+    return 0;
   }
 
   fwrite(buff->data,sizeof (float), npts*2 , fstream);
   fclose(fstream);
-  return;
+  return 1;
 
 
 
@@ -4328,10 +4310,10 @@ gint set_cwd(char *dir)
 
   int result;
   
-  // printf("in set_cwd with arg: %s, old working dir was %s\n",dir,getcwd(old_dir,PATH_LENGTH));
+  // fprintf(stderr,"in set_cwd with arg: %s, old working dir was %s\n",dir,getcwd(old_dir,PATH_LENGTH));
   
   result = wordexp(dir, &word, WRDE_NOCMD|WRDE_UNDEF);
-  //  printf("in set_cwd: %s  dir is: %s\n",word.we_wordv[0],dir);
+  //  fprintf(stderr,"in set_cwd: %s  dir is: %s\n",word.we_wordv[0],dir);
 
   result = chdir(word.we_wordv[0]);
   wordfree(&word);
@@ -4372,13 +4354,18 @@ gint put_name_in_buff(dbuff *buff,char *fname)
   if (s2 !=NULL){
     path_strcpy(name,s2+1);
     *s2 = 0;
+  
+    set_cwd( dir );
   }
-  set_cwd( dir );
+  //else path_strcpy( name,fname); //so we don't segfault if we get a name with no /
+
   path_strcpy(buff->param_set.save_path,dir);
   path_strcat(buff->param_set.save_path,"/");
   path_strcat(buff->param_set.save_path,name);
   
-  //  printf("put name in buff: %s\n",buff->param_set.save_path);
+  
+
+  //  fprintf(stderr,"put name in buff: %s\n",buff->param_set.save_path);
   
   if ( buff->buffnum == current )
     update_param_win_title(&buff->param_set);
@@ -4439,7 +4426,7 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   path_strcat(s,"/Xnmr/data/acq_temp");
   if (strcmp(s,data_shm->save_data_path) !=0){
     put_name_in_buff(buff,data_shm->save_data_path);
-    //       	printf("special buff creation put %s in save\n",buff->param_set.save_path);
+    //       	fprintf(stderr,"special buff creation put %s in save\n",buff->param_set.save_path);
     
     
   }
@@ -4452,14 +4439,14 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
     path_strcpy( my_string, data_shm->pulse_exec_path);
     load_param_file( my_string, &buff->param_set );
   }
-  //  else printf("skipping load_param_file\n");
+  //  else fprintf(stderr,"skipping load_param_file\n");
   
   //now that we have loaded the parameters, we will set them using the fetch functions
   
   load_p_string( data_shm->parameters, data_shm->num_acqs_2d, &buff->param_set );
   
 
-  //  printf("in clone_from_acq, about to upload and then draw\n");
+  //  fprintf(stderr,"in clone_from_acq, about to upload and then draw\n");
   upload_data(buff); 
   
 
@@ -4521,7 +4508,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
   if (sf_param == -1){
     popup_msg("Set sf: no suitable sf parameter found\n",TRUE);
-    printf("no parameter with name %s found\n",param_search);
+    fprintf(stderr,"no parameter with name %s found\n",param_search);
     return;
   }
 
@@ -4530,10 +4517,10 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   }
   else
     sf_is_float = pfetch_float(&buff->param_set,param_search,&old_freq,buff->disp.record);
-  //  printf("got old_freq: %f \n",old_freq);
+  //  fprintf(stderr,"got old_freq: %f \n",old_freq);
 
   if (old_freq == 0.0){
-    printf("didn't get an old freq\n");
+    fprintf(stderr,"didn't get an old freq\n");
     return;
   }
 
@@ -4547,7 +4534,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   if (sf_is_float == 1) {
      
     if (buff->param_set.parameter[sf_param].type == 'F'){ // unarray it
-      printf("unarraying\n");
+      fprintf(stderr,"unarraying\n");
       g_free(buff->param_set.parameter[sf_param].f_val_2d);
       buff->param_set.parameter[sf_param].f_val_2d = NULL;
       buff->param_set.parameter[sf_param].type = 'f';
@@ -4566,7 +4553,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 	if (buff->param_set.parameter[i].size > max) 
 	  max = buff->param_set.parameter[i].size;
       }
-      //      printf("unarray in set_sf1_press_event: max size was %i\n",max);
+      //      fprintf(stderr,"unarray in set_sf1_press_event: max size was %i\n",max);
       if (buff->buffnum == current) 
 	gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), max ); 
       else buff->param_set.num_acqs_2d = max;      
@@ -4586,7 +4573,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
     snprintf(buff->param_set.parameter[sf_param].t_val,PARAM_T_VAL_LEN,"%.7f",old_freq);
 
   }
-  //  printf("setting freq to: %s\n",buff->param_set.parameter[sf_param].t_val);
+  //  fprintf(stderr,"setting freq to: %s\n",buff->param_set.parameter[sf_param].t_val);
   
   // hmm, don't know how to set the adjustment, so instead, put this value into the parameter
 
@@ -4685,7 +4672,7 @@ void calc_rms(GtkAction *action,dbuff *buff)
    rms=0.;
    rmsi=0.;
 
-  //  printf("in calc_rms\n");
+  //  fprintf(stderr,"in calc_rms\n");
   for (i=0;i<buff->param_set.npts;i++){
    sum  += buff->data[buff->param_set.npts*2*j+2*i]  ;
    sumi += buff->data[buff->param_set.npts*2*j+2*i+1];
@@ -4702,13 +4689,13 @@ void calc_rms(GtkAction *action,dbuff *buff)
  rms = sqrt(sum2/buff->param_set.npts - avg*avg);
  rmsi = sqrt(sum2i/buff->param_set.npts - avgi*avgi);
  
- printf("RMS: Real: %f  Imaginary: %f\n",rms, rmsi);
+ fprintf(stderr,"RMS: Real: %f  Imaginary: %f\n",rms, rmsi);
  if (j==buff->disp.record){
    snprintf(out_string,UTIL_LEN,"RMS for real: %f, imag: %f",rms,rmsi);
    popup_msg(out_string,TRUE);
  }
  }
- printf("\n");
+ fprintf(stderr,"\n");
  draw_canvas(buff);
   return;
 
@@ -4731,7 +4718,7 @@ char get_ch1(dbuff *buff){
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but1b))) return 'B';
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but1c))) return 'C';
 
-  printf("in get_ch1, couldn't find a channel!!!\n");
+  fprintf(stderr,"in get_ch1, couldn't find a channel!!!\n");
   exit(0);
   return 'A';
 }
@@ -4741,7 +4728,7 @@ char get_ch2(dbuff *buff){
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2b))) return 'B';
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2c))) return 'C';
 
-  printf("in get_ch2, couldn't find a channel!!!\n");
+  fprintf(stderr,"in get_ch2, couldn't find a channel!!!\n");
   exit(0);
   return 'C';
 
@@ -4755,7 +4742,7 @@ void check_for_overrun_timeout(gpointer data){
   int count=0;
   char title[UTIL_LEN*2];
   static char bug=0;
-  //  printf("in check for overrun_timeout\n"); 
+  //  fprintf(stderr,"in check for overrun_timeout\n"); 
   if (bug == 1) return;  // already reported.
 
   gdk_threads_enter();
@@ -4770,12 +4757,12 @@ void check_for_overrun_timeout(gpointer data){
       }
 	
       if (buffp[i]->overrun1 != 85*(1+256+65536+16777216)){
-	printf("buffer %i overrun1 wrong!!!\n",i);
+	fprintf(stderr,"buffer %i overrun1 wrong!!!\n",i);
 	popup_msg("found an overrun1 problem!",TRUE);
 	bug = 1;
       }
       if (buffp[i]->overrun2 != 85*(1+256+65536+16777216)){
-	printf("buffer %i overrun2 wrong!!!\n",i);
+	fprintf(stderr,"buffer %i overrun2 wrong!!!\n",i);
 	popup_msg("found an overrun2 problem!",TRUE);
 	bug = 1;
       }
@@ -4796,34 +4783,34 @@ gint channel_button_change(GtkWidget *widget,dbuff *buff){
 
 
   if (!GTK_TOGGLE_BUTTON (widget)->active) {
-    //    printf("channel button not active\n");
+    //    fprintf(stderr,"channel button not active\n");
     return TRUE;
   }
 
 // the norecur things shouldn't be necessary - we only get here on the pressed signal.
   if (norecur != 0){
-    //    printf("got norecur\n");
+    //    fprintf(stderr,"got norecur\n");
     norecur = 0;
     return TRUE;
   }
   
 
-  //    printf("in channel_button_change, buffnum: %i, acq_in_progress %i\n",buff->buffnum,acq_in_progress);
+  //    fprintf(stderr,"in channel_button_change, buffnum: %i, acq_in_progress %i\n",buff->buffnum,acq_in_progress);
 
   if (allowed_to_change(buff->buffnum) == FALSE){    
     if ( no_update_open == 0)
       popup_no_update("Can't change channels in acquiring or queued window");
     if (widget == buff->win.but1a || widget == buff->win.but1b || widget == buff->win.but1c){
-      //      printf("got channel 1 setting to: %c\n",data_shm->ch1);
+      //      fprintf(stderr,"got channel 1 setting to: %c\n",data_shm->ch1);
       norecur = 1;
       set_ch1(buff,data_shm->ch1);
     }
     else  if (widget == buff->win.but2a || widget == buff->win.but2b || widget == buff->win.but2c){
-      //      printf("got channel 2\n");
+      //      fprintf(stderr,"got channel 2\n");
       norecur = 1;
       set_ch2(buff,data_shm->ch2);
     }
-    else printf("channel button change: got unknown widget\n");
+    else fprintf(stderr,"channel button change: got unknown widget\n");
     return FALSE;
   }
   return FALSE;
@@ -4856,7 +4843,7 @@ void csort(float *points,int num){
 
   }
   //  for(i=0;i<num;i++)
-  //    printf("%f\n",points[i]);
+  //    fprintf(stderr,"%f\n",points[i]);
   
 }
 #define NUM_SPLINE 100
@@ -4890,7 +4877,7 @@ void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spl
 	yvals[i] += buff->data[2*j+buff->disp.record*buff->param_set.npts*2];
       yvals[i] /= 5.;
     }
-    //	printf("%f %f\n",base.spline_points[i],yvals[i]);
+    //	fprintf(stderr,"%f %f\n",base.spline_points[i],yvals[i]);
   }
 
   spline(spline_points-1,yvals-1,num_spline_points,0.,0.,y2vals-1);
@@ -4900,7 +4887,7 @@ void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spl
     splint(spline_points-1,yvals-1,y2vals-1,num_spline_points,x,&y);
     
     temp_data[2*i] = y;
-    //    printf("%f %f\n",x,y);
+    //    fprintf(stderr,"%f %f\n",x,y);
   }
 
 
@@ -4915,7 +4902,7 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
   CHECK_ACTIVE(buff);
   if (base.spline_current_buff != -1) {
     gdk_window_raise(base.dialog->window);
-    printf("already picking\n");
+    fprintf(stderr,"already picking\n");
     return;
   }
   if (buff->win.press_pend != 0){
@@ -4965,7 +4952,7 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
   buff->win.press_pend=1;
   
   
-  //      printf("pick spline points\n");
+  //      fprintf(stderr,"pick spline points\n");
   
   
   
@@ -5033,7 +5020,7 @@ void do_spline(GtkAction *action, dbuff *buff){
     
     
   } // if not, give up on imag part...
-  else printf("Fixing up the imaginary part failed - npts not a power of 2\n");
+  else fprintf(stderr,"Fixing up the imaginary part failed - npts not a power of 2\n");
   g_free(temp_data);
   
   draw_canvas(buff);
@@ -5041,7 +5028,7 @@ void do_spline(GtkAction *action, dbuff *buff){
 
 void show_spline_fit(GtkAction *action, dbuff *buff){
   float *temp_data;
-      //      printf("show_spline_fit\n");
+      //      fprintf(stderr,"show_spline_fit\n");
   CHECK_ACTIVE(buff);
   if (buff->disp.dispstyle != SLICE_ROW){
     popup_msg("Spline only works on rows for now",TRUE);
@@ -5096,7 +5083,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
   /* this routine is a callback for the spline menu items.
      It is also a callback for responses internally.  In that case, the buff that comes in won't be right... */
 
-  //  printf("buff: %i, action: %i, widget %i, dialog: %i\n",(int) buff, action, (int) widget, (int) dialog);
+  //  fprintf(stderr,"buff: %i, action: %i, widget %i, dialog: %i\n",(int) buff, action, (int) widget, (int) dialog);
 
   // we should never get here with spline_current_buff unset:
   if (base.spline_current_buff == -1){
@@ -5115,7 +5102,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 	  (buffp[base.spline_current_buff]->disp.xx2-buffp[base.spline_current_buff]->disp.xx1)
 	  +buffp[base.spline_current_buff]->disp.xx1;
 
-	//	printf("got x val: %f\n",xval);
+	//	fprintf(stderr,"got x val: %f\n",xval);
 
 	// if its near a boundary, forget it.
 
@@ -5129,7 +5116,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 
 
 	    old_point = 1;
-	    printf("found old point, erase it\n");
+	    fprintf(stderr,"found old point, erase it\n");
 	    draw_vertical(buffp[base.spline_current_buff],&colours[WHITE],0.,(int)event->x);
 	    for ( j = i ; j < base.num_spline_points-1 ; j++ )
 	      base.spline_points[j] = base.spline_points[j+1];
@@ -5165,11 +5152,11 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
   /* Otherwise, we're here because user said they're done picking points */
     
     if ((void *) buff == (void *) base.dialog){ 
-      //           printf("buff is dialog!\n");
+      //           fprintf(stderr,"buff is dialog!\n");
       gtk_object_destroy(GTK_OBJECT(base.dialog));
       
       if ( buffp[base.spline_current_buff] == NULL){ // our buffer destroyed while we were open...
-	printf("Baseline_spline: buffer was destroyed while we were open\n");
+	fprintf(stderr,"Baseline_spline: buffer was destroyed while we were open\n");
       }
       else{
 	buffp[base.spline_current_buff]->win.press_pend = 0;
@@ -5181,7 +5168,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 					  buffp[base.spline_current_buff]);
       }
       
-      //      printf("got a total of: %i points for spline\n",base.num_spline_points);
+      //      fprintf(stderr,"got a total of: %i points for spline\n",base.num_spline_points);
       draw_canvas(buffp[base.spline_current_buff]);
       base.spline_current_buff = -1;
 
@@ -5190,7 +5177,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
       return;
     }
 
-    else printf("baseline_spline got unknown action: %i\n",action);
+    else fprintf(stderr,"baseline_spline got unknown action: %i\n",action);
   }
 
 
@@ -5205,7 +5192,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
 
  gettimeofday(&t2,&tz);
  tt = (t2.tv_sec-t1.tv_sec)*1e6 + t2.tv_usec-t1.tv_usec;
- printf("took: %i usec\n",tt);
+ fprintf(stderr,"took: %i usec\n",tt);
 */
 
 
@@ -5238,7 +5225,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   int sbnum1,sbnum2,dbnum;
   char s[5];
 
-  //    printf("in add_sub_changed\n");
+  //    fprintf(stderr,"in add_sub_changed\n");
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_buff2));
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_buff));
@@ -5251,20 +5238,20 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   else dbnum = add_sub.index[k-1];
   
 
-  //   printf("buffers: %i %i ",add_sub.index[i],add_sub.index[j]);
-  //   if (k==0) printf("new\n");
-  //   else printf("%i\n",add_sub.index[k-1]);
+  //   fprintf(stderr,"buffers: %i %i ",add_sub.index[i],add_sub.index[j]);
+  //   if (k==0) fprintf(stderr,"new\n");
+  //   else fprintf(stderr,"%i\n",add_sub.index[k-1]);
 
   i= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record1));
   j= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record2));
   k= gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record));
 
-  //  printf("got actives: %i %i %i\n",i,j,k);
+  //  fprintf(stderr,"got actives: %i %i %i\n",i,j,k);
 
   f1 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult1));
   f2 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult2));
   
-  //  printf(" got multipliers: %lf %lf\n",f1,f2);
+  //  fprintf(stderr," got multipliers: %lf %lf\n",f1,f2);
 
 
   if (widget == add_sub.s_buff1){
@@ -5272,20 +5259,20 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
     if (buffp[sbnum1]->npts2 < add_sub.s_rec_c1){ // too many
 
       if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record1)) - 2 > buffp[sbnum1]->npts2 - 1){
-	//	printf("resetting srec1\n");
+	//	fprintf(stderr,"resetting srec1\n");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record1),2);
       }
 
 
       for (i= add_sub.s_rec_c1-1; i >= buffp[sbnum1]->npts2;i--){
-	//	printf("deleting record: %i\n",i);
+	//	fprintf(stderr,"deleting record: %i\n",i);
 	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_record1),i+2);
       }
     }
     else if(buffp[sbnum1]->npts2 > add_sub.s_rec_c1){ // too few
       for (i=add_sub.s_rec_c1;i<buffp[sbnum1]->npts2;i++){
 	sprintf(s,"%i",i);
-	//	printf("adding record: %i\n",i);
+	//	fprintf(stderr,"adding record: %i\n",i);
 	gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record1),s);
       }
     }
@@ -5299,19 +5286,19 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
       // see if our current record is going to disappear:
 
       if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.s_record2)) - 2 > buffp[sbnum2]->npts2 - 1){
-	//	printf("resetting srec2\n");
+	//	fprintf(stderr,"resetting srec2\n");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record2),2);
       }
 
       for (i= add_sub.s_rec_c2-1; i >= buffp[sbnum2]->npts2;i--){
-	//	printf("deleting record: %i\n",i);
+	//	fprintf(stderr,"deleting record: %i\n",i);
 	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_record2),i+2);
       }
     }
     else if(buffp[sbnum2]->npts2 > add_sub.s_rec_c2){ // too few
       for (i=add_sub.s_rec_c2;i<buffp[sbnum2]->npts2;i++){
 	sprintf(s,"%i",i);
-	//	printf("adding record: %i\n",i);
+	//	fprintf(stderr,"adding record: %i\n",i);
 	gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record2),s);
       }
     }
@@ -5328,18 +5315,18 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
       if (dbnum == -1) { // can't look at the dest buff if it doesn't exist yet.
 	if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record))-2 > 0){
 	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),2);
-	  printf("set dest record to 2\n");
+	  fprintf(stderr,"set dest record to 2\n");
 	}
       }
       else if (gtk_combo_box_get_active(GTK_COMBO_BOX(add_sub.dest_record)) - 2 > buffp[dbnum]->npts2 - 1){
-	//	  printf("resetting destrec\n");
+	//	  fprintf(stderr,"resetting destrec\n");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),2);
       }
 
 
       for (i= add_sub.dest_rec_c-1; i >= new_num;i--){ // too many
 
-	//	printf("deleting record: %i\n",i);
+	//	fprintf(stderr,"deleting record: %i\n",i);
 	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.dest_record),i+2);
       }
 
@@ -5347,7 +5334,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
     else if(new_num > add_sub.dest_rec_c){ // too few
       for (i=add_sub.dest_rec_c;i<new_num;i++){
 	sprintf(s,"%i",i);
-	//	printf("adding record: %i\n",i);
+	//	fprintf(stderr,"adding record: %i\n",i);
 	gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.dest_record),s);
       }
     }
@@ -5368,7 +5355,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
   }
 
   else if (widget == add_sub.dest_record){
-    //    printf("dest record changed\n");
+    //    fprintf(stderr,"dest record changed\n");
   }
 
   
@@ -5390,7 +5377,7 @@ void add_sub_buttons(GtkWidget *widget,gpointer data){
     float *temp_data1=NULL,*temp_data2=NULL,*data1,*data2;
     int i,j,k,l,npts,dest_rec;
     double f1,f2;
-    //    printf("in add_sub_changed stuff, got data: %i\n",(int) data);
+    //    fprintf(stderr,"in add_sub_changed stuff, got data: %i\n",(int) data);
     int sbnum1,sbnum2,dbnum;
 
 
@@ -5548,7 +5535,7 @@ if the number of records on the input records doesn't match for "each each", err
 	  buffp[dbnum]->data[k + l* npts*2] = 
 	    f1 * buffp[sbnum1]->data[k + l* npts*2] +
 	    f2 * buffp[sbnum2]->data[k + l* npts*2];
-      printf("did each + each -> each\n");
+      fprintf(stderr,"did each + each -> each\n");
     }
     else if (i == 1 || j == 1){ // one is a sum all
       float *temp_data;
@@ -5565,7 +5552,7 @@ if the number of records on the input records doesn't match for "each each", err
 	    buffp[dbnum]->data[k + l*npts*2] = 
 	      f1* temp_data[k] + f2* buffp[sbnum2]->data[k + l* npts*2];
 	g_free(temp_data);
-	printf("did each + sum_all\n");
+	fprintf(stderr,"did each + sum_all\n");
       }
       else{ // j == 1 so second is sum all
 	// collapse the sum all into temp:
@@ -5578,7 +5565,7 @@ if the number of records on the input records doesn't match for "each each", err
 	    buffp[dbnum]->data[k + l*npts*2] = 
 	      f2* temp_data[k] + f1* buffp[sbnum1]->data[k + l* npts*2];
 	g_free(temp_data);
-	printf("did  sum_all + each\n");
+	fprintf(stderr,"did  sum_all + each\n");
       }
     }
     else if (i > 1){
@@ -5587,19 +5574,19 @@ if the number of records on the input records doesn't match for "each each", err
 	  buffp[dbnum]->data[k + l*npts*2] = 
 	    f1* buffp[sbnum1]->data[k+(i-2)*npts*2] + f2* buffp[sbnum2]->data[k + l* npts*2];
 
-      printf("did  record + each");
+      fprintf(stderr,"did  record + each");
     }
     else{
       for (k=0;k<npts*2;k++)
 	for(l=0;l<buffp[sbnum1]->npts2;l++)
 	  buffp[dbnum]->data[k + l*npts*2] = 
 	    f1* buffp[sbnum1]->data[k+l*npts*2] + f2* buffp[sbnum2]->data[k + (j-2)* npts*2];
-      printf("did each + record\n");
+      fprintf(stderr,"did each + record\n");
     }
   }
   else{    // neither is an each - output is a single record
   
-    if ( k == 0 ) printf("got dest each, can't happen here\n");
+    if ( k == 0 ) fprintf(stderr,"got dest each, can't happen here\n");
     if (k == 1){ // deal with append
       dest_rec = buffp[dbnum]->npts2;
       buff_resize(buffp[dbnum],npts,buffp[dbnum]->npts2+1); // make sure npts is right
@@ -5610,7 +5597,7 @@ if the number of records on the input records doesn't match for "each each", err
     }
     
     if (i==1){
-      //      printf("first source is sum all\n");
+      //      fprintf(stderr,"first source is sum all\n");
       temp_data1 = g_malloc(npts*8);
       memset(temp_data1,0,npts*8);
       for (k=0;k<npts*2;k++)
@@ -5620,7 +5607,7 @@ if the number of records on the input records doesn't match for "each each", err
     }
     else data1 = &buffp[sbnum1]->data[(i-2)*npts*2];
     if (j==1){
-      //      printf("second source is sum all\n");
+      //      fprintf(stderr,"second source is sum all\n");
       temp_data2 = g_malloc(npts*8);
       memset(temp_data2,0,npts*8);
       for (k=0;k<npts*2;k++)
@@ -5631,7 +5618,7 @@ if the number of records on the input records doesn't match for "each each", err
     else data2=&buffp[sbnum2]->data[(j-2)*npts*2];
     for (k=0;k<npts*2;k++)
       buffp[dbnum]->data[k+dest_rec*npts*2] = f1 * data1[k] + f2 * data2[k];
-    //    printf("did two simple adds\n");
+    //    fprintf(stderr,"did two simple adds\n");
     if (i == 1) g_free(temp_data1);
     if (j == 1) g_free(temp_data2);
   }
@@ -5650,7 +5637,7 @@ if the number of records on the input records doesn't match for "each each", err
 
 
 
-  else printf("in add_sub_button, got an unknown button?\n");
+  else fprintf(stderr,"in add_sub_button, got an unknown button?\n");
 
 } // end add_buttons
 
@@ -5670,7 +5657,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
     float max,m,b,width,x_left,x_right;
 
     event = (GdkEventButton *) action;
-    //    printf("believe we got a press event\n");
+    //    fprintf(stderr,"believe we got a press event\n");
 
     if (fit_data.num_components == MAX_FIT){
       popup_msg("Too Many components",TRUE);
@@ -5680,7 +5667,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
     if (buffp[sbnum]->disp.dispstyle==SLICE_ROW){ // only capture point on a row
       xval= (event->x-1.)/(buffp[sbnum]->win.sizex-1) *
 	(buffp[sbnum]->disp.xx2-buffp[sbnum]->disp.xx1)	+buffp[sbnum]->disp.xx1;
-      //      printf("xval is: %f\n",xval);
+      //      fprintf(stderr,"xval is: %f\n",xval);
     
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.components),fit_data.num_components+1);
       // now set the values in it
@@ -5694,7 +5681,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
       // we used exactly the center that the user selected.  Find a nearby maximum and then get a width.
       
       xpt = pix_to_x(buffp[sbnum],event->x);
-      //    printf("got point %i\n",xpt);
+      //    fprintf(stderr,"got point %i\n",xpt);
       i_max = xpt;
       record = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record));
       
@@ -5718,7 +5705,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 	}
       
       //so we should have the max:
-      //    printf("found max of %f at %i\n",max,i_max);
+      //    fprintf(stderr,"found max of %f at %i\n",max,i_max);
       
       // now look for the width.
       // look to the right till we get below half max
@@ -5738,7 +5725,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 	    i = -1;
 	  }
 	}
-      //    printf("left and right limits: %i %i\n",i_left,i_right);
+      //    fprintf(stderr,"left and right limits: %i %i\n",i_left,i_right);
       // so we've got a rough width, let's do a little better
       width = 0;
       x_left = xpt;
@@ -5748,7 +5735,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 	     buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]);
 	b= buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]-m*i_left;
 	x_left = (max/2.-b)/m;
-	//      printf("using %f for left edge\n",x_left);
+	//      fprintf(stderr,"using %f for left edge\n",x_left);
 	width += (xpt-x_left)
 	  *buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
       }
@@ -5758,12 +5745,12 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 	     buffp[sbnum]->data[2*(i_right-1)+buffp[sbnum]->param_set.npts*2*record]);
 	b= buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-m*i_right;
 	x_right = (max/2.-b)/m;
-	//      printf("using %f for right edge\n",x_right);
+	//      fprintf(stderr,"using %f for right edge\n",x_right);
 	
 	width += (x_right-xpt)*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
 	
       }
-      //    printf("so width is: %f\n",width);
+      //    fprintf(stderr,"so width is: %f\n",width);
       // stick half in each of lorentz and gaus
       
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[fit_data.num_components-1]),width);
@@ -5780,12 +5767,12 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
   }
 
   if ((void *) buff == (void *) fit_data.add_dialog){ 
-    //           printf("buff is dialog!\n");
-    //    printf("believe we got a delete event for dialog\n");
+    //           fprintf(stderr,"buff is dialog!\n");
+    //    fprintf(stderr,"believe we got a delete event for dialog\n");
     gtk_object_destroy(GTK_OBJECT(fit_data.add_dialog));
     fit_data.add_dialog = NULL;
       if ( buffp[sbnum] == NULL){ // our buffer destroyed while we were open... shouldn't happen
-	printf("fit_add_components: buffer was destroyed while we were open\n");
+	fprintf(stderr,"fit_add_components: buffer was destroyed while we were open\n");
       }
       else{
 	buffp[sbnum]->win.press_pend = 0;
@@ -5797,7 +5784,7 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
 					  buffp[sbnum]);
       }
       
-      //      printf("got a total of: %i points for spline\n",num_spline_points);
+      //      fprintf(stderr,"got a total of: %i points for spline\n",num_spline_points);
       draw_canvas(buffp[sbnum]);
 
   }
@@ -5877,7 +5864,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
   if (j>=1) dbnum = add_sub.index[j-1];
   else dbnum = -1; // indicates new buffer.
 
-  //  printf("dbnum is %i\n",dbnum);
+  //  fprintf(stderr,"dbnum is %i\n",dbnum);
 
 
   if (widget == fit_data.start_clicking){
@@ -6014,7 +6001,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
 	n = 2*(i2-i1+1);
 	       //	n = () * buffp[sbnum]->param_set.npts;
-	//	printf("got fit range, set npts from %i to %i total %i\n",i1,i2,n);
+	//	fprintf(stderr,"got fit range, set npts from %i to %i total %i\n",i1,i2,n);
       }
       else
 	n = buffp[sbnum]->param_set.npts *2; // we're going to fit the imaginary part too!
@@ -6073,19 +6060,19 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	for(i=0;i<p;i++) stddev[i] = 0.;
 	// check return value, see if the fit is good?
 	if (iv[0] == 3 || iv[0] == 4 || iv[0]==5){
-	  //	  printf("Claim to have a fit ");
+	  //	  fprintf(stderr,"Claim to have a fit ");
 	  if (iv[25] > 0){
 	    j = iv[25]-1;
 	    for(i=0;i<p;i++){// get the stddevs
 	      stddev[i]=sqrt(v[j]);
-	      //	      printf("stddev: of %i is %f, used  v[%i]=%f\n",i,stddev[i],j,v[j]);
+	      //	      fprintf(stderr,"stddev: of %i is %f, used  v[%i]=%f\n",i,stddev[i],j,v[j]);
 	      j=j+i+2;
 	    }
 	  }
-	  else printf("didn't get a covariance matrix?\n");
+	  else fprintf(stderr,"didn't get a covariance matrix?\n");
 	}
 	else
-	  printf("didn't get a good fit\n");
+	  fprintf(stderr,"didn't get a good fit\n");
 	// now need to output the results. and calc the goodness of fit.
 	out_len += snprintf(out_string,max_len,
 			    "FITTING RESULTS\n#Line      Center                Amplitude             Gaussian width      Lorentz width\n") ;
@@ -6128,11 +6115,11 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	if (out_len > 0)
 	  out_len += snprintf(&out_string[out_len],max_len-out_len,"\nGoodness of fit: Sqrt(Chi^2/N): %f (compare to noise)\n",chi2);
 	  popup_msg(out_string,FALSE);
-	  printf("%s\n",out_string);
+	  fprintf(stderr,"%s\n",out_string);
       }
 
       // calc the final spectrum
-      //      printf("doing final spectrum calc:\n");
+      //      fprintf(stderr,"doing final spectrum calc:\n");
       calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);
 
 
@@ -6157,24 +6144,24 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	// create a new buffer if we need to
 	if (dbnum == -1){
 	  my_current = current;
-	  printf("creating a new buffer\n");
+	  fprintf(stderr,"creating a new buffer\n");
 	  file_new(NULL,NULL);
 	  dbnum = current;
-	  printf("created buffer %i\n",current);
+	  fprintf(stderr,"created buffer %i\n",current);
 	  if (dbnum == my_current){ // didn't create buffer, too many?
-	    printf("couldn't open a buffer?\n");
+	    fprintf(stderr,"couldn't open a buffer?\n");
 	    goto dont_move_fit;
 	  }
 	  // if we asked for append, set to first record.
 	  
 	  if (gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) == 0){
-	    printf("had append as dest record, change to record 0\n");
+	    fprintf(stderr,"had append as dest record, change to record 0\n");
 	    gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_record),1);
 	  }
 	  
-	  printf("resizing to: %i %i\n",buffp[sbnum]->param_set.npts,1);
+	  fprintf(stderr,"resizing to: %i %i\n",buffp[sbnum]->param_set.npts,1);
 	  buff_resize(buffp[dbnum],buffp[sbnum]->param_set.npts,1); // set the size of the buffer.
-	  printf("setting combo box to %i\n",add_sub.index[dbnum]+1);
+	  fprintf(stderr,"setting combo box to %i\n",add_sub.index[dbnum]+1);
 	  gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_buff),add_sub.index[dbnum]+1);
 	  
 	  
@@ -6185,12 +6172,12 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	  if (buffp[dbnum]->npts2 < gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) ||
 	      buffp[dbnum]->param_set.npts != buffp[sbnum]->param_set.npts ||
 	      gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) == 0){
-	    printf("resizing buffer to : %i %i\n",buffp[sbnum]->param_set.npts,buffp[dbnum]->npts2+1);
+	    fprintf(stderr,"resizing buffer to : %i %i\n",buffp[sbnum]->param_set.npts,buffp[dbnum]->npts2+1);
 	    buff_resize(buffp[dbnum],buffp[sbnum]->param_set.npts,buffp[dbnum]->npts2+1);
 
 	    // set the combo box so subsequent attempts go to the same place, if we said append
 	    if (gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) == 0){
-	      printf("setting active record to %i\n", buffp[dbnum]->npts2);
+	      fprintf(stderr,"setting active record to %i\n", buffp[dbnum]->npts2);
 	      gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_record),buffp[dbnum]->npts2);
 	    }
 	  }
@@ -6212,13 +6199,13 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
       /*
       for(i=0;i<n/2;i++)
-	printf("%i %f %f\n",i,spect[2*i],spect[2*i+1]);
+	fprintf(stderr,"%i %f %f\n",i,spect[2*i],spect[2*i+1]);
       */
 
       //only do the display if we're actually viewing the correct data.
       if (buffp[sbnum]->disp.dispstyle == SLICE_ROW &&
 	  gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record)) == buffp[sbnum]->disp.record ){
-	//	printf("drawing the calc'd trace\n");
+	//	fprintf(stderr,"drawing the calc'd trace\n");
 	draw_canvas(buffp[sbnum]);
 	draw_row_trace(buffp[sbnum],0,0,spect,buffp[sbnum]->param_set.npts,&colours[BLUE],0);
 	//	draw_row_trace(buffp[sbnum],0,0,spect,n/2,&colours[GREEN],1);
@@ -6250,7 +6237,7 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
 
   int i,pnum,sbnum,do_gauss,do_lorentz,i1,npts;
   float scale,spare;
-  //  printf("in calc_spectrum_residuals, got %i data points and %i parameters\n",*n,*p);
+  //  fprintf(stderr,"in calc_spectrum_residuals, got %i data points and %i parameters\n",*n,*p);
   
   // need the source buffer
   i = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
@@ -6270,33 +6257,33 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
 					    
 
     if(do_gauss == TRUE && do_lorentz == TRUE){
-      //      printf("line %i, doing both only\n",i);
+      //      fprintf(stderr,"line %i, doing both only\n",i);
       add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],x[pnum+3],ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 4;
       }
     else if (do_gauss == TRUE){
-      //      printf("line %i, doing gauss only\n",i);
+      //      fprintf(stderr,"line %i, doing gauss only\n",i);
       add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],0.,ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 3;
       }
     else if (do_lorentz == TRUE){
-      //      printf("line %i, doing lorentz only\n",i);
+      //      fprintf(stderr,"line %i, doing lorentz only\n",i);
       add_gauss_lorentz_line(x[pnum],x[pnum+1],0.,x[pnum+2],ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 3;
     }
-    else printf("for line: %i, didn't add a line\n",i);
+    else fprintf(stderr,"for line: %i, didn't add a line\n",i);
 
     
   }
-  //  printf("got %i parameters, used: %i\n",*p,pnum);
+  //  fprintf(stderr,"got %i parameters, used: %i\n",*p,pnum);
 
   // in here we'll now do the process broadenings if requested
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_proc_broad)) == TRUE){
     float factor,temp;
     factor = buffp[sbnum]->process_data[EM].val;
-    //    printf("got enable process broadening\n");
+    //    fprintf(stderr,"got enable process broadening\n");
     if (buffp[sbnum]->process_data[EM].status == SCALABLE_PROCESS_ON){ // do the mult
-      //      printf("doing exp mult with value: %f\n",factor);
+      //      fprintf(stderr,"doing exp mult with value: %f\n",factor);
       for( i=0; i<npts; i++ ){
 	temp = exp(-1.0 * factor * i * buffp[sbnum]->param_set.dwell/1000000 * M_PI);
 	ur[2*i] *= temp; 
@@ -6305,7 +6292,7 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
     }
     if (buffp[sbnum]->process_data[GM].status == SCALABLE_PROCESS_ON){
       factor = buffp[sbnum]->process_data[GM].val;
-      //      printf("doing the gaussian mult with value: %f\n",factor);
+      //      fprintf(stderr,"doing the gaussian mult with value: %f\n",factor);
       for( i=0; i<npts; i++ ) {
 	temp = i*buffp[sbnum]->param_set.dwell/1000000 * M_PI * factor / 1.6651;
 	ur[2*i] *= exp( -1 * temp * temp );
@@ -6334,7 +6321,7 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
     i1 = (int) (buffp[sbnum]->disp.xx1*(npts-1)+0.5);
   }
   else i1 = 0;
-  //  printf("in calc spectrum residuals, starting at point %i\n",i1);
+  //  fprintf(stderr,"in calc spectrum residuals, starting at point %i\n",i1);
 
   for (i=0; i<*n ;i++){
     r[i] = ur[i+2*i1] - buffp[sbnum]->data[i+2*i1+
@@ -6348,7 +6335,7 @@ void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz
 {
   int i;
   float prefactor;
-  //  printf("add_lorentz_line: center: %f, amp: %f, width: %f, dwell %f\n",center,amp,wid,dwell);
+  //  fprintf(stderr,"add_lorentz_line: center: %f, amp: %f, width: %f, dwell %f\n",center,amp,wid,dwell);
 
   for(i=0;i<np;i++){
     prefactor = amp*exp(-i*dwell*M_PI*lorentz_wid)*exp(-i*dwell*M_PI*gauss_wid/1.6651*i*dwell*M_PI*gauss_wid/1.6651) 
@@ -6371,7 +6358,7 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
   static int norecur = 0,old_sbnum = 0;
 
   if (norecur == 1){
-    printf("doing norecur in fit_data_changed\n");
+    fprintf(stderr,"doing norecur in fit_data_changed\n");
     norecur = 0;
     return;
   }
@@ -6387,7 +6374,7 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
 
 
   
-  //  printf("in fit_data_changed\n");
+  //  fprintf(stderr,"in fit_data_changed\n");
 
   if (widget == fit_data.components){
     i = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.components));
@@ -6451,10 +6438,10 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
     return;
   }
   if (widget == fit_data.s_record || widget == fit_data.d_record){
-    //    printf("one of the records changed\n");
+    //    fprintf(stderr,"one of the records changed\n");
     return;
   }
-  printf("in fit_data_changed but don't know what changed?\n");
+  fprintf(stderr,"in fit_data_changed but don't know what changed?\n");
 
 }
 
@@ -6462,7 +6449,7 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
 void queue_expt(GtkAction *action, dbuff *buff){
   char path[PATH_LENGTH];
   int valid,bnum;
-  //  printf("in queue_expt\n");
+  //  fprintf(stderr,"in queue_expt\n");
   CHECK_ACTIVE(buff);
 
   /* in here we:  make sure acq is running.
@@ -6505,7 +6492,7 @@ void queue_expt(GtkAction *action, dbuff *buff){
     }
     else{
       popup_msg("File Exists - pick a new name",TRUE);
-      //      printf("claim that %s exists\n",path);
+      //      fprintf(stderr,"claim that %s exists\n",path);
       return;
     }
   }
@@ -6526,7 +6513,7 @@ void queue_expt(GtkAction *action, dbuff *buff){
   while (valid){
     gtk_tree_model_get(GTK_TREE_MODEL(queue.list),&queue.iter,
 		       BUFFER_COLUMN,&bnum,-1);
-    printf("buffer: %i\n",bnum);
+    fprintf(stderr,"buffer: %i\n",bnum);
     if (buff->buffnum == bnum){
       popup_msg("This experiment already in the queue",TRUE);
       return;
@@ -6575,14 +6562,14 @@ void queue_expt(GtkAction *action, dbuff *buff){
 }
 void queue_window(GtkAction *action, dbuff *buff){
   GtkTreeModel *model;
-  // printf("in queue_window\n");
+  // fprintf(stderr,"in queue_window\n");
   CHECK_ACTIVE(buff);
 
  gtk_widget_show_all(queue.dialog);
  gdk_window_raise(queue.dialog->window);
 
  if ( gtk_tree_selection_get_selected(queue.select,&model,&queue.iter)){
-   //   printf("unselecting\n");
+   //   fprintf(stderr,"unselecting\n");
    gtk_tree_selection_unselect_iter(queue.select,&queue.iter);
  }
  
@@ -6595,21 +6582,21 @@ void remove_queue (GtkWidget *widget,gpointer dum){
 
   if ( gtk_tree_selection_get_selected(queue.select,&model,&queue.iter)){
     if ((void *)model == (void *)queue.list)
-      printf("in remove, model= list!\n");
+      fprintf(stderr,"in remove, model= list!\n");
     else
-      printf("in remove, model != list\n");
+      fprintf(stderr,"in remove, model != list\n");
 
     gtk_tree_model_get(model,&queue.iter,BUFFER_COLUMN,&bnum,-1);
     gtk_list_store_remove(queue.list,&queue.iter);
     queue.num_queued -= 1;
     set_queue_label();
-    //    printf("selected buffer %i\n",bnum);
+    //    fprintf(stderr,"selected buffer %i\n",bnum);
   }
   else {
-    printf("in remove queue, but nothing selected\n");
+    fprintf(stderr,"in remove queue, but nothing selected\n");
   }
 
-  //  printf("%i experiments left in queue\n",queue.num_queued);
+  //  fprintf(stderr,"%i experiments left in queue\n",queue.num_queued);
 
 
 
@@ -6626,4 +6613,282 @@ void set_queue_label(){
   else
     snprintf(s,UTIL_LEN,"%i Experiments in Queue",queue.num_queued);
   gtk_label_set_text(GTK_LABEL(queue.label),s);
+}
+
+
+
+void readscript(){
+  pthread_t script_thread;
+  pthread_create(&script_thread,NULL,&readscript_thread_routine,&dummy);
+  fprintf(stderr,"done creating thread, returning\n");
+  return;
+}
+
+
+void *readscript_thread_routine(){
+  char iline[200],oline[200];
+
+
+
+  fprintf(stderr,"in readscript, waiting for input\n");
+  
+  do{
+    fgets(iline,200,stdin);
+    fprintf(stderr,"got input: %s",iline);
+    if (script_handler(iline,oline,1) == 0){ // the 1 is to tell is we're from stdin
+      fprintf(stderr,"%s\n",oline);
+      fprintf(stderr,"readscript_thread_routine exiting\n");
+      pthread_exit(NULL);
+    } 
+    fprintf(stderr,"%s\n",oline);
+  }while ( 1 );
+
+}
+
+
+int script_handler(char *input,char *output, int source){
+
+  int eo;
+  if (strncmp("EXIT",input,4)==0) return 0;
+
+  /* priorities: 
+
+     acquire  
+     file open
+     file save_as
+     file append
+
+     socket i/o
+
+     set parameters
+     set npts, sw etc
+
+  */
+
+    if (strncmp("PROCESS",input,7)==0){
+      fprintf(stderr,"processing\n");
+      gdk_threads_enter();
+      gtk_button_clicked(GTK_BUTTON(script_widgets.process_button));
+      gdk_threads_leave();
+      fprintf(stderr,"done\n");
+      strcpy(output,"OK");
+      return 1;
+    }
+    
+    if (strncmp("ACQUIRE",input,7) == 0){
+      if (acq_in_progress != ACQ_STOPPED){
+	strcpy(output,"ACQ_BUSY");
+	return 0;
+      }
+      gdk_threads_enter();
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(script_widgets.acquire_button),TRUE);
+      gdk_threads_leave();
+      if (acq_in_progress == ACQ_STOPPED){
+	fprintf(stderr,"said start, but stopped\n");
+	strcpy(output,"ACQ NOT STARTED");
+	return 0;
+      }
+      strcpy(output,"ACQ STARTED");
+      script_widgets.acquire_notify = source; // one for stdout, will be 2 for socket.
+      return 1;
+    }
+    if (strncmp("LOAD ",input,5) == 0){
+      // remove trailing \n, replace with 0
+      char *s2;
+      s2=strstr(input,"\n");
+      if (s2 != NULL){
+	fprintf(stderr,"got a newline\n");
+	*s2 = 0;
+      }
+
+      if (strnlen(input,200) < 6){
+	strcpy(output,"NO FILENAME");
+	return 0;
+      }
+      if (input[5] != '/'){
+	char s3[PATH_LENGTH];
+	path_strcpy(s3,input+5);
+	getcwd(input+5,PATH_LENGTH-5);
+	path_strcat(input,"/");
+	path_strcat(input,s3);
+	fprintf(stderr,"fixed filename to: %s\n",input);
+      }
+
+      //      fprintf(stderr,"calling do_load with input: %s, current is %i\n",input+5,current);
+      
+      gdk_threads_enter();
+      eo = do_load(buffp[current],input+5);
+      gdk_threads_leave();
+
+      if (eo == -1){
+	strcpy(output,"FILE NOT LOADED");
+	return 0;
+      }
+      strcpy(output,"FILE LOADED");
+      return 1;
+    }
+    if (strncmp("SAVE ",input,5) == 0){
+      char *s2;
+      s2=strstr(input,"\n");
+      if (s2 != NULL){
+	fprintf(stderr,"got a newline\n");
+	*s2 = 0;
+      }
+      
+      if (strnlen(input,200) < 6){
+	strcpy(output,"NO FILENAME");
+	return 0;
+      }
+
+      if (input[5] != '/'){
+	char s3[PATH_LENGTH];
+	path_strcpy(s3,input+5);
+	getcwd(input+5,PATH_LENGTH-5);
+	path_strcat(input,"/");
+	path_strcat(input,s3);
+	fprintf(stderr,"fixed filename to: %s\n",input);
+      }
+
+
+      /* we have to make the directory */
+      if( mkdir( input+5, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
+	if( errno != EEXIST ) {
+	  strcpy(output,"CANT MKDIR");
+	  return 0 ;
+	}
+      }
+
+      gdk_threads_enter();
+      eo=do_save(buffp[current],input+5);
+      gdk_threads_leave();
+      if (eo == 0){
+	strcpy(output,"NOT SAVED");
+	return 0;
+      }
+
+      strcpy(output,"FILE SAVED");
+      return 1;
+    }
+
+
+    if (strncmp("APPEND",input,6) == 0){
+      gdk_threads_enter();
+      eo=file_append(NULL,buffp[current]);
+      gdk_threads_leave();
+      if (eo == 0){
+	strcpy(output,"APPEND FAILED");
+	return 0;
+      }
+      strcpy(output,"APPENDED");
+      return 1;
+    }
+
+    strcpy(output,"NOT UNDERSTOOD");
+    return 1;
+
+	
+
+
+}
+// some globals for the socket stuff.
+struct sockaddr_un my_addr;
+struct sockaddr_un from;
+int fds;
+int socket_thread_open = 0;
+
+void script_notify_acq_complete(){
+
+  char mess[13]="ACQ_COMPLETE";
+
+  if (script_widgets.acquire_notify == 1){
+    fprintf(stderr,"ACQ COMPLETE\n");
+    
+  }
+  if (script_widgets.acquire_notify == 2){
+    sendto(fds,mess,13,0,(struct sockaddr *)&from,SUN_LEN(&from));
+  }
+
+
+  script_widgets.acquire_notify = 0;
+  return;
+}
+
+
+void socket_script(){
+  // open a socket for remote control
+  pthread_t socket_thread;
+
+  struct stat buf;
+
+  if (socket_thread_open == 1){
+    popup_msg("Socket thread already listening",TRUE);
+    return;
+  }
+  if (no_acq == TRUE){
+    popup_msg("Can't open socket in no_acq mode",TRUE);
+    return;
+  }
+
+  my_addr.sun_family = AF_UNIX;
+  strncpy(my_addr.sun_path,"/tmp/Xnmr_remote",17);
+  fds = socket(PF_LOCAL,SOCK_DGRAM,0);
+  if (fds == 0){
+    popup_msg("Can't open socket",TRUE);
+    return;
+  }
+
+ // check to see if /tmp/Xnmr_remote already exists.  If so, remove.
+  // we're in acq mode, so we're taking over
+  if ( stat(my_addr.sun_path,&buf) == 0) { // it exists!
+    fprintf(stderr,"wiping out old /tmp/Xnmr_remote\n");
+    if (unlink(my_addr.sun_path) != 0){
+      popup_msg("can't unlink old /tmp/Xnmr_remote",TRUE); 
+      return;
+    }
+  }
+
+  if (bind(fds,(struct sockaddr *)&my_addr,SUN_LEN(&my_addr)) != 0){
+    popup_msg("Couldn't bind socket",TRUE);
+    return;
+  }
+  chmod (my_addr.sun_path,0666);
+  
+  
+  pthread_create(&socket_thread,NULL,&readsocket_thread_routine,&dummy);
+  socket_thread_open = 1;
+
+  fprintf(stderr,"done creating socket thread, returning\n");
+  return;
+
+
+
+}
+
+void *readsocket_thread_routine(){
+  char iline[PATH_LENGTH],oline[PATH_LENGTH];
+  int fromlen,rlen;
+
+
+  do{
+    fromlen = 108;
+    rlen = recvfrom(fds,iline,PATH_LENGTH,0,(struct sockaddr *)&from,&fromlen);
+    iline[rlen] = 0;
+
+    fprintf(stderr,"got input: %s",iline);
+
+    if (script_handler(iline,oline,2) == 0){ // the 2 says we're from a socket
+      sendto(fds,oline,strnlen(oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
+      fprintf(stderr,"%s\n",oline);
+      fprintf(stderr,"readsocket_thread_routine exiting\n");
+
+      unlink(my_addr.sun_path);
+      socket_thread_open = 0;
+      pthread_exit(NULL);
+    }
+    sendto(fds,oline,strnlen(oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
+    fprintf(stderr,"%s\n",oline);
+
+  }while (1);
+
+
 }

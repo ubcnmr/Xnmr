@@ -168,6 +168,7 @@ float phase20,phase21;
 GdkCursor *cursorclock;
 char no_acq=FALSE;
 GtkWidget *panwindow;
+script_widget_type script_widgets;
 
 char from_do_destroy_all=0; // global flags to figure out what to do on exit.
 
@@ -219,7 +220,7 @@ int main(int argc,char *argv[])
   do{
     ar=getopt_long(argc,argv,"n",cmds,&longindex);
     if (ar == 'n') {
-      printf("got noacq\n");
+      fprintf(stderr,"got noacq\n");
       no_acq=TRUE;
     }
   }while (ar !=EOF );
@@ -228,7 +229,7 @@ int main(int argc,char *argv[])
   path_strcpy(command,getenv("HOME"));
   path_strcat(command,"/.xnmrrc");
 	 
-  //  printf("looking for rc file: %s\n",command);
+  //  fprintf(stderr,"looking for rc file: %s\n",command);
   gtk_rc_parse( command );
  
   /* initialize my stuff */
@@ -252,11 +253,11 @@ int main(int argc,char *argv[])
 
 
     if (result_shm != 0){                // shared mem exists
-      printf("shm already exists, looking for running Xnmr\n");
+      fprintf(stderr,"shm already exists, looking for running Xnmr\n");
       if ( data_shm->ui_pid >0 ){   // pid in shm is valid
 	path_strcpy(command,"ps auxw|grep -v grep|grep Xnmr|grep ");
 	snprintf(&command[strlen(command)],PATH_LENGTH-strlen(command),"%i", data_shm->ui_pid);
-	//		printf("using command: %s\n",command);
+	// fprintf(stderr,"using command: %s\n",command);
 	ic = system(command); // returns zero when it finds something, 256 if nothing?
 	if (ic == 0 ) { // Xnmr is still running
 	  no_acq = TRUE; 
@@ -281,7 +282,7 @@ int main(int argc,char *argv[])
 
   //  popup_msg("Caution: new version using Analog Devices DSP receiver");
   if ((strcmp(":0.0",getenv("DISPLAY")) != 0) && strcmp(":0",getenv("DISPLAY")) != 0){
-    printf("Your display is set to go elsewhere???\n");
+    fprintf(stderr,"Your display is set to go elsewhere???\n");
   }
   
 
@@ -293,14 +294,14 @@ int main(int argc,char *argv[])
     if ( data_shm->acq_pid > 0){ // there is a valid pid
       path_strcpy(command,"ps auxw|grep -v grep|grep [acq]|grep ");
       snprintf(&command[strlen(command)],PATH_LENGTH-strlen(command),"%i",data_shm->acq_pid);
-      //      printf("using command: %s\n",command);
+      //      fprintf(stderr,"using command: %s\n",command);
       ic = system(command); // returns zero when it finds something, 256 if nothing?
       if (ic == 0 ) { //acq is still alive
 	g_idle_add((GtkFunction) popup_msg_mutex_wrap,"There appears to be a running acq");
       }
     }
     if (data_shm->acq_pid <1 || ic != 0){ 
-	printf( "Xnmr will start acq\n" );
+	fprintf(stderr, "Xnmr will start acq\n" );
 	data_shm->acq_pid = -1;
 	
 	init_ipc_signals();
@@ -308,7 +309,7 @@ int main(int argc,char *argv[])
 
 	start_acq();
 	/*	if ( wait_for_acq() != ACQ_LAUNCHED ){
-	  printf("Acq not launched successfully???\n");
+	  fprintf(stderr,"Acq not launched successfully???\n");
 	  g_idle_add((GtkFunction) popup_msg_mutex_wrap,"Trouble starting up acq: started noacq");
 	  no_acq = TRUE;
 	  } */
@@ -333,7 +334,8 @@ int main(int argc,char *argv[])
 
   // want size of buffer window to set placement of panel window.
   // so postpone placing this window
-
+  
+  script_widgets.acquire_notify = 0;
 
   /* create a first buffer */
 
@@ -344,7 +346,7 @@ int main(int argc,char *argv[])
   result = chdir(command);
 
   if (result == -1){
-    printf("creating directories...");
+    fprintf(stderr,"creating directories...");
     path_strcpy (command,getenv("HOME"));
     path_strcat(command,"/Xnmr");
     result = mkdir(command,0755);
@@ -816,9 +818,9 @@ int main(int argc,char *argv[])
 
 
 
-  //  printf("did first buffer create, npts = %i\n",buffp[0]->param_set.npts);
+  //  fprintf(stderr,"did first buffer create, npts = %i\n",buffp[0]->param_set.npts);
   if (buffp[0] == NULL){
-    printf("first buffer creation failed\n");
+    fprintf(stderr,"first buffer creation failed\n");
     exit(0);
   }
   // now a first buffer exists, find its size.
@@ -840,25 +842,25 @@ int main(int argc,char *argv[])
   colours[RED].blue=0;
   colours[RED].green=0;
   colours[RED].pixel=(gulong) 255*256*256; /* red */
-  //printf("pixel: %li\n",colours[RED].pixel);
+  // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
   gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[RED],FALSE,TRUE);
-  //printf("pixel: %li\n",colours[RED].pixel);
+  // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
   
   colours[BLUE].red=0;
   colours[BLUE].blue=65535;
   colours[BLUE].green=0;
   colours[BLUE].pixel=(gulong) 255; /* blue */
-  //printf("pixel: %li\n",colours[BLUE].pixel);
+  // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
   gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLUE],FALSE,TRUE);
-  //printf("pixel: %li\n",colours[BLUE].pixel);
+  // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
 
   colours[GREEN].red=0;
   colours[GREEN].blue=0;
   colours[GREEN].green=65535;
   colours[GREEN].pixel=(gulong) 255*256; /* green */
-  //printf("pixel: %li\n",colours[GREEN].pixel);
+  // fprintf(stderr,"pixel: %li\n",colours[GREEN].pixel);
   gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[GREEN],FALSE,TRUE);
-  //printf("pixel: %li\n",colours[GREEN].pixel);
+  // fprintf(stderr,"pixel: %li\n",colours[GREEN].pixel);
 
   colours[WHITE].red=65535;
   colours[WHITE].blue=65535;
@@ -881,7 +883,7 @@ int main(int argc,char *argv[])
     
     colours[ic].pixel= (gulong) colours[ic].green 
       +256*colours[ic].red+colours[ic].blue/256;
-    //    printf("r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
+    //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     
     gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
 		    &colours[ic],FALSE,TRUE);
@@ -896,7 +898,7 @@ int main(int argc,char *argv[])
 
     colours[ic].pixel= (gulong) colours[ic].green 
       +256*colours[ic].red+colours[ic].blue/256;
-    //    printf("r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
+    //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
 		    &colours[ic],FALSE,TRUE);
     ic++;
@@ -904,7 +906,7 @@ int main(int argc,char *argv[])
 
   //extra for white to be in the middle
   ic++;
-  //  printf("just skipped colour: %i\n",ic-1);
+  //  fprintf(stderr,"just skipped colour: %i\n",ic-1);
   for (i=0;i<NUM_COLOURS/4;i++){
     colours[ic].red = (int) 256*255.*0;
     colours[ic].blue = (int) 256*255.*i/(NUM_COLOURS/4.);
@@ -913,7 +915,7 @@ int main(int argc,char *argv[])
 
     colours[ic].pixel= (gulong) colours[ic].green 
       +256*colours[ic].red+colours[ic].blue/256;
-    //    printf("r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
+    //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
 		    &colours[ic],FALSE,TRUE);
     ic++;
@@ -927,7 +929,7 @@ int main(int argc,char *argv[])
 
     colours[ic].pixel= (gulong) colours[ic].green 
       +256*colours[ic].red+colours[ic].blue/256;
-    //    printf("r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
+    //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
 		    &colours[ic],FALSE,TRUE);
     ic++;
@@ -1092,9 +1094,9 @@ white set up below  */
 
 
   if( result_shm == 1 && !no_acq ) {
-    printf("connecting to old shm\n");
+    fprintf(stderr,"connecting to old shm\n");
     upload_buff = current;
-    //printf( "initializing IPC signals and sending an idle_draw_canvas\n" );
+    // fprintf(stderr, "initializing IPC signals and sending an idle_draw_canvas\n" );
 
     
     
@@ -1127,9 +1129,9 @@ white set up below  */
   gdk_threads_enter();
   gtk_main();
   gdk_threads_leave();
-  //  printf("out of gtk_main\n");
+  //  fprintf(stderr,"out of gtk_main\n");
   /* post main - clean up */
-  //printf("post main cleanup\n");
+  // fprintf(stderr,"post main cleanup\n");
   /* unalloc gc */
   gdk_gc_unref(colourgc);
 
@@ -1310,7 +1312,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
 
       if(buff->disp.dispstyle == SLICE_ROW){
 	if (phase_npts == buff->param_set.npts){
-	  //printf("in ok button, dealing with slice\n");
+	  // fprintf(stderr,"in ok button, dealing with slice\n");
 	  if(widget==phase_data.apply_all){
 	    
 	    for(j=0;j<buff->npts2;j++){
@@ -1377,7 +1379,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
       draw_canvas(buff);
       if (buff->buffnum == current){
 	gdk_window_raise(buff->win.window->window);
-	//	printf("raised current window 4\n");
+	// fprintf(stderr,"raised current window 4\n");
       }
       phase_npts=0;
       g_free(phase_data.data);
@@ -1412,7 +1414,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
       buff->win.press_pend=0;
       if (buff->buffnum == current){
 	gdk_window_raise(buff->win.window->window);
-	//	printf("raised current window 5\n");
+	// fprintf(stderr,"raised current window 5\n");
       }
 
       draw_canvas(buff);
@@ -1440,7 +1442,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
     g_free(phase_data.data2);
     gtk_widget_hide(phase_dialog);
     phase_data.is_open=0;
-    printf("in phase, buffer is gone\n");
+    fprintf(stderr,"in phase, buffer is gone\n");
   }
   return 0;
 }
@@ -1536,7 +1538,7 @@ gint phase_changed(GtkObject *widget,gpointer *data)
 			 rect.x,rect.y,rect.width,rect.height);
       
       if (colourgc == NULL){
-	printf("in draw_canvas, gc is NULL\n");
+	fprintf(stderr,"in draw_canvas, gc is NULL\n");
 	return -1;           //??????? -SN
       } /* shouldn't need this */
       if(buff->disp.dispstyle==SLICE_ROW){
@@ -1566,7 +1568,7 @@ gint pivot_set_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   lp1=GTK_ADJUSTMENT(phase1_ad)->value;
 
   if(buff->win.press_pend<1){
-    printf("in pivot set and press_pend <1\n");
+    fprintf(stderr,"in pivot set and press_pend <1\n");
     return TRUE;
   }
 
@@ -1578,7 +1580,7 @@ gint pivot_set_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
     ll1=buff->disp.yy1;
     ll2=buff->disp.yy2;
   }
-  //printf("ll1: %f, ll2: %f\n",ll1,ll2);
+  // fprintf(stderr,"ll1: %f, ll2: %f\n",ll1,ll2);
   /* if there's an old pivot, erase it */
 
   if(phase_data.pivot>0 && phase_data.pivot<1){
@@ -1591,7 +1593,7 @@ gint pivot_set_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
   new_pivot = (float) (xval-1) /(sizex-1) *(ll2-ll1)+ll1;
 
-  //printf("pivot set to: %f\n",new_pivot);
+  // fprintf(stderr,"pivot set to: %f\n",new_pivot);
 
   /*  
   lp0 += (new_pivot-phase_data.pivot)*
@@ -1604,7 +1606,7 @@ gint pivot_set_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
   draw_vertical(buff,&colours[BLUE],new_pivot,-1);
 
-  //printf("leaving pivot set\n");
+  // fprintf(stderr,"leaving pivot set\n");
   return TRUE;
     
 
@@ -1613,7 +1615,7 @@ gint pivot_set_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 void cursor_busy(dbuff *buff)
 {
-  //  printf("setting cursor busy\n");
+  //  fprintf(stderr,"setting cursor busy\n");
   gdk_window_set_cursor(buff->win.window->window,cursorclock);
 
   return;
@@ -1621,7 +1623,7 @@ void cursor_busy(dbuff *buff)
 
 void cursor_normal(dbuff *buff)
 {
-  //  printf("setting cursor normal\n");
+  //  fprintf(stderr,"setting cursor normal\n");
    gdk_window_set_cursor(buff->win.window->window,NULL); 
    return;
 }
@@ -1633,7 +1635,7 @@ gint destroy_all(GtkWidget *widget, gpointer data)
   GtkWidget *dialog;
   int result;
   // this routine gets called if we do a file_exit, or if we kill the panel window
-  //  printf("in destroy_all\n");
+  //  fprintf(stderr,"in destroy_all\n");
   
   if (acq_in_progress != ACQ_STOPPED){
     // need to build a "acq is running, are you sure you want to quit? box"
@@ -1679,7 +1681,7 @@ void do_destroy_all()
 
   // this gets called from destroy_all, and also if we get a kill signal
 
-  //  printf("in do_destroy_all\n");
+  //  fprintf(stderr,"in do_destroy_all\n");
   from_do_destroy_all = 1;
   for( i=0; i<MAX_BUFFERS; i++ ) {
     if( buffp[i] != NULL )
@@ -1688,17 +1690,17 @@ void do_destroy_all()
 
   //release_ipc_stuff will be called when the last file window is destroyed,, so we don't have to 
   // call it explicitaly
-  //  printf( "done closing buffers\n" );
+  //  fprintf(stderr, "done closing buffers\n" );
 
   //  gtk_main_quit();  // this is done in destroy buff.
-  //  printf("just called gtk_main_quit\n");
+  //  fprintf(stderr,"just called gtk_main_quit\n");
   return;
 }
 
 gint hide_phase( GtkWidget *widget, GdkEvent  *event, gpointer   data )
 {
   phase_buttons( phase_data.cancel, NULL );
-  //printf( "hiding window\n" );
+  // fprintf(stderr, "hiding window\n" );
   return TRUE;
 }
 
@@ -1770,15 +1772,15 @@ void draw_vertical(dbuff *buff,GdkColor *col, float xvalf,int xvali){
     rect.x=(int) ((xvalf-ll1)*(sizex-1)/
       (ll2-ll1)+1.5);
 
-    //    printf("in draw_vertical with rect.x = %i from float\n",rect.x);
+    //    fprintf(stderr,"in draw_vertical with rect.x = %i from float\n",rect.x);
   }
   else{ 
     rect.x = xvali;
-    //    printf("in draw_vertical with rect.x = %i from int\n",rect.x);
+    //    fprintf(stderr,"in draw_vertical with rect.x = %i from int\n",rect.x);
   }
 
     if (rect.x < 0 || rect.x >sizex){
-      printf("in draw row_vert, xval is out of range\n");
+      fprintf(stderr,"in draw row_vert, xval is out of range\n");
     }
 
   

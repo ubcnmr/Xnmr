@@ -119,6 +119,14 @@ typedef struct {
 } dbuff;
 
 
+typedef struct {
+  GtkWidget  
+  *process_button,
+    *acquire_button;
+  int acquire_notify;
+    } script_widget_type;
+
+
 /* flags are: */
 
 #define FT_FLAG 1

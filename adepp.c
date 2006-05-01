@@ -31,17 +31,17 @@ int initialize_dsp_epp(int p)
   // get permission to use the EPP port
   if (got_perm != 1 ){
     port=p;
-    printf("adepp, setting port to: 0x%x\n",port);
+    fprintf(stderr,"adepp, setting port to: 0x%x\n",port);
     /*    i = ioperm(port, 8, 1);
     if(i != 0)
       { 
-	printf("Can't get permission to access the port 0x%x\n", port);
+	fprintf(stderr,"Can't get permission to access the port 0x%x\n", port);
 	return -1;
 	}*/
   }
   got_perm = 1;
   if (port != p ){
-    printf("in initialize_dsp_epp, got a different port address?\n");
+    fprintf(stderr,"in initialize_dsp_epp, got a different port address?\n");
     return -1;
   }
 
@@ -60,7 +60,7 @@ int initialize_dsp_epp(int p)
   b = inb(SPP_STAT+port);
 
   if (b & 0x01) {
-    printf("doing a manual address write to try to clear port\n");
+    fprintf(stderr,"doing a manual address write to try to clear port\n");
     mask = DSP_NCS | DSP_NWR | DSP_NRD | DSP_NRESET ;
     outb(mask, port);
     
@@ -71,11 +71,11 @@ int initialize_dsp_epp(int p)
 
   b = inb(SPP_STAT+port);
   
-  //printf("SPP status register: 0x%x\n", b);
+  //fprintf(stderr,"SPP status register: 0x%x\n", b);
   //  outb(b & 0xfe, SPP_STAT+port);
   if(b & 0x01)
     {
-      printf("Couldn't reset EPP timeout bit on port 0x%x\n", port);
+      fprintf(stderr,"Couldn't reset EPP timeout bit on port 0x%x\n", port);
       return -1;
     }
   return 0;
@@ -140,7 +140,7 @@ void start_acquire_pulse()
 {
 
   reset_fifo();
-  //  printf("start_acquire_pulse, just reset fifo\n");
+  //  fprintf(stderr,"start_acquire_pulse, just reset fifo\n");
   mask = FIFO | FIFO_OFF | MR_OFF  | DSP_NRESET;
   outb(mask, EPP_ADDR+port);
 
@@ -160,7 +160,7 @@ int read_fifo_epp(int npts,int *data)
   unsigned char mask1,mask2,mask3,mask4;
   int i,istart=0;
 
-  //  printf("in read_fifo_epp, port is: %i\n",port);
+  //  fprintf(stderr,"in read_fifo_epp, port is: %i\n",port);
 
   if (npts == 0 ) return 0;
 
@@ -207,11 +207,11 @@ int read_fifo_epp(int npts,int *data)
   if ((data[0] == data[1]) && (data[0] == last_word)){
     // need to start over
     istart = 0;
-    //    printf("apparently fifo was empty\n");
+    //    fprintf(stderr,"apparently fifo was empty\n");
   }
   else{
     istart = 2;
-    //    printf("fifo was not empty\n");
+    //    fprintf(stderr,"fifo was not empty\n");
   }
   
 

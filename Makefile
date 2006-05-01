@@ -6,7 +6,7 @@
 
 
 #CC = icc
-CFLAGS =     -O2 -march=pentium4  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
+CFLAGS =     -g -O2 -march=pentium4  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 #O3 causes serious problems with rtai!
 
 # for icc:
@@ -27,11 +27,11 @@ Xnmr_preproc: Xnmr_preproc.c
 	$(CC) $(CFLAGS)  -o Xnmr_preproc Xnmr_preproc.c
 
 
-#libxnmr.a: pulse.o param_utils.o
-#	ar -rc libxnmr.a pulse.o param_utils.o
+#libxnmr.a: pulse.o param_utils.o four1.o
+#	ar -rc libxnmr.a pulse.o param_utils.o four1.o
 
-libxnmr.so: pulse.o param_utils.o
-	$(CC) $(CFLAGS) -shared -o libxnmr.so pulse.o param_utils.o
+libxnmr.so: pulse.o param_utils.o four1.o
+	$(CC) $(CFLAGS) -shared -o libxnmr.so pulse.o param_utils.o four1.o
 
 
 dsp.o: dsp.h dsp.c shm_data.h adepp.c adepp.h param_utils.h
@@ -52,17 +52,17 @@ pulse_hardware.o: pulse_hardware.c pulse_hardware.h shm_prog.h h_config.h param_
 	$(CC) -O1 $(CFLAGS) -c pulse_hardware.c
 
 # added -L/usr/realtime/lib and -lpthread for rtai
-acq: acq.o pulse_hardware.o param_utils.o dsp.o adepp.o ad9850.o
-	$(CC) $(CFLAGS) -L/usr/realtime/lib -o acq acq.o pulse_hardware.o param_utils.o dsp.o adepp.o ad9850.o `pkg-config --libs gtk+-2.0` -lm -lpthread 
+acq: acq.o pulse_hardware.o libxnmr.so dsp.o adepp.o ad9850.o libxnmr.so
+	$(CC) $(CFLAGS) -L/usr/realtime/lib -L. -o acq acq.o pulse_hardware.o dsp.o adepp.o ad9850.o `pkg-config --libs gtk+-2.0` -lm -lpthread  -lxnmr
 	@echo ""
 	@echo "Don't forget to make acq suid!!!"
 	@echo ""
 
-Xnmr: xnmr.o buff.o four1.o panel.o process_f.o param_f.o xnmr_ipc.o param_utils.o spline.o\
- splint.o nrutil.o 
-	$(CC) $(CFLAGS)  xnmr.o   buff.o four1.o panel.o process_f.o param_f.o\
- xnmr_ipc.o param_utils.o spline.o splint.o nrutil.o \
--o Xnmr `pkg-config --libs gthread-2.0 gtk+-2.0` -lm -lport -lf2c  -Xlinker -defsym -Xlinker MAIN__=main
+Xnmr: xnmr.o buff.o panel.o process_f.o param_f.o xnmr_ipc.o  spline.o\
+ splint.o nrutil.o  libxnmr.so
+	$(CC) $(CFLAGS)  -L. xnmr.o   buff.o  panel.o process_f.o param_f.o\
+ xnmr_ipc.o  spline.o splint.o nrutil.o \
+-o Xnmr `pkg-config --libs gthread-2.0 gtk+-2.0` -L-lm -lport -lf2c  -lxnmr -Xlinker -defsym -Xlinker MAIN__=main
 
 # the -Xlinker -defsym -Xlinker MAIN__=main   passes: '-defsym MAIN__=main' to the linker, let us use 
 # fortran and C together.  The -lportP has the nonlinear fitting routine, and lf2c is necessary for fortran

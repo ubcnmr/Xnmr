@@ -119,7 +119,7 @@ void file_new(GtkAction *action,dbuff *buff);
 //void file_exit(dbuff *buff,int action,GtkWidget *widget);
 void file_exit(GtkAction *action, dbuff *buff);
 //void file_append(dbuff *buff,int action,GtkWidget *widget);
-void file_append(GtkAction *action, dbuff *buff);
+int file_append(GtkAction *action, dbuff *buff);
 
 
 //void do_scales(dbuff *buff,int action,GtkWidget *widget);
@@ -183,7 +183,6 @@ gint do_load_wrapper( GtkWidget* widget, GtkFileSelection* fs );
 gint do_save( dbuff* buff, char* fileN );
 
 gint check_overwrite( dbuff* buff, char* path );
-gint check_overwrite_wrapper( GtkWidget* widget, GtkFileSelection* fs );
 
 gint pix_to_x(dbuff * buff,int xval);
 gint pix_to_y(dbuff * buff,int yval);
@@ -252,6 +251,13 @@ void queue_expt(GtkAction *action, dbuff *buff);
 void queue_window(GtkAction *action, dbuff *buff);
 void remove_queue(GtkWidget *widget, gpointer dum);
 void set_queue_label();
+
+void readscript();
+void *readscript_thread_routine();
+void *readsocket_thread_routine();
+int script_handler(char *input,char *output,int source);
+void script_notify_acq_complete();
+void socket_script();
 #endif
 
 

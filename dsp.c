@@ -58,7 +58,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
 
 
   if ((last_sw == sw) && (last_freq == freq) && (last_dgain == dgain) && (last_dsp_ph == dsp_ph) && force_setup == 0) {
-    //    printf("setup_dsp: sw and freq and dgain and dsp_ph the same, returning\n");
+    //    fprintf(stderr,"setup_dsp: sw and freq and dgain and dsp_ph the same, returning\n");
     select_device(FIFO);
     start_acquire_pulse(); // reset the fifo...
       return 1;
@@ -74,43 +74,43 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   DSPpass = 0;
   
   snprintf(filter_name,PATH_LENGTH,"/usr/share/Xnmr/filters/%d.imp",sw);
-  //  printf("setup_dsp: filter_name is %s\n",filter_name);
+  //  fprintf(stderr,"setup_dsp: filter_name is %s\n",filter_name);
   
   fptr1 = fopen(filter_name, "rt");
   if ( fptr1 == NULL){
-    printf ("filter file not found\n");
+    fprintf (stderr,"filter file not found\n");
     return -1;
   }
   
   
   fscanf(fptr1,"%d&",&value);
   contr[6][0]=value-1; //MCIC2 decimation
-  //  printf("CIC2 dec: %d\n",value);
+  //  fprintf(stderr,"CIC2 dec: %d\n",value);
   mcic2=value;
   
   fscanf(fptr1,"%d&",&value);
   contr[8][0]=value-1; //MCIC5 decimation
-  //  printf("CIC5 dec: %d\n",value);
+  //  fprintf(stderr,"CIC5 dec: %d\n",value);
   mcic5=value;
   
   fscanf(fptr1,"%d&",&value);
   contr[10][0]=value-1; //RCF decimation
-  //  printf("RCF dec: %d\n",value);
+  //  fprintf(stderr,"RCF dec: %d\n",value);
   mrcf=value;
   
   fscanf(fptr1,"%ld",&lvalue);
   clk = lvalue;
-  //  printf("clk speed from file: %ld, ignoring, using 60000000\n",clk);
+  //  fprintf(stderr,"clk speed from file: %ld, ignoring, using 60000000\n",clk);
   clk=60000000.;
   
   fscanf(fptr1,"%d",&value);  
   if (value != 1) {
-    printf("reading filter file: value not 1\n");
+    fprintf(stderr,"reading filter file: value not 1\n");
     return -1;
   }
   fscanf(fptr1,"%d",&value);
   if (value != 1) {
-    printf("reading filter file: value not 1\n");
+    fprintf(stderr,"reading filter file: value not 1\n");
     return -1;
   }
   
@@ -123,14 +123,14 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
       eo=fscanf (fptr1, "%d", &value);
       if (eo != EOF){
 	rcf [i]=value;
-	//	printf("tap: %d ",value);
+	//	fprintf(stderr,"tap: %d ",value);
       }
       else{
 	taps=i;
 	i=256;
       }
     }
-  //  printf("found %d taps\n",taps);
+  //  fprintf(stderr,"found %d taps\n",taps);
   fclose(fptr1);
   
   // process the taps into the bytes the dsp wants
@@ -177,7 +177,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   contr [4] [2]=0;
   contr [4] [3]=0;
   contr [4] [4]=0;
-  //  printf("phases:%i %i %i %i %i %i\n",phase, contr[4][0],contr[4][1],contr[4][2],contr[4][3],contr[4][4]); 
+  //  fprintf(stderr,"phases:%i %i %i %i %i %i\n",phase, contr[4][0],contr[4][1],contr[4][2],contr[4][3],contr[4][4]); 
   // 5 and 6 are the CIC2 scale, CIC2 decimation,
   // 7 and 8 are CIC5 scale and decimations
   // 9 and 10 are output scale and decimation
@@ -203,18 +203,18 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   // look out for under sampling:
   if ((freq > 30000000) && (freq < 60000000)) freq=60000000-freq;
   // 0-30 and 60-90 work by themselves
-  //  printf("receiver trying to get freq:%f\n",freq);
+  //  fprintf(stderr,"receiver trying to get freq:%f\n",freq);
   div = freq/(double)clk;
   nco = pow(2.0,32.0)*div;
 
-  printf ("receiver: NCO = %lu, freq is: %12.8f \n", nco,(double)((double) clk) * nco/pow(2.0,32.0));
+  fprintf (stderr,"receiver: NCO = %lu, freq is: %12.8f \n", nco,(double)((double) clk) * nco/pow(2.0,32.0));
   bb=nco;
   
   // load the frequency bytes
   for (i=0; i<4; i++){
     contr [3] [i] = 0xff & bb;
     bb = bb >>8;
-    //    printf("freq byte: %x\n",contr[3][i]);
+    //    fprintf(stderr,"freq byte: %x\n",contr[3][i]);
   }
   
   //calculate the scale factors
@@ -248,10 +248,10 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   if (ssf[2] < 0)  return -3;
   
 
-  //  printf("dgain: %d  input_level: %f  \n",dgain,input_level);
-  //  printf("scale factors: %d %d %d\n",ssf[0],ssf[1],ssf[2]);
-  //  printf("output levels: %f, %f %f\n",ol2,ol5,olr);
-  //  printf("sum of taps:  %f\n",sum);
+  //  fprintf(stderr,"dgain: %d  input_level: %f  \n",dgain,input_level);
+  //  fprintf(stderr,"scale factors: %d %d %d\n",ssf[0],ssf[1],ssf[2]);
+  //  fprintf(stderr,"output levels: %f, %f %f\n",ol2,ol5,olr);
+  //  fprintf(stderr,"sum of taps:  %f\n",sum);
 
   contr [5] [0] = (0x07 & ssf[0]);
   contr [7] [0] = (0x1f & ssf[1]);
@@ -262,7 +262,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   // if we're changing frequency, do the whole deal
   if (freq != last_freq || force_setup == 1){
     /*    if (force_setup == 1)
-	  printf("in setup_dsp, got force_setup\n"); */
+	  fprintf(stderr,"in setup_dsp, got force_setup\n"); */
     //*********** initialize dsp ***********//
     retval = +2;
     i = initialize_dsp_epp(p); // passes in the port to use.
@@ -273,7 +273,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   //********* program dsp *************//
     writing (rcf_c,taps);
     writing (data,256);
-    //    printf("RCF written\n\n");
+    //    fprintf(stderr,"RCF written\n\n");
 
     writing (contr,14);
     //    fprintf(stderr,"\n0x300-0x30D registers written");
@@ -284,7 +284,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   //  fprintf(stderr,"\nAD6620 taken out of soft reset\n");
   }
   else if (sw != last_sw ){ // this isn't recommended in the ad6620 manual
-    printf("got new sw, updating taps, ntaps, and decimations\n");
+    fprintf(stderr,"got new sw, updating taps, ntaps, and decimations\n");
     select_device(DSP);
     writing(rcf_c,taps);
     writing( &(contr [6]),1); // decimations:
@@ -297,7 +297,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   }
   else if (dgain != last_dgain ){ 
     // we're just changing gain - just write the scale factors
-    printf("Skipped most programming of DSP, updating scale factors only\n");
+    fprintf(stderr,"Skipped most programming of DSP, updating scale factors only\n");
     select_device(DSP);
     writing(&(contr [5]),1);
     writing(&(contr [7]),1);
@@ -305,7 +305,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   }
   else if (dsp_ph != last_dsp_ph ){ 
     // we're just changing dsp_ph - just write the phases
-    printf("Skipped most programming of DSP, updating NCO phase only\n");
+    fprintf(stderr,"Skipped most programming of DSP, updating NCO phase only\n");
     select_device(DSP);
     writing(&(contr [4]),1);
   }
@@ -318,7 +318,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   select_device(FIFO);
   //  reset_fifo();  this is done in start_acquire_pulse
 
-  //  fprintf(stderr,"start acquire \n");
+  //  ffprintf(stderr,stderr,"start acquire \n");
   start_acquire_pulse(); // waits for pulse prog to do acq
 
   last_freq = freq;

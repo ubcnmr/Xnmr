@@ -3,8 +3,11 @@
 // it will wait for interrupts !!!
 // it will also generate "simulated" data
 //
+
 #define NOHARDWARE
-//#define NO_RT_SCHED
+#define NO_PORT_INTERRUPT
+#define NO_RT_SCHED
+
 
 
 // for rtai interrupts, uncomment both.
@@ -103,6 +106,7 @@ volatile RTIME t1,t2;
 #include "/usr/share/Xnmr/config/pulse_hardware.h"    //indirectly dependant on h_config.h
 #include "param_utils.h"
 #include "ad9850.h"
+#include "nr.h"
 
 /*
  * possible states of variable done
@@ -144,16 +148,16 @@ static void *timer_handler(void *args)
 	//	priority = sched_get_priority_max(SCHED_FIFO);
 
  	if (!(handler = rt_task_init_schmod(nam2num("HANDLR"), 0, 0, 0, SCHED_FIFO, 0xF))) {
-		printf("CANNOT INIT HANDLER TASK > HANDLR <\n");
+		fprintf(stderr,"CANNOT INIT HANDLER TASK > HANDLR <\n");
 		exit(1);
 	}
 	rt_allow_nonroot_hrt();
 	mlockall(MCL_CURRENT | MCL_FUTURE);
-	//	printf("handler thread about to go to hard real time\n");
+	//	fprintf(stderr,"handler thread about to go to hard real time\n");
 	rt_make_hard_real_time();
 	ovr = 0;
 
-	//	printf("about to start waiting for irq's\n");
+	//	fprintf(stderr,"about to start waiting for irq's\n");
 	rt_request_irq_task(PARPORT_IRQ, handler, RT_IRQ_TASK, 1);
 	rt_startup_irq(PARPORT_IRQ);
 	rt_enable_irq(PARPORT_IRQ);
@@ -178,7 +182,7 @@ static void *timer_handler(void *args)
 	rt_make_soft_real_time();
 	rt_task_delete(handler);
 	end_handler = 0;
-	//	printf("cleaned up handler nicely\n");
+	//	fprintf(stderr,"cleaned up handler nicely\n");
 	return 0;
 }
 
@@ -221,7 +225,7 @@ int init_msgs()
     i++;
 
   if( i> 0 ) {
-    //printf( "acq removed %d messages from the message queue\n", i );
+    // fprintf(stderr, "acq removed %d messages from the message queue\n", i );
   }
 
   return msgq_id;
@@ -237,7 +241,7 @@ int init_shm()
   data_shm_id = shmget( DATA_SHM_KEY, sizeof( struct data_shm_t ),0);
 
   if (data_shm_id < 0 ) perror("acq: error getting data shm");
-  printf("acq: data_shm_id: %i\n",data_shm_id);
+  fprintf(stderr,"acq: data_shm_id: %i\n",data_shm_id);
 
   prog_shm_id = shmget( PROG_SHM_KEY, sizeof( struct prog_shm_t ), IPC_CREAT|IPC_EXCL|0660); // fails if it already existed
   if (prog_shm_id  < 0) {  // call failed for some reason
@@ -247,12 +251,12 @@ int init_shm()
   else{
     shmctl(prog_shm_id,SHM_LOCK,NULL);
  }
-    printf("data_shm_id: %i, prog_shm_id: %i\n",data_shm_id,prog_shm_id);
+    fprintf(stderr,"data_shm_id: %i, prog_shm_id: %i\n",data_shm_id,prog_shm_id);
 
 
   if( data_shm_id < 0 || prog_shm_id < 0 ) {
-    printf( "acq: Error getting shared memory segments\n" );
-    printf("about to call tell_xnmr_fail\n");
+    fprintf(stderr, "acq: Error getting shared memory segments\n" );
+    fprintf(stderr,"about to call tell_xnmr_fail\n");
     tell_xnmr_fail();
     shut_down();
   }
@@ -271,29 +275,29 @@ int init_shm()
   }
 
   if (existed == 0){ // we just created prog_shm
-    printf("acq: created prog_shm copying %s into version\n",PPROG_VERSION);
+    fprintf(stderr,"acq: created prog_shm copying %s into version\n",PPROG_VERSION);
     strncpy(prog_shm->version,PPROG_VERSION,VERSION_LEN);
   }
   else{
-    printf("acq: found %s in prog_shm version\n",prog_shm->version);
+    fprintf(stderr,"acq: found %s in prog_shm version\n",prog_shm->version);
     if (strcmp(prog_shm->version,PPROG_VERSION) != 0){
-      printf("acq: PPROG_VERSION mismatch\n");
+      fprintf(stderr,"acq: PPROG_VERSION mismatch\n");
       tell_xnmr_fail();
       shut_down();
     }
   }
 
-  printf("acq: found %s in data_shm version\n",XNMR_ACQ_VERSION);
+  fprintf(stderr,"acq: found %s in data_shm version\n",XNMR_ACQ_VERSION);
   if (strcmp(data_shm->version,XNMR_ACQ_VERSION) != 0){
-    printf("acq: XNMR_ACQ_VERSION mismatch\n");
-    printf("data_shm says %s, I say: %s\n",data_shm->version,XNMR_ACQ_VERSION);
+    fprintf(stderr,"acq: XNMR_ACQ_VERSION mismatch\n");
+    fprintf(stderr,"data_shm says %s, I say: %s\n",data_shm->version,XNMR_ACQ_VERSION);
     tell_xnmr_fail();
     shut_down();
   }
   
 
   if( data_shm->acq_pid > 0 ) {
-    printf( "acq is already running\n" );
+    fprintf(stderr, "acq is already running\n" );
     tell_xnmr_fail();
     exit(1);
   }
@@ -307,7 +311,7 @@ int init_shm()
       perror("acq: setrlimit");
     }
     else{ // only do the memlock if we were able to set our limit.
-      //      printf("doing the mlockall\n");
+      //      fprintf(stderr,"doing the mlockall\n");
       if (mlockall( MCL_CURRENT |MCL_FUTURE ) !=0 )
 	perror("mlockall");
     }
@@ -326,7 +330,7 @@ int send_sig_ui( char sig )
   data_shm->acq_sig_ui_meaning = sig;
 
   if( pid > 0 ){
-    //    printf("in acq, sending a signal to Xnmr on pid %i\n",pid);
+    //    fprintf(stderr,"in acq, sending a signal to Xnmr on pid %i\n",pid);
     kill( pid, SIG_UI_ACQ );
     return 0;
   }
@@ -338,7 +342,7 @@ void ui_signal_handler()
     
 {
   struct msgbuf message;
-  //  printf( "acq: ui_signal_handler invoked\n" );
+  //  fprintf(stderr, "acq: ui_signal_handler invoked\n" );
 
 #ifdef RTAI_INTERRUPT
   sig_rec = 1;
@@ -347,28 +351,28 @@ void ui_signal_handler()
   switch( data_shm->ui_sig_acq_meaning ) {
     
   case ACQ_START:
-    //    printf( "acq received signal ACQ_START\n" );
+    //    fprintf(stderr, "acq received signal ACQ_START\n" );
     data_shm->ui_sig_acq_meaning = NO_SIGNAL;
     if( running == 0) 
       run();
     else{
-      printf( "acq: can't start, already running\n" );
+      fprintf(stderr, "acq: can't start, already running\n" );
       send_sig_ui( PPROG_ALREADY_RUNNING);
     }    
     break;
 
   case ACQ_STOP:
-    //    printf( "acq received signal ACQ_STOP\n" );
+    //    fprintf(stderr, "acq received signal ACQ_STOP\n" );
     data_shm->ui_sig_acq_meaning = NO_SIGNAL;
     //    data_shm->mode = NO_MODE;  //this prevents last accumulation - don't do it
     done = NICE_DONE;
     break;
 
   case ACQ_KILL:
-    //    printf("acq: got kill signal, running is: %i\n",running);
-    //    printf("msg_wait_flag: %i\n",msg_wait_flag);
+    //    fprintf(stderr,"acq: got kill signal, running is: %i\n",running);
+    //    fprintf(stderr,"msg_wait_flag: %i\n",msg_wait_flag);
     ph_clear_EPP_port(); // stop the hardware immediately, if its allocated
-    // printf("cleared EPP port\n");
+    // fprintf(stderr,"cleared EPP port\n");
     data_shm->ui_sig_acq_meaning = NO_SIGNAL; 
     //    data_shm->mode = NO_MODE; // xnmr_ipc does the rest of these.
     done = KILL_DONE;
@@ -386,7 +390,7 @@ void ui_signal_handler()
 
     break;
   }
-  //  printf("returning from acq's ui sig handler\n");
+  //  fprintf(stderr,"returning from acq's ui sig handler\n");
   return;
 }
 
@@ -397,7 +401,7 @@ int init_signals()
   struct sigaction sa2;
 
 
-  //  printf("in acq init_signals\n");
+  //  fprintf(stderr,"in acq init_signals\n");
 
 
 
@@ -435,16 +439,16 @@ int wait_for_pprog_msg(  )
   int result;
 
 
-  //  printf( "acq: retrieving message\n" );
+  //  fprintf(stderr, "acq: retrieving message\n" );
   msg_wait_flag = 1;
   result = msgrcv ( msgq_id, &message, 1, P_PROGRAM_READY, MSG_NOERROR );
   msg_wait_flag = 0;
 
   /*   if(   prog_shm->prog_ready != READY)
-       printf("acq: got a message, but shm doesn't say ready\n");;  */
+       fprintf(stderr,"acq: got a message, but shm doesn't say ready\n");;  */
      
   if( result<0 )
-    printf( "Acq received a bad message\n" );
+    fprintf(stderr, "Acq received a bad message\n" );
 
   //Now that we have received a real message, stop the timeout timer and check to see what this signal is
 
@@ -458,10 +462,10 @@ int wait_for_pprog_msg(  )
     case P_PROGRAM_INTERNAL_TIMEOUT:
     case P_PROGRAM_RECOMPILE:
       errcode = message.mtext[0];
-      //      printf("acq: got message that pulse program had an error\n");
+      //      fprintf(stderr,"acq: got message that pulse program had an error\n");
       break;
     default:
-      printf( "acq received an unusual message %ld\n", message.mtype );
+      fprintf(stderr, "acq received an unusual message %ld\n", message.mtype );
       break;
     }
 
@@ -499,7 +503,7 @@ int start_pprog()
     euid=geteuid();
     rgid=getgid();
     egid=getegid();
-    //        printf("real: %i, eff: %i\n, setting effective uid to %i\n",ruid,euid,ruid);
+    //        fprintf(stderr,"real: %i, eff: %i\n, setting effective uid to %i\n",ruid,euid,ruid);
 
     //    seteuid(ruid);  // these two will give up root privileges.
     //    setegid(rgid);
@@ -517,12 +521,12 @@ int start_pprog()
 
     if (fs != NULL){
       fclose(fs);
-      //      printf("launching pprog using: %s\n",s);
+      //      fprintf(stderr,"launching pprog using: %s\n",s);
       execl( s, NULL );
     }
 
     // shouldn't return from here
-    printf( "failed to launch pulse program\n" );
+    fprintf(stderr, "failed to launch pulse program\n" );
 
 
   
@@ -538,7 +542,7 @@ int start_pprog()
     exit(1);
   }
 
-  //printf( "acq: starting pulse program: %s on pid: %d\n", data_shm->pulse_exec_path, (int)pid );
+  //fprintf(stderr, "acq: starting pulse program: %s on pid: %d\n", data_shm->pulse_exec_path, (int)pid );
 
   return (int) pid;
 }
@@ -550,7 +554,7 @@ int accumulate_data( int* buffer )
 
 
   if (data_shm->npts > MAX_DATA_POINTS){
-    printf("acq: accumulate_data, npts > MAX_DATA_POINTS, should NEVER HAPPEN\n");
+    fprintf(stderr,"acq: accumulate_data, npts > MAX_DATA_POINTS, should NEVER HAPPEN\n");
     data_shm->npts = MAX_DATA_POINTS;
   }
   //data does not accumulate in repeat mode
@@ -588,16 +592,47 @@ int accumulate_data( int* buffer )
 
     case PHASE270:
       for( i=0; i<data_shm->npts*2; i += 2 ) {
-	data_shm->data_image[ i ] += buffer[i+1]; 
-	data_shm->data_image[ i+1 ] -= buffer[i];
+	data_shm->data_image[ i ] += buffer[ i+1 ]; 
+	data_shm->data_image[ i+1 ] -= buffer[ i ];
       }
       return 0;
       break;
+    case PHASE_POWER: // for spin noise expt - accumulates power spectrum
+      {
+      // first, copy data to floats, then do FT
+	float *tdata,spare,scale = 2.0;
+	tdata = g_malloc( data_shm->npts*2 * sizeof(float));
+	for ( i = 0; i < data_shm->npts*2 ; i += 1 )
+	  tdata[i] = (float) buffer[i];
 
-      default:
+	four1(tdata-1,data_shm->npts,-1);
+
+	// unscramble the FT'd data
+	for( i = 0 ; i < data_shm->npts ; i++ ){
+	  spare = tdata[i]/scale;
+	  tdata[i] = tdata[i+data_shm->npts]/scale;
+	  tdata[i+data_shm->npts] = spare;
+	}
+	     
+	
+	// then add powers:
+	for(i = 0; i < data_shm->npts*2; i += 2){
+	  data_shm->data_image[i] += tdata[i]*tdata[i]+tdata[i+1]*tdata[i+1];
+
+	  // for testing:
+	  //data_shm->data_image[i] += tdata[i];
+	  //data_shm->data_image[i+1] += tdata[i+1];
+
+	}
+	g_free(tdata);
+
+      return 0;
+      break;
+      }
+    default:
 	break;
     }
-  printf( "acq: invalid acquisition phase: %i\n",accum_phase );
+  fprintf(stderr, "acq: invalid acquisition phase: %i\n",accum_phase );
   return -1;
 }
 
@@ -607,28 +642,28 @@ void post_pprog_timeout()
   int pid;
   pid = data_shm->pprog_pid;
   
-  //  printf("in post_pprog_timeout, pid: %i\n",data_shm->pprog_pid);
+  //  fprintf(stderr,"in post_pprog_timeout, pid: %i\n",data_shm->pprog_pid);
   if( pid>0 ) {
-    //    printf( "acq: terminating pulse program\n" );
+    //    fprintf(stderr, "acq: terminating pulse program\n" );
     kill( pid, SIGKILL ); // if the pulse program was dead, our handler
     // was catching the SIGTERM and running shut_down ??
-    //    printf("about to waitpid\n");
+    //    fprintf(stderr,"about to waitpid\n");
     waitpid(pid,NULL,0);
-    //    printf("returned from waitpid\n");
+    //    fprintf(stderr,"returned from waitpid\n");
     data_shm->pprog_pid = -1; //carl added
     
   }
 
   done = ERROR_DONE;
-  //  printf("post_pprog_timeout: set done to error_done\n");
+  //  fprintf(stderr,"post_pprog_timeout: set done to error_done\n");
 
-  //  printf( "acq: Error, invalid pulse program or timeout occurred\n" );
+  //  fprintf(stderr, "acq: Error, invalid pulse program or timeout occurred\n" );
   if (errcode == 0){
-    //    printf("in post_pprog timeout with errcode 0\n");
+    //    fprintf(stderr,"in post_pprog timeout with errcode 0\n");
     send_sig_ui( P_PROGRAM_ERROR );
   }
   else{
-    //    printf("in post_pprog_timeout, sending errcode: %i\n",errcode);
+    //    fprintf(stderr,"in post_pprog_timeout, sending errcode: %i\n",errcode);
     send_sig_ui( errcode );
   }
   errcode = 0;
@@ -638,19 +673,19 @@ void pprog_ready_timeout()
 
 {
   struct msgbuf message;
-  //  printf("acq: in pprog ready timeout, pid: %i\n",data_shm->pprog_pid);
+  //  fprintf(stderr,"acq: in pprog ready timeout, pid: %i\n",data_shm->pprog_pid);
   errcode = P_PROGRAM_ACQ_TIMEOUT;
 
   /*  don't do this here.  post_pprog_ready_timeout will set done = ERROR_DONE
   pid = data_shm->pprog_pid;
   if( pid>0 ) {
-//      printf( "acq: terminating pulse program\n" );
+//      fprintf(stderr, "acq: terminating pulse program\n" );
       kill( pid, SIGTERM );
       data_shm->pprog_pid=0;  
 
   }
 
-//   printf( "acq: Error, invalid pulse program or timeout occurred\n" );
+//   fprintf(stderr, "acq: Error, invalid pulse program or timeout occurred\n" );
    send_sig_ui( P_PROGRAM_ERROR );
   */
 
@@ -700,7 +735,7 @@ int run()
 #endif 
 
   if (block_buffer != NULL){
-    printf("acq: on enter, block_buffer was not NULL\n");
+    fprintf(stderr,"acq: on enter, block_buffer was not NULL\n");
     g_free(block_buffer);
     block_buffer = NULL;
   }
@@ -724,14 +759,14 @@ int run()
 
 
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) < 0 ) {
-    //    printf("acq: error in dir. creation\n");
+    //    fprintf(stderr,"acq: error in dir. creation\n");
     if( errno != EEXIST ) {
       perror( "acq couldn't make dir" );
       cant_open_file();
       return 0;
     }
     else
-      //      printf( "aq says directory %s already exists\n",path );
+      //      fprintf(stderr, "aq says directory %s already exists\n",path );
       errno = 0;
   }
 
@@ -745,7 +780,7 @@ int run()
     path_strcpy( fileN2, path);
     path_strcat( fileN2, "params" );
 
-    //printf( "creating parameter file: %s\n", fileN2 );
+    //fprintf(stderr, "creating parameter file: %s\n", fileN2 );
     if (write_param_file(fileN2) == -1) return 0;
 
 
@@ -781,7 +816,7 @@ int run()
   result = setegid(egid);
   if (result != 0) perror("acq:");
   
-  //printf( "starting pprog\n" );
+  //fprintf(stderr, "starting pprog\n" );
   
   data_shm->acqn_2d = 0 ;
   data_shm->acqn = 0;
@@ -791,12 +826,12 @@ int run()
   // open the parallel port interrupt device:
 #ifdef OLD_PORT_INTERRUPT
   int_fd = open( "/dev/PP_irq0", O_RDONLY );
-  printf("on open of /dev/PP_irq0, got fd: %i\n",int_fd);
+  fprintf(stderr,"on open of /dev/PP_irq0, got fd: %i\n",int_fd);
 #endif
 
 #ifndef NOHARDWARE
   i = iopl(3);
-  //  printf("just called iopl\n");
+  //  fprintf(stderr,"just called iopl\n");
   if (i != 0 ){
     perror("error on iopl");
     send_sig_ui(PERMISSION_ERROR);
@@ -813,7 +848,7 @@ int run()
   }
 else{
     freq = 20e6;
-    printf("acq: no sf1 found, using receiver freq of: %f\n",freq);
+    fprintf(stderr,"acq: no sf1 found, using receiver freq of: %f\n",freq);
   }
   */
 
@@ -822,7 +857,7 @@ else{
 
   result = sfetch_int(data_shm->parameters,"block_size",&block_size,0);
   if (result == 0){
-    //printf("acq: got block_size: %i\n",block_size);
+    //fprintf(stderr,"acq: got block_size: %i\n",block_size);
   }
   else
     block_size = 0;
@@ -832,7 +867,7 @@ else{
   if (block_size > 0){
     block_buffer = g_malloc(data_shm->num_acqs_2d * data_shm->npts * 2 * sizeof ( long long));
     if (block_buffer == NULL){
-      printf("acq: malloc for block_buff failed\n");
+      fprintf(stderr,"acq: malloc for block_buff failed\n");
       done = ERROR_DONE;
     }
     else {
@@ -855,17 +890,17 @@ else{
   result = sfetch_int(data_shm->parameters,"dummy_scans",&dummy_scans,0);
   if (result != 0 ) dummy_scans = 0;
   num_dummy = dummy_scans;
-  //  else printf("acq: got %i dummy_scans\n",dummy_scans);
+  //  else fprintf(stderr,"acq: got %i dummy_scans\n",dummy_scans);
 
 
 
   result = sfetch_int( data_shm->parameters,"dgain",&dgain,0);
   if (result != 0) dgain=0;
-  //  printf("acq: got dgain: %i\n",dgain);
+  //  fprintf(stderr,"acq: got dgain: %i\n",dgain);
 
   result = sfetch_double( data_shm->parameters,"dsp_ph",&dsp_ph,0);
   if (result != 0) dsp_ph=0.;
-  //  printf("acq: got dsp_ph: %f\n",dsp_ph);
+  //  fprintf(stderr,"acq: got dsp_ph: %f\n",dsp_ph);
 
 
   //  ok, set up the DSP
@@ -876,7 +911,7 @@ else{
   force_setup = 0;
   
   if (data_shm->reset_dsp_and_synth == 1){
-    //    printf("in acq, got reset_dsp_and_synth flag, resetting\n");
+    //    fprintf(stderr,"in acq, got reset_dsp_and_synth flag, resetting\n");
     force_setup = 1;
 
     data_shm->reset_dsp_and_synth = 0;
@@ -897,17 +932,17 @@ else{
 }
 
   if ( i == -1 ) {
-    printf("acq: Couldn't find filter file\n");
+    fprintf(stderr,"acq: Couldn't find filter file\n");
     done = ERROR_DONE;
     send_sig_ui( DSP_FILE_ERROR );
   }
   else if (i == -2){ // some other error?
-    printf("acq: error initializing dsp board\n");
+    fprintf(stderr,"acq: error initializing dsp board\n");
     done = ERROR_DONE;
     send_sig_ui(DSP_INIT_ERROR);
   }
   else if (i == -3){
-    printf("acq: setup_dsp: dgain too big\n");
+    fprintf(stderr,"acq: setup_dsp: dgain too big\n");
     done = ERROR_DONE;
     send_sig_ui(DSP_DGAIN_OVERFLOW);
   }
@@ -918,11 +953,11 @@ else{
 #ifndef NOHARDWARE
     i = init_pulse_hardware( PULSE_PORT );
 #else
-    printf("would have init_pulse_hardware\n");
+    fprintf(stderr,"would have init_pulse_hardware\n");
     i = 0;
 #endif
     if( i < 0 ) {
-      printf( "acq: Error Initializing pulse programmer hardware\n" );
+      fprintf(stderr, "acq: Error Initializing pulse programmer hardware\n" );
       done = ERROR_DONE;
       send_sig_ui( PULSE_PP_ERROR );
     }
@@ -951,7 +986,7 @@ else{
     extra_mult = dummy_scans;
   else
     extra_mult = dummy_scans * ((data_shm->num_acqs + block_size-1) / block_size);
-  //  printf("extra_mult = %i, dummy_scans is: %i\n",extra_mult,dummy_scans);
+  //  fprintf(stderr,"extra_mult = %i, dummy_scans is: %i\n",extra_mult,dummy_scans);
   
   for (i=0;i< data_shm->num_acqs_2d && done== NOT_DONE;i++){
     int j;
@@ -962,24 +997,24 @@ else{
       time.it_interval.tv_usec = 0;
       time.it_value.tv_sec = 5;
       time.it_value.tv_usec = 0;
-      //      printf("about to call signal for SIGALRM\n");
+      //      fprintf(stderr,"about to call signal for SIGALRM\n");
       signal( SIGALRM, pprog_ready_timeout ); 
       setitimer( ITIMER_REAL, &time, &old );
       
-      //      printf("starting to wait for pprog in pre-calc, done = %i\n",done);
+      //      fprintf(stderr,"starting to wait for pprog in pre-calc, done = %i\n",done);
       if( wait_for_pprog_msg() <0)  //waits till a message comes back from pprog.
 	post_pprog_timeout();
       
       if (done < 0){  //this may seem a little weird - reset the timer only if we're done.  Otherwise, we're
 	//about to set it again immediately anyway.
 	//reset the timer
-	//	printf("clearing timer after startup failure\n");
+	//	fprintf(stderr,"clearing timer after startup failure\n");
 	time.it_interval.tv_sec = 0;
 	time.it_interval.tv_usec = 0;
 	time.it_value.tv_sec = 0;
 	time.it_value.tv_usec = 0;
 	setitimer( ITIMER_REAL, &time, &old );
-	//	printf("cleared timer after startup failure\n");
+	//	fprintf(stderr,"cleared timer after startup failure\n");
 
       }
 
@@ -1001,8 +1036,8 @@ else{
 	    data_shm->time_remaining += pp_time()* dummy_scans;
 	  }
 	}
-	else printf("in acq, calc'ing pp length, got j = %i\n",j);
-	//printf("after calc'ing: %d, total time is: %f\n",data_shm->acqn_2d,data_shm->time_remaining/20e6);
+	else fprintf(stderr,"in acq, calc'ing pp length, got j = %i\n",j);
+	//fprintf(stderr,"after calc'ing: %d, total time is: %f\n",data_shm->acqn_2d,data_shm->time_remaining/20e6);
 	
 	if (j == 1){ // increment the 2d loop
 	  data_shm->acqn_2d += 1;
@@ -1017,14 +1052,14 @@ else{
 
       message.mtype = P_PROGRAM_CALC;
       message.mtext[0] = P_PROGRAM_CALC;
-      //      printf("acq: about to send message to calc next prog\n");
+      //      fprintf(stderr,"acq: about to send message to calc next prog\n");
       msgsnd ( msgq_id, &message, 1, 0 );
-      //    printf("acq: sent message to calc next prog\n");
+      //    fprintf(stderr,"acq: sent message to calc next prog\n");
       }
     }
   }
   
-  //  printf("Acq: pre-calc complete\n");
+  //  fprintf(stderr,"Acq: pre-calc complete\n");
 
   // this is done above in the pre-calc
   //  data_shm->acqn_2d = 0 ;
@@ -1036,13 +1071,13 @@ else{
    */
 
 
-  // printf("going into main loop, block_size: %i\n",block_size);
+  // fprintf(stderr,"going into main loop, block_size: %i\n",block_size);
   prev_ppo_time = 0;
 
 
   if (prog_shm->is_noisy == 0){
     while( done == NOT_DONE && end_2d_loop == 0 ) {
-      //        printf("inside acq's main while loop, acqn_2d: %i of %i\n",data_shm->acqn_2d,
+      //        fprintf(stderr,"inside acq's main while loop, acqn_2d: %i of %i\n",data_shm->acqn_2d,
       //   data_shm->num_acqs_2d);
       
       //Reset the shared memory for a new record in 2d dimension
@@ -1055,7 +1090,7 @@ else{
       // this is the one-d loop:
       
       while( done == NOT_DONE && ( end_1d_loop == 0 || data_shm->mode == REPEAT_MODE )  ) {
-	//            printf("inside acq's 1d while loop\n");
+	//            fprintf(stderr,"inside acq's 1d while loop\n");
 	
 	//we sent out for start already
 	
@@ -1066,7 +1101,7 @@ else{
 	  time.it_interval.tv_usec = 0;
 	  time.it_value.tv_sec = 5;
 	  time.it_value.tv_usec = 0;
-	  //	printf("about to call signal for SIGALRM\n");
+	  //	fprintf(stderr,"about to call signal for SIGALRM\n");
 	  signal( SIGALRM, pprog_ready_timeout ); 
 	  setitimer( ITIMER_REAL, &time, &old );
 	  
@@ -1074,10 +1109,10 @@ else{
 	}
 		
 	if( done >= 0 ) {
-	//	printf("starting to wait for pprog in real-calc\n");
+	//	fprintf(stderr,"starting to wait for pprog in real-calc\n");
 	  if( wait_for_pprog_msg() <0) 
 	    post_pprog_timeout(); //waits till a message comes back from pprog.
-	  //      printf("acq: came back from waiting for msg\n");
+	  //      fprintf(stderr,"acq: came back from waiting for msg\n");
 	}
 	accum_phase = prog_shm->phase;
 	
@@ -1093,7 +1128,7 @@ else{
 	setitimer( ITIMER_REAL, &time, &old );
 	
 	if( prog_shm->prog_ready == NOT_READY )
-	  printf( "acq: warning: pulse program not ready!\n" );
+	  fprintf(stderr, "acq: warning: pulse program not ready!\n" );
 	
 	
 	//  ok, if this is the first time through, then apparently we heard from the pprog ok, now crank up its priority:
@@ -1108,21 +1143,21 @@ else{
 	    priority = sched_get_priority_max(SCHED_FIFO);
 	    sp.sched_priority = priority/2 - 2;  // set it to two less than acq's - shims goes in the middle
 	    result = sched_setscheduler(data_shm->pprog_pid,SCHED_FIFO,&sp); // comment out to not
-	    //	printf("in acq, set priority of: %i for pprog\n",priority/2);
+	    //	fprintf(stderr,"in acq, set priority of: %i for pprog\n",priority/2);
 	    
 	    if( result!= 0) 
 	      perror("acq: init_sched for pprog");
 	    
 	    result = sched_getscheduler(data_shm->pprog_pid);
-	    if (result != SCHED_FIFO) printf("acq: scheduler of pprog is not SCHED_FIFO: %i\n",result);
+	    if (result != SCHED_FIFO) fprintf(stderr,"acq: scheduler of pprog is not SCHED_FIFO: %i\n",result);
 #endif
 	    data_shm->force_synth = 0;
 
 #ifdef RTAI_INTERRUPT
 	    thread = rt_thread_create(timer_handler, NULL, 10000);  // create thread
-	    if (thread == 0) printf("creating timer_handler thread, got null\n");
+	    if (thread == 0) fprintf(stderr,"creating timer_handler thread, got null\n");
 	    usleep(100); // wait for thread to go real time.
-	    //	    printf("done creating rtai handler thread\n");
+	    //	    fprintf(stderr,"done creating rtai handler thread\n");
 
 #endif
 
@@ -1133,13 +1168,13 @@ else{
 	// check to see if there was a pulse_program event_error:
 	if (done >= 0){
 	  if (prog_shm->event_error == 1){
-	    printf("acq: got pulse_program event_error\n");
+	    fprintf(stderr,"acq: got pulse_program event_error\n");
 	    done = ERROR_DONE;
 	    send_sig_ui(EVENT_ERROR);
 	  }      
 	  
 	  if (prog_shm->got_ppo == 0){
-	    printf("acq: no ppo found\n");
+	    fprintf(stderr,"acq: no ppo found\n");
 	    done = ERROR_DONE;
 	    send_sig_ui(PPO_ERROR);
 	  }      
@@ -1148,14 +1183,14 @@ else{
 	
 	//download pulse program to pulse programmer hardware
 	if( done >= 0 ) {
-	  //	printf("acq: about to send to hardware\n");
+	  //	fprintf(stderr,"acq: about to send to hardware\n");
 #ifndef NOHARDWARE
 	  i = pulse_hardware_send( prog_shm );
 #else
 	  i=0;
 #endif
 	  if( i < 0 ) {
-	    printf( "acq: Error downloading pulse program to hardware\n" );
+	    fprintf(stderr, "acq: Error downloading pulse program to hardware\n" );
 	    done = ERROR_DONE;
 	    send_sig_ui( PULSE_PP_ERROR );
 	  }
@@ -1176,7 +1211,7 @@ else{
 	// last program is now sent to hardware, fix up variables to go calculate the next one.
 #ifdef NOHARDWARE
 	for (i=0;i<data_shm->npts*2;i++) buffer[i]=0;
-	i = data_shm->acqn+data_shm->acqn_2d*data_shm->num_acqs;
+	i = data_shm->acqn + data_shm->acqn_2d*data_shm->num_acqs;
 	if (i >= data_shm->npts) i = i% data_shm->npts;
 	buffer[i*2] = data_shm->acqn+data_shm->acqn_2d*data_shm->num_acqs+4;
 #endif
@@ -1190,7 +1225,7 @@ else{
 	}
 	
 	
-	//      printf("acq:just incremented acqn: %li\n",data_shm->acqn);
+	//      fprintf(stderr,"acq:just incremented acqn: %li\n",data_shm->acqn);
 	
 	// next three lines to avoid executing % with block_size = 0
 	i = 1;
@@ -1225,32 +1260,32 @@ else{
 	
       // go calculate the next pulse program.
 	if (done >=0 && (data_shm->acqn_2d < data_shm->num_acqs_2d || data_shm->mode == REPEAT_MODE )){
-	  //		printf( "acq sending message P_PROGRAM_CALC with acqn, %li acq2d %i\n" ,
+	  //		fprintf(stderr, "acq sending message P_PROGRAM_CALC with acqn, %li acq2d %i\n" ,
 	  //			data_shm->acqn,data_shm->acqn_2d);
 	message.mtype = P_PROGRAM_CALC;
 	message.mtext[0] = P_PROGRAM_CALC;
-	//	printf("acq: about to send message to calc next prog\n");
+	//	fprintf(stderr,"acq: about to send message to calc next prog\n");
 	msgsnd ( msgq_id, &message, 1, 0 );
-	//	printf("acq: sent message to calc next prog\n");
+	//	fprintf(stderr,"acq: sent message to calc next prog\n");
 	}
 	
 
 	  
 	  //start pulse programmer
 	  if( done >= 0 ) {
-	    //	printf( "acq: starting pulse programmer hardware\n" );
+	    //	fprintf(stderr, "acq: starting pulse programmer hardware\n" );
 #ifndef NOHARDWARE
 	    
 	    
 	    i = pulse_hardware_start(0);
 #else
 	    i=0;
-	    //	    printf("didn't start pulse programmer\n");
+	    //	    fprintf(stderr,"didn't start pulse programmer\n");
 #endif
 	    
 	    
 	    if( i < 0 ) {
-	      printf( "acq: Error starting pulse program\n" );
+	      fprintf(stderr, "acq: Error starting pulse program\n" );
 	      done = ERROR_DONE;
 	      if (i == - (TTC_ERROR))
 		send_sig_ui (TTC_ERROR);
@@ -1264,40 +1299,40 @@ else{
 	  
 	  if( done >= 0 ) {
 #ifdef OLD_PORT_INTERRUPT
-	    printf( "acq: waiting for an interrupt\n" );
+	    fprintf(stderr, "acq: waiting for an interrupt\n" );
 	    while( read( int_fd, buffer, 1 ) <= 0 && done >=0)
 	      {
 		perror( "acq: PP_irq read broken" );
 		fflush(stdout);
 	      }
-	    printf( "acq: interrupt received\n" );
+	    fprintf(stderr, "acq: interrupt received\n" );
 #endif
 #ifdef RTAI_INTERRUPT
 	    do{
-	      //	      printf("about to wait for sem\n");
+	      //	      fprintf(stderr,"about to wait for sem\n");
 	      sig_rec = 0;
 	      rt_sem_wait(dspsem); // how to tell if this was real, or a signal - use sig_rec
 	      t2 = rt_get_cpu_time_ns();
 	      if (t2-t1 > 45000)
-		printf("interrupt delivered in %i ns\n",(int) (t2-t1));
+		fprintf(stderr,"interrupt delivered in %i ns\n",(int) (t2-t1));
 	      // ok, got the interrupt
-	      //	      	      printf("got sem\n");
+	      //	      	      fprintf(stderr,"got sem\n");
 	    } while((done >= 0) && (sig_rec == 1));
 		  
 #endif
 
 	  }
-	  //      if (done == ERROR_DONE) printf("acq woken from read to find ERROR_DONE\n");
+	  //      if (done == ERROR_DONE) fprintf(stderr,"acq woken from read to find ERROR_DONE\n");
 	  
 	  
 	  if( done >= 0 ) { // update time remaining, and read in data.
-	    //	  printf( "acq doing acquisition %u of dimension %u\n", data_shm->acqn, data_shm->acqn_2d );
+	    //	  fprintf(stderr, "acq doing acquisition %u of dimension %u\n", data_shm->acqn, data_shm->acqn_2d );
 	    
-	    //	printf("%f %f %f\n",current_total_time/20e6,current_ppo_time/20e6,prev_ppo_time/20e6);
+	    //	fprintf(stderr,"%f %f %f\n",current_total_time/20e6,current_ppo_time/20e6,prev_ppo_time/20e6);
 	    data_shm->time_remaining -= ( (long long) current_total_time - current_ppo_time + prev_ppo_time);
 	    prev_ppo_time = current_ppo_time;
 	    
-	    //	printf("time remaining: %f,\n",data_shm->time_remaining/20e6);
+	    //	fprintf(stderr,"time remaining: %f,\n",data_shm->time_remaining/20e6);
 #ifndef NOHARDWARE
 	    /*	{    
 	    // this was a performance checking gizmo to test port speed.
@@ -1313,16 +1348,16 @@ else{
 	      gettimeofday(&end_time,&tz);
 	      
 	      d_time=(end_time.tv_sec-start_time.tv_sec)*1e6+(end_time.tv_usec-start_time.tv_usec);
-	      printf("took: %f us to read in data from fifo\n",d_time); 
+	      fprintf(stderr,"took: %f us to read in data from fifo\n",d_time); 
 	      } */
 	  
 #else
 	    i= data_shm->npts*2;
-	    //	  printf("didn't read data from dsp\n");
+	    //	  fprintf(stderr,"didn't read data from dsp\n");
 #endif	
 	    
 	    if( i != data_shm->npts*2  ) {
-	      printf( "acq: Error reading data from FIFO\n" );
+	      fprintf(stderr, "acq: Error reading data from FIFO\n" );
 	      done = ERROR_DONE;
 	      send_sig_ui( FIFO_READ_ERROR );
 	    }
@@ -1330,19 +1365,19 @@ else{
 
 #ifndef NOHARDWARE
 	    if (memcmp(buffer,zeros,20*4) == 0){ // then darn, all we got back from the receiver are 0's.
-	      printf("acq: got first 10 points as all zeros\n");
+	      fprintf(stderr,"acq: got first 10 points as all zeros\n");
 	      // look the hard way
 	      for( i = 0 ; i < data_shm->npts*2 ; i++ )
 		if (buffer[i] != 0){
-		  printf("acq: in further zero checking, found pt: %i\n",i);
+		  fprintf(stderr,"acq: in further zero checking, found pt: %i\n",i);
 		  i = data_shm->npts*2+5;
 		}
 	      if (i != data_shm->npts*2+6 ){ 
 		// yes +6 because we added 5 above, then leaving the loop added one more!
-		printf("acq: at scan ct: %li, next acqn: %li, acqn2d: %i.  Got zeros from receiver\n",data_shm->ct,data_shm->acqn,data_shm->acqn_2d);
+		fprintf(stderr,"acq: at scan ct: %li, next acqn: %li, acqn2d: %i.  Got zeros from receiver\n",data_shm->ct,data_shm->acqn,data_shm->acqn_2d);
 		done = ERROR_DONE;
 		send_sig_ui(FIFO_ZERO_ERROR);
-		//	      printf("last successful scan was the one before this one\n");
+		//	      fprintf(stderr,"last successful scan was the one before this one\n");
 	      }
 	    }
 	    
@@ -1373,18 +1408,18 @@ else{
 	
 	//signal UI that new data is ready 
 	
-	//      printf("at end of 1d loop, done = %i, acqn: %li\n",done,data_shm->acqn);
+	//      fprintf(stderr,"at end of 1d loop, done = %i, acqn: %li\n",done,data_shm->acqn);
 	if( done >= 0 ) send_sig_ui( NEW_DATA_READY );
-	//      printf("coming up to end acq's 1d loop, just told ui, new data\n");
+	//      fprintf(stderr,"coming up to end acq's 1d loop, just told ui, new data\n");
 #ifndef OLD_PORT_INTERRUPT
 #ifndef RTAI_INTERRUPT
 	{	  
 	  if (end_2d_loop == 1 && end_1d_loop == 1)
 	    {
-	      printf("not sleeping\n");
+	      fprintf(stderr,"not sleeping\n");
 	    }
 	  else{
-	    //	      printf("in acq with no port interrupts, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
+	    //	      fprintf(stderr,"in acq with no port interrupts, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
 	    usleep( pp_time()/(CLOCK_SPEED/1000000));
 	  }
 	}
@@ -1393,7 +1428,7 @@ else{
 	
       
       } //End of 1d while loop
-      //      printf("just out of acq's 1d loop\n");
+      //      fprintf(stderr,"just out of acq's 1d loop\n");
       
       
       /*
@@ -1409,11 +1444,11 @@ else{
 	   block_buffer[data_shm->last_acqn_2d*data_shm->npts *2 +i] = data_shm->data_image[i];
 	
 	
-	//	printf( "acq appending file: %s\n", fileN );
+	//	fprintf(stderr, "acq appending file: %s\n", fileN );
 	
 	// need to change to fseek 
 	fstream = fopen( fileN, "r+" );
-	//      printf("seeking to: %i\n",data_shm->last_acqn_2d*data_shm->npts*2*sizeof(float));
+	//      fprintf(stderr,"seeking to: %i\n",data_shm->last_acqn_2d*data_shm->npts*2*sizeof(float));
 	fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
 	for( i=0; i<data_shm->npts*2; i++ ) {
 	  f = (float) data_shm->data_image[i];
@@ -1436,7 +1471,7 @@ else{
 	  block_size = 0;
 	}
 	while( done == NOT_DONE && end_2d_loop == 0 ) {
-	  //        printf("inside acq's main while loop, acqn_2d: %i of %i\n",data_shm->acqn_2d,
+	  //        fprintf(stderr,"inside acq's main while loop, acqn_2d: %i of %i\n",data_shm->acqn_2d,
 	  //   data_shm->num_acqs_2d);
       
 
@@ -1446,7 +1481,7 @@ else{
 #ifndef NOHARDWARE
 	  ph_clear_EPP_port(); // yes - every block
 #else
-	  printf("would have cleared pulse hardware\n");
+	  fprintf(stderr,"would have cleared pulse hardware\n");
 #endif
 	
 
@@ -1466,17 +1501,17 @@ else{
 	    time.it_interval.tv_usec = 0;
 	    time.it_value.tv_sec = 5;
 	    time.it_value.tv_usec = 0;
-	    //	printf("about to call signal for SIGALRM\n");
+	    //	fprintf(stderr,"about to call signal for SIGALRM\n");
 	    signal( SIGALRM, pprog_ready_timeout ); 
 	    setitimer( ITIMER_REAL, &time, &old );
 	  }
 	
 	
 	  if( done >= 0 ) {
-	    //	printf("starting to wait for pprog in real-calc\n");
+	    //	fprintf(stderr,"starting to wait for pprog in real-calc\n");
 	    if( wait_for_pprog_msg() <0) 
 	      post_pprog_timeout(); //waits till a message comes back from pprog.
-	    //      printf("acq: came back from waiting for msg\n");
+	    //      fprintf(stderr,"acq: came back from waiting for msg\n");
 	  }
 	  accum_phase = prog_shm->phase;
 	  
@@ -1492,7 +1527,7 @@ else{
 	  setitimer( ITIMER_REAL, &time, &old );
 	  
 	  if( prog_shm->prog_ready == NOT_READY )
-	    printf( "acq: warning: pulse program not ready!\n" );
+	    fprintf(stderr, "acq: warning: pulse program not ready!\n" );
 
 	  //  ok, if this is the first time through, then apparently we heard from the pprog ok, now crank up its priority:
 	  if (first_time == 1 && done >= 0 )
@@ -1506,13 +1541,13 @@ else{
 	      priority = sched_get_priority_max(SCHED_FIFO);
 	      sp.sched_priority = priority/2 - 2;  // set it to two less than acq's - shims goes in the middle
 	      result = sched_setscheduler(data_shm->pprog_pid,SCHED_FIFO,&sp); // comment out to not
-	      //	printf("in acq, set priority of: %i for pprog\n",priority/2);
+	      //	fprintf(stderr,"in acq, set priority of: %i for pprog\n",priority/2);
 	      
 	      if( result!= 0) 
 		perror("acq: init_sched for pprog");
 	      
 	      result = sched_getscheduler(data_shm->pprog_pid);
-	      if (result != SCHED_FIFO) printf("acq: scheduler of pprog is not SCHED_FIFO: %i\n",result);
+	      if (result != SCHED_FIFO) fprintf(stderr,"acq: scheduler of pprog is not SCHED_FIFO: %i\n",result);
 #endif
 	      data_shm->force_synth = 0;
 	      
@@ -1523,13 +1558,13 @@ else{
 	  // check to see if there was a pulse_program event_error:
 	  if (done >= 0){
 	    if (prog_shm->event_error == 1){
-	      printf("acq: got pulse_program event_error\n");
+	      fprintf(stderr,"acq: got pulse_program event_error\n");
 	      done = ERROR_DONE;
 	      send_sig_ui(EVENT_ERROR);
 	    }      
 	    
 	    if (prog_shm->got_ppo == 0){
-	      printf("acq: no ppo found\n");
+	      fprintf(stderr,"acq: no ppo found\n");
 	      done = ERROR_DONE;
 	      send_sig_ui(PPO_ERROR);
 	    }      
@@ -1538,7 +1573,7 @@ else{
 	  
 	  //download pulse program to pulse programmer hardware
 	  if( done >= 0 ) {
-	    //	printf("acq: about to send to hardware\n");
+	    //	fprintf(stderr,"acq: about to send to hardware\n");
 	    old_start_pos = prog_shm->noisy_start_pos; // save this for later!
 #ifndef NOHARDWARE
 	    i = pulse_hardware_send( prog_shm );
@@ -1546,7 +1581,7 @@ else{
 	    i=0;
 #endif
 	    if( i < 0 ) {
-	      printf( "acq: Error downloading pulse program to hardware\n" );
+	      fprintf(stderr, "acq: Error downloading pulse program to hardware\n" );
 	      done = ERROR_DONE;
 	      send_sig_ui( PULSE_PP_ERROR );
 	    }
@@ -1586,12 +1621,12 @@ else{
 
 
 	  if (done >=0 && (data_shm->acqn_2d < data_shm->num_acqs_2d )){
-	    //		printf( "acq sending message P_PROGRAM_CALC with acqn, %li acq2d %i\n" ,
+	    //		fprintf(stderr, "acq sending message P_PROGRAM_CALC with acqn, %li acq2d %i\n" ,
 	    message.mtype = P_PROGRAM_CALC;
 	    message.mtext[0] = P_PROGRAM_CALC;
-	    //	printf("acq: about to send message to calc next prog\n");
+	    //	fprintf(stderr,"acq: about to send message to calc next prog\n");
 	    msgsnd ( msgq_id, &message, 1, 0 );
-	    //	printf("acq: sent message to calc next prog\n");
+	    //	fprintf(stderr,"acq: sent message to calc next prog\n");
 	  }
 
 
@@ -1612,17 +1647,17 @@ else{
 	  
 	  //start pulse programmer
 	  if( done >= 0 ) {
-	    //	printf( "acq: starting pulse programmer hardware\n" );
+	    //	fprintf(stderr, "acq: starting pulse programmer hardware\n" );
 #ifndef NOHARDWARE
 	    
 	    i = pulse_hardware_start(0); 
 #else
 	    i=0;
-	    printf("didn't start pulse programmer\n");
+	    fprintf(stderr,"didn't start pulse programmer\n");
 #endif
 	    
 	    if( i < 0 ) {
-	      printf( "acq: Error starting pulse program\n" );
+	      fprintf(stderr, "acq: Error starting pulse program\n" );
 	      done = ERROR_DONE;
 	      if (i == - (TTC_ERROR))
 		send_sig_ui (TTC_ERROR);
@@ -1637,7 +1672,7 @@ else{
 	  // this is the one-d loop:
 
 	  while( done == NOT_DONE && ( end_1d_loop == 0 || data_shm->mode == REPEAT_MODE )  ) {
-	      //            printf("inside acq's 1d while loop\n");
+	      //            fprintf(stderr,"inside acq's 1d while loop\n");
 	
 
 
@@ -1663,7 +1698,7 @@ else{
 	}
 	
 	
-	//      printf("acq:just incremented acqn: %li\n",data_shm->acqn);
+	//      fprintf(stderr,"acq:just incremented acqn: %li\n",data_shm->acqn);
 	
 	// next three lines to avoid executing % with block_size = 0
 	i = 1;
@@ -1675,7 +1710,7 @@ else{
 
 	if ((data_shm->acqn == data_shm->num_acqs || i == 1    )
 	    && (data_shm->mode == NORMAL_MODE || data_shm->mode == NORMAL_MODE_NOSAVE)){
-	  //	  printf("at end of block size\n");
+	  //	  fprintf(stderr,"at end of block size\n");
 	  
 	  if(data_shm->last_acqn_2d == data_shm->num_acqs_2d -1 && data_shm->acqn == data_shm->num_acqs  )
 	    end_2d_loop = 1;
@@ -1684,7 +1719,7 @@ else{
 	  
 	  if (block_size > 0 && data_shm->acqn_2d == 0 ){
 	    current_block += 1;
-	    //	    printf("incremented current_block\n");
+	    //	    fprintf(stderr,"incremented current_block\n");
 	  }
 	  
 	  if (block_size > 0){
@@ -1695,7 +1730,7 @@ else{
 	  else
 	    data_shm->acqn = 0;	  
 	}
-	//	printf("about to wait for interrupt.\nHave set:\ndummy_scans: %i, acqn: %lu, acqn_2d: %i\n",dummy_scans,data_shm->acqn,data_shm->acqn_2d);
+	//	fprintf(stderr,"about to wait for interrupt.\nHave set:\ndummy_scans: %i, acqn: %lu, acqn_2d: %i\n",dummy_scans,data_shm->acqn,data_shm->acqn_2d);
 	
 
 
@@ -1706,28 +1741,28 @@ else{
 	      // if outputs are off, that means we already missed this interrupt, no point in waiting
 	      // there is a race here - the interrupt could happen between the last call and when we get
 	      // to wait for it.  But checking here helps reduce this.
-	      //	  printf( "acq: waiting for an interrupt\n" );
+	      //	  fprintf(stderr, "acq: waiting for an interrupt\n" );
 #ifdef OLD_PORT_INTERRUPT
 	      while( read( int_fd, buffer, 1 ) <= 0 && done >=0)
 		{
 		  //	    perror( "acq: PP_irq read broken" );
 		}
-	      //	  printf( "acq: interrupt received\n" );
+	      //	  fprintf(stderr, "acq: interrupt received\n" );
 #endif
 #ifdef RTAI_INTERRUPT
 	    do{
-	      printf("about to wait for sem\n");
+	      fprintf(stderr,"about to wait for sem\n");
 	      sig_rec = 0;
 	      rt_sem_wait(dspsem); // how to tell if this was real, or a signal
-	      printf("got sem\n");
+	      fprintf(stderr,"got sem\n");
 	    } while((done >= 0) && (sig_rec == 1));
-	    printf("think we finished a scan %i %i\n",done,sig_rec);
+	    fprintf(stderr,"think we finished a scan %i %i\n",done,sig_rec);
 		  
 #endif
 
 
 	    }
-	    //      if (done == ERROR_DONE) printf("acq woken from read to find ERROR_DONE\n");
+	    //      if (done == ERROR_DONE) fprintf(stderr,"acq woken from read to find ERROR_DONE\n");
 
 
 
@@ -1739,11 +1774,11 @@ else{
 #ifndef NOHARDWARE
 	      i = pulse_hardware_start(old_start_pos);
 #else
-	      printf("would have restarted\n");
+	      fprintf(stderr,"would have restarted\n");
 	      i=0;
 #endif
 	      if( i < 0 ) {
-		printf( "acq: Error starting pulse program\n" );
+		fprintf(stderr, "acq: Error starting pulse program\n" );
 		done = ERROR_DONE;
 		if (i == - (TTC_ERROR))
 		  send_sig_ui (TTC_ERROR);
@@ -1756,11 +1791,11 @@ else{
 	  
 	  
 	  if( done >= 0 ) { // update time remaining, and read in data.
-	    //	  printf( "acq doing acquisition %u of dimension %u\n", data_shm->acqn, data_shm->acqn_2d );
+	    //	  fprintf(stderr, "acq doing acquisition %u of dimension %u\n", data_shm->acqn, data_shm->acqn_2d );
 	    
-	    //	printf("%f %f %f\n",current_total_time/20e6,current_ppo_time/20e6,prev_ppo_time/20e6);
+	    //	fprintf(stderr,"%f %f %f\n",current_total_time/20e6,current_ppo_time/20e6,prev_ppo_time/20e6);
 	    
-	    //	printf("time remaining: %f,\n",data_shm->time_remaining/20e6);
+	    //	fprintf(stderr,"time remaining: %f,\n",data_shm->time_remaining/20e6);
 #ifndef NOHARDWARE
 	    
 	    i = read_fifo(data_shm->npts,buffer,NOISY_MODE);
@@ -1768,30 +1803,30 @@ else{
 	  
 #else
 	    i= data_shm->npts*2;
-	    //	  printf("didn't read data from dsp\n");
+	    //	  fprintf(stderr,"didn't read data from dsp\n");
 #endif	
 	    
 	    if( i != data_shm->npts*2  ) {
-	      printf( "acq: Error reading data from FIFO\n" );
+	      fprintf(stderr, "acq: Error reading data from FIFO\n" );
 	      done = ERROR_DONE;
 	      send_sig_ui( FIFO_READ_ERROR );
 	    }
 	    
 #ifndef NOHARDWARE
 	    if (memcmp(buffer,zeros,20*4) == 0){ // then darn, all we got back from the receiver are 0's.
-	      printf("acq: got first 10 points as all zeros\n");
+	      fprintf(stderr,"acq: got first 10 points as all zeros\n");
 	    // look the hard way
 	      for( i = 0 ; i < data_shm->npts*2 ; i++ )
 		if (buffer[i] != 0){
-		  printf("acq: in further zero checking, found pt: %i\n",i);
+		  fprintf(stderr,"acq: in further zero checking, found pt: %i\n",i);
 		  i = data_shm->npts*2+5;
 		}
 	      if (i != data_shm->npts*2+6 ){ 
 		// yes +6 because we added 5 above, then leaving the loop added one more!
-		printf("acq: at scan ct: %li, next acqn: %li, acqn2d: %i.  Got zeros from receiver\n",data_shm->ct,data_shm->acqn,data_shm->acqn_2d);
+		fprintf(stderr,"acq: at scan ct: %li, next acqn: %li, acqn2d: %i.  Got zeros from receiver\n",data_shm->ct,data_shm->acqn,data_shm->acqn_2d);
 		done = ERROR_DONE;
 		send_sig_ui(FIFO_ZERO_ERROR);
-		//	      printf("last successful scan was the one before this one\n");
+		//	      fprintf(stderr,"last successful scan was the one before this one\n");
 	      }
 	    }
 	    
@@ -1815,19 +1850,19 @@ else{
 
 	  //signal UI that new data is ready 
 	  
-	  //      printf("at end of 1d loop, done = %i, acqn: %li\n",done,data_shm->acqn);
+	  //      fprintf(stderr,"at end of 1d loop, done = %i, acqn: %li\n",done,data_shm->acqn);
 
 	  // only tell ui if ppo time is more than 905ms or we're at the end of a 1d loop.
 	  if( done >= 0 && (current_ppo_time > 90e-3*CLOCK_SPEED || end_1d_loop == 1) ) send_sig_ui( NEW_DATA_READY );
-	  //      printf("coming up to end acq's 1d loop, just told ui, new data\n");
+	  //      fprintf(stderr,"coming up to end acq's 1d loop, just told ui, new data\n");
 #ifndef OLD_PORT_INTERRUPT
 #ifndef RTAI_INTERRUPT
 	  {	    if (end_2d_loop == 1 && end_1d_loop == 1)
 	    {
-	      printf("not sleeping\n");
+	      fprintf(stderr,"not sleeping\n");
 	    }
 	  else{
-	    //	      printf("in acq with no port interrupts, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
+	    //	      fprintf(stderr,"in acq with no port interrupts, sleeping %f s\n",pp_time()*1.0/CLOCK_SPEED);
 	    usleep( pp_time()/(CLOCK_SPEED/1000000));
 	  }
 	  }
@@ -1836,8 +1871,8 @@ else{
 	
 	  
 	  } //End of 1d while loop noisy version
-	    //      printf("just out of acq's 1d loop\n");
-	  //	  printf("out of 1d loop\n");
+	    //      fprintf(stderr,"just out of acq's 1d loop\n");
+	  //	  fprintf(stderr,"out of 1d loop\n");
 	    
 	    
 	    /*
@@ -1853,7 +1888,7 @@ else{
 		block_buffer[data_shm->last_acqn_2d*data_shm->npts *2 +i] = data_shm->data_image[i];	
 	  }
 	 
-	  //	  printf("writing out data\n");
+	  //	  fprintf(stderr,"writing out data\n");
 	  // write out the data
 	  fstream = fopen( fileN, "r+" );
 	  
@@ -1871,12 +1906,12 @@ else{
 	  write_param_file (fileN2);
 
 	  if (end_2d_loop == 0){ // guarantees we wait at least that long between scans.
-	    //	    printf("acq: sleeping for pp_time between 2d blocks\n");
+	    //	    fprintf(stderr,"acq: sleeping for pp_time between 2d blocks\n");
 	    usleep( pp_time()/(CLOCK_SPEED/1000000));
 	  }
 
 	}  //End of 2d while loop - noisy style
-	//	printf("out of 2d loop\n");
+	//	fprintf(stderr,"out of 2d loop\n");
 	
 	
       } // end noisy
@@ -1897,22 +1932,22 @@ else{
 
   //terminate the pulse program
 
-  //  printf("acq: at terminate pp\n");
+  //  fprintf(stderr,"acq: at terminate pp\n");
   pid = data_shm->pprog_pid;
   
   if( pid>0 ) {
 
-    //    printf( "acq: terminating pulse program: pid is %i\n",pid );
+    //    fprintf(stderr, "acq: terminating pulse program: pid is %i\n",pid );
       kill( pid, SIGTERM );
       
       // this is a normal pprog termination, causes pulse to call
       // wait for pulse program to terminate
-      //      printf("acq:about to wait for child\n");
+      //      fprintf(stderr,"acq:about to wait for child\n");
       wait( NULL );
 
   }
-  //  printf("done killing pp\n");
-  //  else printf("acq: not bothering to try to kill pprog, it claims to be dead\n");
+  //  fprintf(stderr,"done killing pp\n");
+  //  else fprintf(stderr,"acq: not bothering to try to kill pprog, it claims to be dead\n");
  
 
   //Now manually empty the wait queue of any extra P_PROGRAM_READY messages that could be present
@@ -1940,7 +1975,7 @@ else{
 
 #ifdef RTAI_INTERRUPT
   if (thread !=0){ // kill the thread only if we started it in the first place.onep
-    //    printf("killing handler thread\n");
+    //    fprintf(stderr,"killing handler thread\n");
     
     end_handler = 1;
     rt_irq_signal(PARPORT_IRQ);
@@ -1951,7 +1986,7 @@ else{
   }
 #endif
 
-  //  printf("returning from run\n");
+  //  fprintf(stderr,"returning from run\n");
   return 0;
 
 }
@@ -1961,7 +1996,7 @@ void shut_down()
 {
   pid_t c;
 
-  //  printf( "acq starting shut down sequence\n" );
+  //  fprintf(stderr, "acq starting shut down sequence\n" );
 #ifdef RTAI_INTERRUPT
   sig_rec = 1;
 #endif
@@ -1974,11 +2009,11 @@ void shut_down()
    
 
     if( c > 0 ) {
-      printf( "acq: attempting to shut down pprog\n" );
+      fprintf(stderr, "acq: attempting to shut down pprog\n" );
       kill( c, SIGKILL );
-      //      printf("acq: about to wait for child(2)\n");
+      //      fprintf(stderr,"acq: about to wait for child(2)\n");
       wait( NULL );
-      printf("returned from shutting down pprog\n");
+      fprintf(stderr,"returned from shutting down pprog\n");
     }
 
   }
@@ -1991,19 +2026,19 @@ void shut_down()
   close_port_ad9850();
   closelog(); // system logger messages
 
-  //printf( "acq: releasing memory\n" );
+  //fprintf(stderr, "acq: releasing memory\n" );
 
   release_mem();
 
   //remove the message queue
 
-  //printf( "removing message queue\n" );
+  //fprintf(stderr, "removing message queue\n" );
 
   msgctl( msgq_id, IPC_RMID, NULL );
   iopl(0);
 
 #ifdef RTAI_INTERRUPT
-  printf("deleting rt main task\n");
+  fprintf(stderr,"deleting rt main task\n");
   if (maint != NULL)
     rt_task_delete(maint);
   if (dspsem != NULL)
@@ -2012,7 +2047,7 @@ void shut_down()
 
 
 
-  printf( "acq main terminated\n" );
+  fprintf(stderr, "acq main terminated\n" );
   exit(1);
   return;
 }
@@ -2027,11 +2062,11 @@ int init_sched()
   //  struct timespec tp
 #ifdef RTAI_INTERRUPT
   if(!(maint = rt_task_init(nam2num("MAIN"),1,0,0))){
-    printf("CANNOT INIT MAIN TASK rt_task_init\n");
+    fprintf(stderr,"CANNOT INIT MAIN TASK rt_task_init\n");
     return -1;
   }
   if (!(dspsem = rt_sem_init(nam2num("DSPSEM"), 0))) { 
-    printf("CANNOT INIT SEMAPHORE > DSPSEM <\n");
+    fprintf(stderr,"CANNOT INIT SEMAPHORE > DSPSEM <\n");
     return -1;
 
     // no idea if these are necessary...
@@ -2054,7 +2089,7 @@ int init_sched()
   priority = sched_get_priority_max(SCHED_FIFO);
    sp.sched_priority = priority/2;
    result = sched_setscheduler(0,SCHED_FIFO,&sp);  // comment out to not crank up
-  //  printf("set priority of: %i\n",priority/2);
+  //  fprintf(stderr,"set priority of: %i\n",priority/2);
 
   if( result!= 0) {
     perror("acq: init_sched");
@@ -2062,12 +2097,12 @@ int init_sched()
   }
 
   // result = sched_rr_get_interval(0,&tp);
-  //  printf("rr_interval: %li s, %li ns\n",tp.tv_sec,tp.tv_nsec);
+  //  fprintf(stderr,"rr_interval: %li s, %li ns\n",tp.tv_sec,tp.tv_nsec);
 
   result = sched_getscheduler(0);
 
   if ( result == SCHED_FIFO) {
-    //    printf("confirmed SCHED_FIFO\n");
+    //    fprintf(stderr,"confirmed SCHED_FIFO\n");
   }
   else return -1;
 #endif
@@ -2106,26 +2141,26 @@ int main(){
    *  Initialization stuff
    */
 #ifdef NO_RT_SCHED
-  printf("\n\n********************************\n\n");
-  printf("            Acq started with realtime scheduling Disabled\n");
-  printf("\n\n********************************\n\n");
+  fprintf(stderr,"\n\n********************************\n\n");
+  fprintf(stderr,"            Acq started with realtime scheduling Disabled\n");
+  fprintf(stderr,"\n\n********************************\n\n");
 #endif
 #ifdef NOHARDWARE
-  printf("\n\n********************************\n\n");
-  printf("            Acq started with NOHARDWARE\n");
-  printf("\n\n********************************\n\n");
+  fprintf(stderr,"\n\n********************************\n\n");
+  fprintf(stderr,"            Acq started with NOHARDWARE\n");
+  fprintf(stderr,"\n\n********************************\n\n");
 #endif
 #ifdef OLD_PORT_INTERRUPT
-  printf("            Acq started with OLD_PORT_INTERRUPT \n");
+  fprintf(stderr,"            Acq started with OLD_PORT_INTERRUPT \n");
 #endif
 #ifdef RTAI_INTERRUPT
-  printf("            Acq started with RTAI_INTERRUPT \n");
+  fprintf(stderr,"            Acq started with RTAI_INTERRUPT \n");
 #endif
 #ifndef RTAI_INTERRUPT
 #ifndef OLD_PORT_INTERRUPT
-  printf("\n\n********************************\n\n");
-  printf("            Acq started with no interrupts \n");
-  printf("\n\n********************************\n\n");
+  fprintf(stderr,"\n\n********************************\n\n");
+  fprintf(stderr,"            Acq started with no interrupts \n");
+  fprintf(stderr,"\n\n********************************\n\n");
 #endif
 #endif
   init_shm();
@@ -2147,16 +2182,16 @@ int main(){
   data_shm->acq_sig_ui_meaning = ACQ_LAUNCHED;
 
   if( pid > 0 ) {
-    //    printf("acq startup:  sending signal to pid: %i\n",data_shm->ui_pid);
+    //    fprintf(stderr,"acq startup:  sending signal to pid: %i\n",data_shm->ui_pid);
     kill( data_shm->ui_pid, SIG_UI_ACQ );
   }
-  //printf( "acq main started\n" );
+  //fprintf(stderr, "acq main started\n" );
   
   while(1) {
     pause();
-    //    printf( "acq main unpaused\n" );
+    //    fprintf(stderr, "acq main unpaused\n" );
   }
-  //  printf( "acq: quitting main\n" );
+  //  fprintf(stderr, "acq: quitting main\n" );
 
   shut_down();
  
@@ -2168,10 +2203,10 @@ void tell_xnmr_fail(){
   int pid;
 
   pid = data_shm->ui_pid;
-  printf("acq: ui_pid is: %i\n",pid);
+  fprintf(stderr,"acq: ui_pid is: %i\n",pid);
   data_shm->acq_sig_ui_meaning = ACQ_LAUNCH_FAIL;
   if( pid > 0 ) {
-    printf("acq: sending fail signal put: %i into sig\n",data_shm->acq_sig_ui_meaning);
+    fprintf(stderr,"acq: sending fail signal put: %i into sig\n",data_shm->acq_sig_ui_meaning);
     kill( data_shm->ui_pid, SIG_UI_ACQ );
   }
 
@@ -2187,7 +2222,7 @@ FILE *fstream;
    return -1;
  }
  fprintf( fstream, "%s\n", data_shm->pulse_exec_path );
- //    printf("doing save from within acq, dwell: %f\n",data_shm->dwell);
+ //    fprintf(stderr,"doing save from within acq, dwell: %f\n",data_shm->dwell);
  fprintf( fstream, 
 	  "npts = %u\nacq_npts = %u\nna = %lu\nna2 = %u\nsw = %lu\ndwell = %f\nct = %lu\n", 
 	  data_shm->npts, data_shm->npts,data_shm->num_acqs, 
@@ -2208,7 +2243,7 @@ unsigned long long pp_time(){
 
   for (i=0;i< prog_shm->no_events;i++){
     how_long += TIME_OF(i) + 1;
-    //  printf("pp_time: how_long: %lld, %f\n",how_long,how_long/20e6);
+    //  fprintf(stderr,"pp_time: how_long: %lld, %f\n",how_long,how_long/20e6);
   }
   return how_long;
 }
@@ -2216,7 +2251,7 @@ unsigned long long pp_time(){
 unsigned long long ppo_time(){
   unsigned long long how_long=0;
   how_long += TIME_OF(prog_shm->no_events-1) + 1;
-  //  printf("ppo_time: how_long: %lld, %f\n",how_long,how_long/20e6);
+  //  fprintf(stderr,"ppo_time: how_long: %lld, %f\n",how_long,how_long/20e6);
   return how_long;
 }
 

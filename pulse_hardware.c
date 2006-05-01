@@ -82,10 +82,10 @@ int ph_clear_EPP_timeout()
     outb( b & 0xfe, ph_base + SPP_STAT );    //write bit 0 to 0, leave the rest the same
     
     if( ph_check_EPP_timeout() ) {
-      printf( "Could not reset EPP timeout bit on port 0x%x\n", ph_base );
+      fprintf(stderr, "Could not reset EPP timeout bit on port 0x%x\n", ph_base );
       return -1;
     }
-  } else printf("didn't reset EPP_timeout because no port\n");
+  } else fprintf(stderr,"didn't reset EPP_timeout because no port\n");
   return 0;
 }
 
@@ -95,7 +95,7 @@ int ph_clear_EPP_port()
   if (ph_base >0){
     outb(0x10,ph_base+SPP_CTRL);  // set reset to low
     outb (0x14,ph_base+SPP_CTRL); // set reset high, enable interrupt report
-  } else printf("didn't clear EPP port because no port\n");
+  } else fprintf(stderr,"didn't clear EPP port because no port\n");
   return ph_clear_EPP_timeout();
 }
 
@@ -111,12 +111,12 @@ int init_pulse_hardware( int port )
     return -1;
  
   ph_base = port;
-  //  printf("set pulse_prog port to: 0x%x\n",ph_base);
+  // fprintf(stderr,"set pulse_prog port to: 0x%x\n",ph_base);
   
   /*  i = ioperm( ph_base, 8, 1 );
 
   if( i<0 ) {
-    printf( "Can't get permission to access the port 0x%x\n", ph_base );
+   fprintf(stderr, "Can't get permission to access the port 0x%x\n", ph_base );
     return -1;
     } */
 
@@ -238,14 +238,14 @@ int pulse_hardware_send( struct prog_shm_t* program )
 
   //overhead+=4;
     d_time=(end_time.tv_sec-start_time.tv_sec)*1e6+(end_time.tv_usec-start_time.tv_usec);
-    printf("download time: %.0f us\n",d_time);
-    printf("downloaded: %i+%i bytes to programmer in %.0f us, rate: %.3f MB/s\n",
+   fprintf(stderr,"download time: %.0f us\n",d_time);
+   fprintf(stderr,"downloaded: %i+%i bytes to programmer in %.0f us, rate: %.3f MB/s\n",
 	 byte_count,
        	 overhead, d_time,
 	 (byte_count+overhead)/d_time);  
 #endif
   if( ph_check_EPP_timeout() == 1 ) {
-    printf( "EPP timeout occurred on port %x\n", ph_base );
+   fprintf(stderr, "EPP timeout occurred on port %x\n", ph_base );
     return -1;
   }
 
@@ -261,7 +261,7 @@ int pulse_hardware_load_timer()
   outb( AD1_ADDR, ph_base + EPP_ADDR );
   outb( 0, ph_base + EPP_DATA );
 
-  //printf("about to load timer\n");
+  // fprintf(stderr,"about to load timer\n");
 
   outb( CNTRL_ADDR, ph_base + EPP_ADDR );
   outb( LOAD_TIMER, ph_base + EPP_DATA );
@@ -285,13 +285,13 @@ int pulse_hardware_start(int start_address)
                16 = Timer running, bit on =running, maybe/maybe not,
 	       32 = Outputs enabled, (bit on = enabled) should be low here */
      
-  //     printf( "before start: Status register bits: %d, %d, %d\n", b & 0x08, b&0x10, b&0x20 );
+  //    fprintf(stderr, "before start: Status register bits: %d, %d, %d\n", b & 0x08, b&0x10, b&0x20 );
 
   ad_byte1 = start_address & 255;
-  //  printf("pulse_hardware_start, got start_address: %i, first byte: %u, ",start_address,ad_byte1);
+  // fprintf(stderr,"pulse_hardware_start, got start_address: %i, first byte: %u, ",start_address,ad_byte1);
 
   ad_byte2 = start_address  >>8;
-  //  printf("second byte2: %u\n",ad_byte2);
+  // fprintf(stderr,"second byte2: %u\n",ad_byte2);
 
   outb( AD0_ADDR, ph_base + EPP_ADDR );
   outb( 0, ph_base + EPP_DATA );
@@ -299,7 +299,7 @@ int pulse_hardware_start(int start_address)
   outb( AD1_ADDR, ph_base + EPP_ADDR );
   outb( 0, ph_base + EPP_DATA );
  
-  //printf("about to load PPO_ADDR\n");
+  // fprintf(stderr,"about to load PPO_ADDR\n");
 
   outb( PPO_ADDR, ph_base + EPP_ADDR ); //what is this for?
   outb( 255, ph_base + EPP_DATA );
@@ -307,11 +307,11 @@ int pulse_hardware_start(int start_address)
   //Check for TTC Error
 
   b = inb( ph_base+SPP_STAT ); 
-  //  printf( "before start: Status register bits: %d, %d, %d\n", b & 0x08, b&0x10, b&0x20 );
+  // fprintf(stderr, "before start: Status register bits: %d, %d, %d\n", b & 0x08, b&0x10, b&0x20 );
   if( (b&0x08) == 0 ) {
       outb( CNTRL_ADDR, ph_base + EPP_ADDR );
       outb( RESET_ALL, ph_base+EPP_DATA );
-      printf( "TTC Error occurred, aborting pulse_hardware_start\n" );
+     fprintf(stderr, "TTC Error occurred, aborting pulse_hardware_start\n" );
       return -(TTC_ERROR);
   }
 
@@ -325,29 +325,29 @@ int pulse_hardware_start(int start_address)
   outb( CNTRL_ADDR, ph_base + EPP_ADDR );
   outb( START, ph_base + EPP_DATA );
 
-  //  printf("just wrote start to port\n");
+  // fprintf(stderr,"just wrote start to port\n");
 
   //Check for TTC Error
   b = inb( ph_base+SPP_STAT );
   /* here we should get 8 + 16 + 32 - no error, timer running, outputs on */
-  //printf( "after start: Status register bits: %d, %d, %d\n", b & 0x08, b&0x10, b&0x20 );
+  // fprintf(stderr, "after start: Status register bits: %d, %d, %d\n", b & 0x08, b&0x10, b&0x20 );
 
   if( (b&0x08) == 0 ) {
     outb( CNTRL_ADDR, ph_base + EPP_ADDR );
     outb( RESET_ALL, ph_base+EPP_DATA );
-    printf( "TTC Error occurred, aborting pulse_hardware_start\n" );
+   fprintf(stderr, "TTC Error occurred, aborting pulse_hardware_start\n" );
     return -(TTC_ERROR);
   } 
   if ( (b&0x10) == 0 ){
     outb( CNTRL_ADDR, ph_base + EPP_ADDR );
     outb( RESET_ALL, ph_base+EPP_DATA);
-    printf("started, but timer wasn't running\n");
+   fprintf(stderr,"started, but timer wasn't running\n");
     return -(TTC_ERROR);
   }
   if ( (b&0x20) == 0 ){
     outb( CNTRL_ADDR, ph_base + EPP_ADDR );
     outb( RESET_ALL, ph_base+EPP_DATA);
-    printf("started, but outputs weren't enabled\n");
+    fprintf(stderr,"started, but outputs weren't enabled\n");
     return -(TTC_ERROR);
   }
 
@@ -362,14 +362,14 @@ int free_pulse_hardware()
   //  int result;
 
   if( ph_base == -1 ) {
-    //printf( "no need to free pulse hardware\n" );
+    // fprintf(stderr, "no need to free pulse hardware\n" );
     return 0;
   }
 
   outb( CNTRL_ADDR, ph_base+EPP_ADDR );
   outb( RESET_ALL, ph_base+EPP_DATA );
 
-  //printf( "Freeing pulse_hardware\n" );
+  // fprintf(stderr, "Freeing pulse_hardware\n" );
 
   outb(0x00,ph_base+SPP_CTRL);  // set reset to low, disable interrupt reporting
   outb (0x04,ph_base+SPP_CTRL); // set reset high, leave interrupts disabled

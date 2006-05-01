@@ -53,7 +53,7 @@ int sfetch_float( char* params, char* name, float* var, unsigned int acqn_2d )
     }
     start = breaker;
   }
-  //  printf("returning: %s, %f\n",name,*var);
+  //  fprintf(stderr,"returning: %s, %f\n",name,*var);
 
   return result;
 }
@@ -94,7 +94,7 @@ int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
     start = breaker;
   }
 
-  //  printf("returning %s, %f\n",name,*var);
+  //  fprintf(stderr,"returning %s, %f\n",name,*var);
 
   return result;
 }
@@ -128,7 +128,7 @@ int sfetch_int( char* params, char* name, int* var, unsigned int acqn_2d )
     }
     start = breaker;
   }
-  //  printf("returning: %s, %i\n",name,*var);
+  //  fprintf(stderr,"returning: %s, %i\n",name,*var);
 
   return result;
 }
@@ -165,7 +165,7 @@ int sfetch_text( char* params, char* name, char* var, unsigned int acqn_2d )
     }
     start = breaker;
   }
-  //  printf("returning: %s, %s\n",name,var);
+  //  fprintf(stderr,"returning: %s, %s\n",name,var);
 
   return result;
 }
@@ -239,7 +239,7 @@ int make_param_string( const parameter_set_t* p_set, char* dest )
 	break;
 	  
       default:
-	printf( "invalid type for parameter %d\n, name: %s", i ,p_set->parameter[i].name);
+	fprintf(stderr, "invalid type for parameter %d\n, name: %s", i ,p_set->parameter[i].name);
 	
 	break;
       }
@@ -276,7 +276,7 @@ int make_param_string( const parameter_set_t* p_set, char* dest )
 	  break;
 
 	default:
-	  printf( "invalid type for parameter %d\n", i );
+	  fprintf(stderr, "invalid type for parameter %d\n", i );
 	  break;
 	}
     }
@@ -335,13 +335,13 @@ int load_p_string( char* params, unsigned int acqs_2d, parameter_set_t* param_se
 	    param_set->parameter[i].size = acqs_2d;
 	    param_set->parameter[i].type = 'I';
 	    param_set->parameter[i].i_val_2d = g_malloc( acqs_2d * sizeof(gint) );
-	    //	    printf("load_p_string: malloc\n");
+	    //	    fprintf(stderr,"load_p_string: malloc\n");
 	    for( j=0; j<acqs_2d; j++ )
 	      sfetch_int( params, param_set->parameter[i].name, &param_set->parameter[i].i_val_2d[ j ], j );
 	    break;
 	    
 	  default:
-	    printf( "bad result in attempting to read parameters from shm\n" );
+	    fprintf(stderr, "bad result in attempting to read parameters from shm\n" );
 	    break;
 	  }
 	break;
@@ -353,7 +353,7 @@ int load_p_string( char* params, unsigned int acqs_2d, parameter_set_t* param_se
 	  case 0:
 	    if (sfetch_double( params, param_set->parameter[i].name, &param_set->parameter[i].f_val,0 ) == 0)
 	      param_set->parameter[i].f_val /= param_set->parameter[i].unit; // only do this if we actually find the right value!!
-	    //	    printf("param: %s, unit: %f\n",param_set->parameter[i].name,param_set->parameter[i].unit);
+	    //	    fprintf(stderr,"param: %s, unit: %f\n",param_set->parameter[i].name,param_set->parameter[i].unit);
 	    break;
 	    
 	  case 1:
@@ -362,17 +362,17 @@ int load_p_string( char* params, unsigned int acqs_2d, parameter_set_t* param_se
 	    param_set->parameter[i].size = acqs_2d;
 	    param_set->parameter[i].type = 'F';
 	    param_set->parameter[i].f_val_2d = g_malloc( acqs_2d * sizeof(double) );
-	    //	    printf("load_p_string: malloc\n");
+	    //	    fprintf(stderr,"load_p_string: malloc\n");
 
 	    for( j=0; j<acqs_2d; j++ ){
 	      sfetch_double( params, param_set->parameter[i].name, &param_set->parameter[i].f_val_2d[ j ], j );
 	      param_set->parameter[i].f_val_2d[j] /= param_set->parameter[i].unit;
-	      //	      printf("param: %s, unit: %f\n",param_set->parameter[i].name,param_set->parameter[i].unit);
+	      //	      fprintf(stderr,"param: %s, unit: %f\n",param_set->parameter[i].name,param_set->parameter[i].unit);
 	    }
 	    break;
 	    
 	  default:
-	    printf( "bad result is attempting to read parameters from shm\n" );
+	    fprintf(stderr, "bad result is attempting to read parameters from shm\n" );
 	    break;
 	  }
 	break;
@@ -386,17 +386,17 @@ int load_p_string( char* params, unsigned int acqs_2d, parameter_set_t* param_se
 	    break;
 	    
 	  case 1:
-	    printf( "Error, can't have a 2d text parameter: %s\n",param_set->parameter[i].name );
+	    fprintf(stderr, "Error, can't have a 2d text parameter: %s\n",param_set->parameter[i].name );
 	    break;
 	    
 	  default:
-	    printf( "bad result in attempting to read parameters from shm\n" );
+	    fprintf(stderr, "bad result in attempting to read parameters from shm\n" );
 	    break;
 	  }
 	break;
 	
       default:
-	printf( "invalid parameter type: %d, %s\n",param_set->parameter[i].type,param_set->parameter[i].name );
+	fprintf(stderr, "invalid parameter type: %d, %s\n",param_set->parameter[i].type,param_set->parameter[i].name );
 	break;
       }
     
@@ -431,17 +431,17 @@ int pfetch_float( parameter_set_t *param_set, char* name, double* var, unsigned 
 
   for (i=0;i< param_set->num_parameters;i++){
     if (strcmp(name,param_set->parameter[i].name)==0) {
-      //      printf("in pfetch, found a match to: %s\n",param_set->parameter[i].name);
+      //      fprintf(stderr,"in pfetch, found a match to: %s\n",param_set->parameter[i].name);
       
       // if it's a 1d float we're golden
       
       if (param_set->parameter[i].type == 'f'){
 	*var = param_set->parameter[i].f_val*param_set->parameter[i].unit;
-	//	printf("its a 1-d float value returned: %f\n",*var);
+	//	fprintf(stderr,"its a 1-d float value returned: %f\n",*var);
 	return TRUE;
       }
       if (param_set->parameter[i].type != 'F'){
-	//	printf("param is of type: %i\n",param_set->parameter[i].type);
+	//	fprintf(stderr,"param is of type: %i\n",param_set->parameter[i].type);
 	return 0;
       }
       
@@ -463,10 +463,10 @@ return FALSE;
 
 void path_strcat(char *dest, char *source){
   // routine assumes that the dest string is of length PATH_LENGTH.
-  //  printf("in path_strcat, lengths: %i %i\n",strlen(dest),strlen(source));
+  //  fprintf(stderr,"in path_strcat, lengths: %i %i\n",strlen(dest),strlen(source));
 
   if ( strlen(dest) + strlen(source) >= PATH_LENGTH){ //need room for the 0 at end
-    printf("Overrun while appending string %s onto %s\n",source,dest);
+    fprintf(stderr,"Overrun while appending string %s onto %s\n",source,dest);
     strncat(dest,source,PATH_LENGTH-1-strlen(dest));
     //    dest[strlen(dest)]=0; // appears to be unnecessary.
     return;
@@ -477,10 +477,10 @@ void path_strcat(char *dest, char *source){
 
 void param_strcat(char *dest, char *source){
   // routine assumes that the dest string is of length PARAMETER_LEN.
-  //  printf("in param_strcat, lengths: %i %i\n",strlen(dest),strlen(source));
+  //  fprintf(stderr,"in param_strcat, lengths: %i %i\n",strlen(dest),strlen(source));
 
   if ( strlen(dest) + strlen(source) >= PARAMETER_LEN){ //need room for the 0 at end
-    printf("Overrun while appending string %s onto %s\n",source,dest);
+    fprintf(stderr,"Overrun while appending string %s onto %s\n",source,dest);
     strncat(dest,source,PARAMETER_LEN-1-strlen(dest));
     //    dest[strlen(dest)]=0; // appears to be unnecessary.
     return;
@@ -494,7 +494,7 @@ void path_strcpy(char *dest,const char*source){
   // again assume that dest string is of length PATH_LENGTH
 
   if ( strlen(source) >= PATH_LENGTH){
-    printf("Overrun while copy string %s into %s\n",source,dest);
+    fprintf(stderr,"Overrun while copy string %s into %s\n",source,dest);
     strncpy(dest,source,PATH_LENGTH-1);
     dest[PATH_LENGTH]=0;
     return;

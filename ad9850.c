@@ -47,19 +47,19 @@ int init_port_ad9850(int new_port){
   if (have_port == 0){
     i = ioperm(port,8,1);
     if (i<0){
-      printf("Can't get permission to access ad9850 port: %o\n",port);
+      fprintf(stderr,"Can't get permission to access ad9850 port: %o\n",port);
       return -1;
       }
     have_port = 1;
     port = new_port;
   }
-  else printf("init_port_ad9850: already have port\n");
+  else fprintf(stderr,"init_port_ad9850: already have port\n");
   return 0;
 }
 
 int reset_ad9850(){
 
-  //  printf("in reset_ad9850\n");
+  //  fprintf(stderr,"in reset_ad9850\n");
   outb(0,port);  // set port data values to all 0
   control = nRRESET+nFFQUD+nSTROBE;
   outb(control,port+SPP_CTRL); // set all the control port to 0 as well
@@ -67,7 +67,7 @@ int reset_ad9850(){
   // these 3 are hardware inverted.
   // now do a reset
   control = control ^ nRRESET;
-  //  printf("to do reset, control = %i\n",(int) control);
+  //  fprintf(stderr,"to do reset, control = %i\n",(int) control);
   outb(control,port+SPP_CTRL); // set all the control port to 0 as well
 
   // now toggle the strobe
@@ -87,21 +87,21 @@ int setup_ad9850()
 
 
   if (have_port == 0){
-    printf("Called setup_ad9850, but don't have port\n");
+    fprintf(stderr,"Called setup_ad9850, but don't have port\n");
     return 0;
   }
 
     an = 21093750.; // gives an integral frequency
     //an = 21000000.;
 
-  //  printf("ad9850: using clk: %li and an: %li\n",(long int) clk,(long int) an);
+  //  fprintf(stderr,"ad9850: using clk: %li and an: %li\n",(long int) clk,(long int) an);
 
   nco = TWOTHIRTYTWO  * (double) an/(double)clk;
 
  
    got_freq = ((double) nco) * ((double) clk) / TWOTHIRTYTWO;
 
-   printf("ad9850: nco phase inc: %li, actual freq: %12.8f\n",nco, got_freq);
+   fprintf(stderr,"ad9850: nco phase inc: %li, actual freq: %12.8f\n",nco, got_freq);
 
    reset_ad9850();
 
@@ -110,17 +110,17 @@ int setup_ad9850()
   // read in the status register and see if its there on the "check" line:
 
   status=inb(port+SPP_STAT);
-  //  printf("status: %i\n",status&255);
+  //  fprintf(stderr,"status: %i\n",status&255);
   // the check line is bit 3 and should now be high 
 
   if ( (status & 8) == 0)
-    printf("after setting reset high, check bit is not high\n");
+    fprintf(stderr,"after setting reset high, check bit is not high\n");
 
 
   // now set reset low and latch it in
 
   control = control ^ nRRESET;
-  //  printf("un resetting: control = %i\n",(int) control);
+  //  fprintf(stderr,"un resetting: control = %i\n",(int) control);
   outb(control,port+SPP_CTRL); // set all the control port to 0 as well
   toggle_strobe();
 
@@ -128,11 +128,11 @@ int setup_ad9850()
   // read in the status register and see if its there on the "check" line:
 
   status=inb(port+SPP_STAT);
-  //  printf("status: %i\n",status&255);
+  //  fprintf(stderr,"status: %i\n",status&255);
 
   // the check line is bit 3 and should now be low
   if ( (status & 8) == 8)
-    printf("after setting reset low, check bit is not low\n");
+    fprintf(stderr,"after setting reset low, check bit is not low\n");
 
   // ok, now feed out the 5 data bytes:
   for (i=3;i>=0;i--){
@@ -149,7 +149,7 @@ int setup_ad9850()
 
 
   for(i=0;i<4;i++){
-    //    printf("byte: %x\n",bb[i]);
+    //    fprintf(stderr,"byte: %x\n",bb[i]);
     outb(bb[i],port);
     toggle_strobe();
     toggle_wwclk();
@@ -164,7 +164,7 @@ int setup_ad9850()
   outb(control,port+SPP_CTRL);
   toggle_strobe();
 
-  //  printf("done, just toggled the FFQUD line\n");
+  //  fprintf(stderr,"done, just toggled the FFQUD line\n");
 
 
     
@@ -177,11 +177,11 @@ void toggle_strobe(){
     //  usleep(t); // apparently, this is (un)necessary.
   for (i=0;i<5000;i++);
   control = control ^ nSTROBE;
-  //  printf("to toggle strobe, control = %i\n",(int) control);
+  //  fprintf(stderr,"to toggle strobe, control = %i\n",(int) control);
   outb(control,port+SPP_CTRL); // set all the control port to 0 as well
 
   control = control ^ nSTROBE;
-  //  printf("to toggle strobe, control = %i\n",(int) control);
+  //  fprintf(stderr,"to toggle strobe, control = %i\n",(int) control);
   outb(control,port+SPP_CTRL); // set all the control port to 0 as well
 }
 

@@ -218,9 +218,9 @@ void set_timer(int event_no,long long time){
 void parameter_not_found( char *name){
   struct msgbuf message;
   int result;
-  printf("didn't find a value for parmeter: %s\n",name);
+  fprintf(stderr,"didn't find a value for parmeter: %s\n",name);
 
-  printf("Pulse Program timed out internally\n");
+  fprintf(stderr,"Pulse Program timed out internally\n");
   
   // let acq know we have a problem
   message.mtype = P_PROGRAM_READY;
@@ -240,7 +240,7 @@ void parameter_not_found( char *name){
    //   data_shm->pprog_pid = -1;  // don't set this to -1 so that acq knows what to wait() for
    shmdt( (char*) data_shm ); 
    shmdt( (char*) prog_shm ); 
-   //printf( "pulse program terminated\n" ); 
+   // fprintf(stderr, "pulse program terminated\n" ); 
    exit(1);  
    return; 
 
@@ -253,10 +253,10 @@ void parameter_not_found( char *name){
    struct msgbuf message; 
    int result; 
 
-   //printf( "Pulse Program waiting for msg from acq\n" ); 
+   // fprintf(stderr, "Pulse Program waiting for msg from acq\n" ); 
 
    result = msgrcv( msgq_id, &message, 1, P_PROGRAM_CALC, MSG_NOERROR ); 
-   //   printf("pprog: received message\n");
+   //   fprintf(stderr,"pprog: received message\n");
 
    // so we only ever get the CALC message, but it could be sent internally to force us
    // out of waiting.  We could also be woken up by acq to quit.
@@ -276,15 +276,15 @@ void parameter_not_found( char *name){
    switch ( message.mtype ) 
      { 
      case P_PROGRAM_CALC : 
-       //printf( "pprog recieved message P_PROGRAM_CALC\n" ); 
+       // fprintf(stderr, "pprog recieved message P_PROGRAM_CALC\n" ); 
        return P_PROGRAM_CALC; 
 
      case P_PROGRAM_END : 
-       //printf( "pprog recieved message P_PROGRAM_END\n" ); 
+       // fprintf(stderr, "pprog recieved message P_PROGRAM_END\n" ); 
        return P_PROGRAM_END; 
      } 
 
-   printf( "pprog recieved an unusual message: %ld on a result of: %d\n", message.mtype, result ); 
+   fprintf(stderr, "pprog recieved an unusual message: %ld on a result of: %d\n", message.mtype, result ); 
    return -1; 
 
  } 
@@ -304,15 +304,15 @@ void parameter_not_found( char *name){
    unsigned int dum2;
    unsigned char *val_c,*mask_c;
 
-   //   printf("write_device: dev: %i, val: %i, event: %i,bit %i ",device_id,val,event_no,hardware_config[device_id].start_bit);
+   //   fprintf(stderr,"write_device: dev: %i, val: %i, event: %i,bit %i ",device_id,val,event_no,hardware_config[device_id].start_bit);
 
    if (event_no <0 || event_no >= MAX_EVENTS){
      prog_shm->event_error = 1;
-     printf("write_device: got an event_no out of range\n");
+     fprintf(stderr,"write_device: got an event_no out of range\n");
      return -1;
    }
    if (device_id <0){
-     printf("write_device got device_id <0\n");
+     fprintf(stderr,"write_device got device_id <0\n");
      return 0;
    }
    if (hardware_config[device_id].start_bit < 0 ){
@@ -349,15 +349,15 @@ void parameter_not_found( char *name){
 
 
 
-   //   printf("write_device: dev: %i, val: %i, event: %i,bit %i ",device_id,val,event_no,hardware_config[device_id].start_bit);
+   //   fprintf(stderr,"write_device: dev: %i, val: %i, event: %i,bit %i ",device_id,val,event_no,hardware_config[device_id].start_bit);
 
    if (event_no <0 || event_no >= MAX_EVENTS){
      prog_shm->event_error = 1;
-     printf("write_device: got an event_no out of range\n");
+     fprintf(stderr,"write_device: got an event_no out of range\n");
      return -1;
    }
    if (device_id <0){
-     printf("write_device got device_id <0\n");
+     fprintf(stderr,"write_device got device_id <0\n");
      return 0;
    }
    if (hardware_config[device_id].start_bit < 0 ){
@@ -425,12 +425,12 @@ void parameter_not_found( char *name){
 	  if ( ((unsigned int *)prog_shm->prog_image[i])[j] != 
 	       ((unsigned int *)old_prog_image[i])[j]){
 	    j = prog_shm->no_events+10;	      // break out of loop.
-	    //	    printf("ready: chip %i is dirty\n",i);
+	    //	    fprintf(stderr,"ready: chip %i is dirty\n",i);
 	  }
       }
 	if ( j == (prog_shm->no_events+sizeof(unsigned int *)-1)/sizeof(unsigned int)){
 	  prog_shm->chip_clean[i] = CLEAN;
-	  //	  printf("ready: marking chip: %i as clean\n",i);
+	  //	  fprintf(stderr,"ready: marking chip: %i as clean\n",i);
 	}
       }// end NUM_CHIPS  
   } // end needed to compare one by one.
@@ -442,12 +442,12 @@ void parameter_not_found( char *name){
       for (j=0;j<prog_shm->no_events;j++){
 	if (prog_shm->prog_image[i][j] != old_prog_image[i][j]){
 	  j = prog_shm->no_events+10;	      // break out of loop.
-	  //	    printf("ready: chip %i is dirty\n",i);
+	  //	    fprintf(stderr,"ready: chip %i is dirty\n",i);
 	}
       }
       if ( j == prog_shm->no_events ){
 	prog_shm->chip_clean[i] = CLEAN;
-	//	  printf("ready: marking chip: %i as clean\n",i);
+	//	  fprintf(stderr,"ready: marking chip: %i as clean\n",i);
       }
       
       
@@ -463,14 +463,14 @@ void parameter_not_found( char *name){
 
   gettimeofday(&end_time,&tz);
   d_time=(end_time.tv_sec-start_time.tv_sec)*1e6+(end_time.tv_usec-start_time.tv_usec);
-  printf("compare time: %.0f us\n",d_time);
+  fprintf(stderr,"compare time: %.0f us\n",d_time);
 
 
 #endif
 
 
 
-   //   printf("coming into ready, num events is: %i\n",prog_shm->no_events);
+   //   fprintf(stderr,"coming into ready, num events is: %i\n",prog_shm->no_events);
 
      
 
@@ -486,8 +486,8 @@ void parameter_not_found( char *name){
        int chip; 
        int bit; 
        
-       printf( "dumping pulse program to file\n" ); 
-       //       printf("in dumping, first_time is: %i\n",first_time);
+       fprintf(stderr, "dumping pulse program to file\n" ); 
+       //       fprintf(stderr,"in dumping, first_time is: %i\n",first_time);
        fid = fopen( "pprog.txt", "w" ); 
        
        for( event=0; event<prog_shm->no_events; event++ ) { 
@@ -525,7 +525,7 @@ void parameter_not_found( char *name){
 
    if (first_time == 1){
      first_time =0;
-     //     printf("got first time, setting to 0\n");
+     //     fprintf(stderr,"got first time, setting to 0\n");
    }
    
 
@@ -533,21 +533,21 @@ void parameter_not_found( char *name){
      return P_PROGRAM_END; 
    }
 
-   //   printf( "Pulse Program calculation complete\n" ); 
+   //   fprintf(stderr, "Pulse Program calculation complete\n" ); 
 
    prog_shm->phase = phase;  //let acq know what phase shift to apply to data 
 
-   //   printf( "pprog sending message P_PROGRAM_READY\n" ); 
+   //   fprintf(stderr, "pprog sending message P_PROGRAM_READY\n" ); 
 
    message.mtype = P_PROGRAM_READY; 
    message.mtext[0] = P_PROGRAM_READY;
 
    result=msgsnd ( msgq_id, &message, 1, 0 ); 
    if (result == -1) perror("pulse.c:msgsnd"); 
-   //   printf("inside pulse, just sent P_PROGRAM_READY\n"); 
+   //   fprintf(stderr,"inside pulse, just sent P_PROGRAM_READY\n"); 
 
    result = wait_for_acq_msg( ); 
-   //   printf("inside pulse, just got message for CALC\n"); 
+   //   fprintf(stderr,"inside pulse, just got message for CALC\n"); 
    prog_shm->prog_ready = NOT_READY; 
 
    return result; 
@@ -566,16 +566,16 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
 
    // set up special device numbers - done in pulse_prog_init
    if (clkc == -1 ){
-     printf("write_device_wrap: pulse_program not init'ed\n");
+     fprintf(stderr,"write_device_wrap: pulse_program not init'ed\n");
      prog_shm->event_error = 1;
      return -1;
    }
 
 
  if (device_id >= RF_OFFSET){ 
-   //       printf("translating device: %i ",device_id);
+   //       fprintf(stderr,"translating device: %i ",device_id);
    device_id = tran_table[device_id-RF_OFFSET];
-   //       printf("to device: %i\n",device_id);
+   //       fprintf(stderr,"to device: %i\n",device_id);
  }
  
  if ( device_id == PP_OVER ) prog_shm->got_ppo = 1; // to ensure there is a ppo 
@@ -590,7 +590,7 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
    }
    
    else  if (device_id == phasec){
-     //   printf("got phasec, value: %f\n",fval);
+     //   fprintf(stderr,"got phasec, value: %f\n",fval);
      lookup_phasec(fval,&ival,&qval);
      is_amp_phase |= 4;
      
@@ -600,7 +600,7 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
      
    }
    else if ( device_id == ampb ){
-     //       printf("got ampb, value: %f\n",fval);
+     //       fprintf(stderr,"got ampb, value: %f\n",fval);
      
      val = lookup_ampb(fval);
      is_amp_phase |= 2;
@@ -610,7 +610,7 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
    }
    
    else  if (device_id == phaseb){
-     //       printf("got phaseb, value: %f\n",fval);
+     //       fprintf(stderr,"got phaseb, value: %f\n",fval);
      lookup_phaseb(fval,&ival,&qval);
      is_amp_phase |= 2;
      
@@ -620,7 +620,7 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
      
    }
    else if ( device_id == ampa ){
-     //       printf("got amp1, value: %f\n",fval);
+     //       fprintf(stderr,"got amp1, value: %f\n",fval);
      
      
      val = lookup_ampa(fval);
@@ -632,7 +632,7 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
    
    else  if (device_id == phasea){
   
-    //       printf("got phase1, value: %f\n",fval);
+    //       fprintf(stderr,"got phase1, value: %f\n",fval);
      lookup_phasea(fval,&ival,&qval);
      is_amp_phase |= 1;
      
@@ -672,7 +672,7 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
 int is_a_float_device(int device_id)
 {
   if (clkc == -1){
-    printf("pulse program not inited!!\n");
+    fprintf(stderr,"pulse program not inited!!\n");
     prog_shm->event_error = 1;
     return -1;
   }
@@ -696,27 +696,27 @@ int is_a_float_device(int device_id)
    long long int counts;   //This is a 64 bit integer 
    char long_event; // flag to say if event was split because of length.
 
-   //   printf("\ncoming into event, number is: %i\n",prog_shm->no_events);
+   //   fprintf(stderr,"\ncoming into event, number is: %i\n",prog_shm->no_events);
    if (prog_shm->begun == 0 ){
-     printf("problem in pulse program.  Got an event before begin()\n");
+     fprintf(stderr,"problem in pulse program.  Got an event before begin()\n");
      prog_shm->event_error = 1;
      return -1;
    }
 
    if( prog_shm->no_events >= MAX_EVENTS ) { 
-     printf( "pprog: Maximum number of events exceeded\n" ); 
+     fprintf(stderr, "pprog: Maximum number of events exceeded\n" ); 
      prog_shm->event_error = 1;
      return -1; 
    } 
 
-   //   printf("event_no: %i time: %lf \n",prog_shm->no_events,time);
+   //   fprintf(stderr,"event_no: %i time: %lf \n",prog_shm->no_events,time);
    counts = (long long int) ( ( time *  CLOCK_SPEED ) -  0.5 ); 
 
 
 
    if( time <= 0 || counts <0 ) {
      if (time < 0)
-       printf("event: time < 0, ignored\n");
+       fprintf(stderr,"event: time < 0, ignored\n");
      return 0; 
    }
 
@@ -724,7 +724,7 @@ int is_a_float_device(int device_id)
 
    if (currently_going_back == 1){
      if ( how_far_back > 0){
-       //       printf("in event, got currently_going_back by time: %.7f\n",(float) how_far_back/CLOCK_SPEED);
+       //       fprintf(stderr,"in event, got currently_going_back by time: %.7f\n",(float) how_far_back/CLOCK_SPEED);
 
        // this should just be one simple go_back call, but I
        // don't see how to pass the variable args back...
@@ -733,7 +733,7 @@ int is_a_float_device(int device_id)
        
        for( i=0; i<num; i++ ) { 
 	 device_id = (unsigned char) va_arg( args, int  ); 
-	 //	 printf("got device_id: %i for event: %i\n",(int) device_id,prog_shm->no_events);
+	 //	 fprintf(stderr,"got device_id: %i for event: %i\n",(int) device_id,prog_shm->no_events);
 	 if (is_a_float_device(device_id) >0 ){
 	   fval = (float) va_arg(args,double);
 	   go_back((float) how_far_back/CLOCK_SPEED,time,1,device_id,fval);
@@ -749,14 +749,14 @@ int is_a_float_device(int device_id)
        va_end(args);
        return 0;
      }
-     printf("in event: you're tring to 'go_back' into the future..., just doing ordinary event\n");
+     fprintf(stderr,"in event: you're tring to 'go_back' into the future..., just doing ordinary event\n");
 
    }
    
 
    if (position_stored == 1 && currently_going_back == 0){
      how_far_back += counts+1;
-     //     printf("in event: how_far_back is now: %f\n",(float) how_far_back/CLOCK_SPEED);
+     //     fprintf(stderr,"in event: how_far_back is now: %f\n",(float) how_far_back/CLOCK_SPEED);
    }
    
    
@@ -776,10 +776,10 @@ int is_a_float_device(int device_id)
 
    //set all the specified device information 
    
-   //   printf("\nin event, no_events: %i,num things this event: %i\n",prog_shm->no_events,num);
+   //   fprintf(stderr,"\nin event, no_events: %i,num things this event: %i\n",prog_shm->no_events,num);
    for( i=0; i<num; i++ ) { 
      device_id = (unsigned char) va_arg( args, int  ); 
-     //     printf("got device_id: %i for event: %i\n",(int) device_id,prog_shm->no_events);
+     //     fprintf(stderr,"got device_id: %i for event: %i\n",(int) device_id,prog_shm->no_events);
      if (is_a_float_device(device_id) >0 )
        fval = (float) va_arg(args,double);
      else
@@ -839,7 +839,7 @@ int is_a_float_device(int device_id)
  static int s1_1=-1,s1_2=-1,s1_latch=-1;
  int i;
 
- //  printf("arriving in set_freq1 with freq: %lf\n",freq);
+ //  fprintf(stderr,"arriving in set_freq1 with freq: %lf\n",freq);
 
  // first of all, find the synth device numbers
  if (s1_1 == -1){
@@ -858,10 +858,10 @@ int is_a_float_device(int device_id)
        s1_latch = i;
    }
    if ( (s1_1 == -1) || (s1_2 == -1) || (s1_latch == -1)){
-     printf("set_freq1: couldn't find one of my devices\n");
+     fprintf(stderr,"set_freq1: couldn't find one of my devices\n");
      exit(0);
    }
-   //   printf("set_freq1, got device numbers: %i %i %i\n",s1_1,s1_2,s1_latch);
+   //   fprintf(stderr,"set_freq1, got device numbers: %i %i %i\n",s1_1,s1_2,s1_latch);
  }
  
 
@@ -877,12 +877,12 @@ int is_a_float_device(int device_id)
  // 234375 is the smallest integral value the dsp and dds can produce. 
 
  if (old_freq == freq2 && data_shm->force_synth == 0 ){
-   //   printf("set freq1: returning, force is: %i\n",data_shm->force_synth);
+   //   fprintf(stderr,"set freq1: returning, force is: %i\n",data_shm->force_synth);
    return 0.0; 
  }
  old_freq = freq2;  
 
- // printf("freq1: setting freq1 %f\n",freq2); 
+ // fprintf(stderr,"freq1: setting freq1 %f\n",freq2); 
  dum1= (int) freq2/1E8; 
  freq2 -= dum1*1E8; 
 
@@ -910,13 +910,13 @@ int is_a_float_device(int device_id)
  freq2 -= dum0*1E-1; 
 
 
- /*printf( "Output Frequency: %d%d", dum1,dum2 ); 
- printf( "%d%d", dum3,dum4 ); 
- printf( "%d%d", dum5,dum6 ); 
- printf( "%d%d", dum7,dum8 ); 
- printf( "%d.%d\n", dum9,dum0 ); 
+ /* fprintf(stderr, "Output Frequency: %d%d", dum1,dum2 ); 
+ fprintf(stderr, "%d%d", dum3,dum4 ); 
+ fprintf(stderr, "%d%d", dum5,dum6 ); 
+ fprintf(stderr, "%d%d", dum7,dum8 ); 
+ fprintf(stderr, "%d.%d\n", dum9,dum0 ); 
  */
- // printf("set freq, calling synth events\n");
+ // fprintf(stderr,"set freq, calling synth events\n");
  event(time,3,s1_1,dum2,s1_2,dum1 ,s1_latch,3); 
  event(time,3,s1_1,dum2,s1_2,dum1 ,s1_latch,0); 
 
@@ -966,7 +966,7 @@ int is_a_float_device(int device_id)
        s2_latch = i;
    }
    if ( (s2_1 == -1) || (s2_2 == -1) || (s2_latch == -1)){
-     printf("set_freq1: couldn't find one of my devices\n");
+     fprintf(stderr,"set_freq1: couldn't find one of my devices\n");
      exit(0);
    }
  }
@@ -982,7 +982,7 @@ int is_a_float_device(int device_id)
  if (old_freq == freq2 && data_shm->force_synth == 0 ) return 0.0; 
  old_freq=freq2;  
 
- //  printf("freq2:  %f\n",freq2); 
+ //  fprintf(stderr,"freq2:  %f\n",freq2); 
  dum1= (int) freq2/1E8; 
  freq2 -= dum1*1E8; 
 
@@ -1008,11 +1008,11 @@ int is_a_float_device(int device_id)
  freq2  -=dum9*1E0; 
 
 
- /* printf( "Output Frequency: %d%d", dum1,dum2 ); 
- printf( "%d%d", dum3,dum4 ); 
- printf( "%d%d", dum5,dum6 ); 
- printf( "%d%d", dum7,dum8 ); 
- printf( "%d.\n", dum9); 
+ /* fprintf(stderr, "Output Frequency: %d%d", dum1,dum2 ); 
+ fprintf(stderr, "%d%d", dum3,dum4 ); 
+ fprintf(stderr, "%d%d", dum5,dum6 ); 
+ fprintf(stderr, "%d%d", dum7,dum8 ); 
+ fprintf(stderr, "%d.\n", dum9); 
  */
  event(time,3,s2_1,dum9,s2_2,dum8 ,s2_latch,7); 
  event(time,3,s2_1,dum9,s2_2,dum8 ,s2_latch,0); 
@@ -1069,7 +1069,7 @@ int is_a_float_device(int device_id)
    prog_shm->event_error = 0;
    prog_shm->got_ppo = 0;
    prog_shm->is_noisy = 0;
-   //   printf("in begin, just set is_noisy to false\n");
+   //   fprintf(stderr,"in begin, just set is_noisy to false\n");
 
    prog_shm->begun = 1;
 
@@ -1099,7 +1099,7 @@ int is_a_float_device(int device_id)
    data_shm->pprog_pid = -1; 
    shmdt( (char*) data_shm ); 
    shmdt( (char*) prog_shm ); 
-   //printf( "pulse program terminated\n" ); 
+   // fprintf(stderr, "pulse program terminated\n" ); 
    exit(1); 
  } 
 
@@ -1122,7 +1122,7 @@ int is_a_float_device(int device_id)
      perror( "pulse: Error getting shared memory segments" ); 
      exit(1); 
    } 
-   //   printf("data_shm_id: %i, prog_shm_id: %i\n",data_shm_id,prog_shm_id);
+   //   fprintf(stderr,"data_shm_id: %i, prog_shm_id: %i\n",data_shm_id,prog_shm_id);
 
    data_shm = (struct data_shm_t*) shmat( data_shm_id, NULL  ,0 ); 
    prog_shm = (struct prog_shm_t*) shmat( prog_shm_id, NULL ,0 ); 
@@ -1135,13 +1135,13 @@ int is_a_float_device(int device_id)
    } 
 
    if( data_shm->pprog_pid != getpid() ) { 
-     printf( "pprog: already running\n" ); 
+     fprintf(stderr, "pprog: already running\n" ); 
      exit(1); 
    } 
 
 
    if (strcmp(data_shm->version,XNMR_ACQ_VERSION) != 0){
-     printf("pprog: XNMR_ACQ_VERSION number mismatch\n");
+     fprintf(stderr,"pprog: XNMR_ACQ_VERSION number mismatch\n");
      shmdt( (char*) data_shm ); 
      shmdt( (char*) prog_shm ); 
      return -1;
@@ -1149,13 +1149,13 @@ int is_a_float_device(int device_id)
    }
 
    if (strcmp(prog_shm->version,PPROG_VERSION) != 0){
-     printf("pprog: PPROG_VERSION number mismatch\n");
-     printf("pprog: got %s and %s\n",prog_shm->version,PPROG_VERSION);
+     fprintf(stderr,"pprog: PPROG_VERSION number mismatch\n");
+     fprintf(stderr,"pprog: got %s and %s\n",prog_shm->version,PPROG_VERSION);
      shmdt( (char*) data_shm ); 
      shmdt( (char*) prog_shm ); 
      return -1;
    }
-   //   printf("pprog: versions ok\n");
+   //   fprintf(stderr,"pprog: versions ok\n");
 
 
 
@@ -1216,12 +1216,12 @@ int is_a_float_device(int device_id)
 
    double f; 
 
-   //printf( "initializing hardware configuration\n" ); 
+   // fprintf(stderr, "initializing hardware configuration\n" ); 
 
    fid = fopen( "/usr/share/Xnmr/config/h_config.h", "r" ); 
 
    if (fid == NULL) {
-     printf("pulse.c: couldn't open h_config.h\n");
+     fprintf(stderr,"pulse.c: couldn't open h_config.h\n");
      exit(0);
    }
 
@@ -1231,14 +1231,14 @@ int is_a_float_device(int device_id)
    } while( strstr( s, "NUM_DEVICES" ) == NULL || eo == NULL ); 
 
    if (eo == NULL){
-     printf("pulse.c: didn't find the number of device in h_config.h\n");
+     fprintf(stderr,"pulse.c: didn't find the number of device in h_config.h\n");
      exit(0);
    }
 
    sscanf(s,"#define NUM_DEVICES %i",&num_dev);
-   //   printf("found num devices = %i\n",num_dev);
+   //   fprintf(stderr,"found num devices = %i\n",num_dev);
 
-   //   printf("sizeof hardware_config: %i\n",sizeof(*hardware_config));
+   //   fprintf(stderr,"sizeof hardware_config: %i\n",sizeof(*hardware_config));
    hardware_config = g_malloc(num_dev * sizeof(*hardware_config));
 
    do { 
@@ -1262,7 +1262,7 @@ int is_a_float_device(int device_id)
  		&hardware_config[i].max_time ); 
 	
 
-	/*	printf( "Device %d loaded: %s, start: %d, bits: %d, latch: %d, default: %d, timeout: %g\n", i,   	 hardware_config[i].name,  
+	/*	fprintf(stderr, "Device %d loaded: %s, start: %d, bits: %d, latch: %d, default: %d, timeout: %g\n", i,   	 hardware_config[i].name,  
  	 hardware_config[i].start_bit, 
  	 hardware_config[i].num_bits, 
  	 hardware_config[i].latch, 
@@ -1270,7 +1270,7 @@ int is_a_float_device(int device_id)
  	 hardware_config[i].max_time ); 
 	*/
        } 
-       else printf( "Invalid device number\n" ); 
+       else fprintf(stderr, "Invalid device number\n" ); 
      } 
 
    } while( strcmp( s, PARSE_END ) ); 
@@ -1286,7 +1286,7 @@ int is_a_float_device(int device_id)
        hardware_config[i].end_chip_num = (hardware_config[i].start_bit+hardware_config[i].num_bits-1)/8;
        hardware_config[i].chip_bit = hardware_config[i].start_bit % 8;
 
-       //       printf("device: %i, start bit: %i, end_bit: %i, start_chip_num: %i, end_chip_num: %i\n",i,hardware_config[i].start_bit,
+       //       fprintf(stderr,"device: %i, start bit: %i, end_bit: %i, start_chip_num: %i, end_chip_num: %i\n",i,hardware_config[i].start_bit,
        //	      hardware_config[i].start_bit+hardware_config[i].num_bits-1,hardware_config[i].start_chip_num,hardware_config[i].end_chip_num);
 
        // here's some bit shifting magic...
@@ -1295,11 +1295,11 @@ int is_a_float_device(int device_id)
 	  ( sizeof(unsigned int)*8 - hardware_config[i].num_bits)) 
 				      << hardware_config[i].chip_bit;
        
-       //     printf("init: dev: %i, chip: %i bit: %i ,mask: %i ",i,(int) hardware_config[i].start_chip_num,(int)hardware_config[i].chip_bit, (int)hardware_config[i].load_mask);
-       //     printf("num_bits: %i\n",hardware_config[i].num_bits);
+       //     fprintf(stderr,"init: dev: %i, chip: %i bit: %i ,mask: %i ",i,(int) hardware_config[i].start_chip_num,(int)hardware_config[i].chip_bit, (int)hardware_config[i].load_mask);
+       //     fprintf(stderr,"num_bits: %i\n",hardware_config[i].num_bits);
        
        if (hardware_config[i].chip_bit + hardware_config[i].num_bits-1 > sizeof(unsigned int)*8){
-	 printf("init_hardware:  device %i crosses a word boundary.  Not supported\n",i);
+	 fprintf(stderr,"init_hardware:  device %i crosses a word boundary.  Not supported\n",i);
 	 exit(0);
        }
      }
@@ -1310,7 +1310,7 @@ int is_a_float_device(int device_id)
 
    for( i=0 ; i<num_dev ; i++){
      if (hardware_config[i].latch == 1 ){
-       //       printf("device %i writing 1's to latch mask\n",i);
+       //       fprintf(stderr,"device %i writing 1's to latch mask\n",i);
        write_device(i,(0xFFFFFFFF >> (sizeof(unsigned long)*8 - hardware_config[i].num_bits)),0);
      }
      else
@@ -1318,9 +1318,9 @@ int is_a_float_device(int device_id)
    }
    for( i=0 ; i<NUM_CHIPS ; i++ ){
      latch_mask[i] = prog_shm->prog_image[i][0];
-     //          printf("%3i ",(int) latch_mask[i]);
+     //          fprintf(stderr,"%3i ",(int) latch_mask[i]);
    }
-   //      printf("\n");
+   //      fprintf(stderr,"\n");
 
 
 
@@ -1331,9 +1331,9 @@ int is_a_float_device(int device_id)
 
    for( i=0 ; i<NUM_CHIPS ; i++ ){
      default_mask[i] = prog_shm->prog_image[i][0];
-     //     printf("%3i ",(int) default_mask[i]);
+     //     fprintf(stderr,"%3i ",(int) default_mask[i]);
    }
-   //      printf("\n");
+   //      fprintf(stderr,"\n");
 
 
    fclose( fid );   
@@ -1372,7 +1372,7 @@ int is_a_float_device(int device_id)
       perror("pulse: setrlimit");
     }
     else{ // only do the memlock if we were able to set our limit.
-      //      printf("doing the mlockall\n");
+      //      fprintf(stderr,"doing the mlockall\n");
       if (mlockall( MCL_CURRENT | MCL_FUTURE ) !=0 )
 	perror("mlockall");
     }
@@ -1412,7 +1412,7 @@ int is_a_float_device(int device_id)
       fs = fopen(s,"r");
     }
     if (fs == NULL){
-      printf("couldn't find my own executable??\n");
+      fprintf(stderr,"couldn't find my own executable??\n");
       message.mtype = P_PROGRAM_READY;
       message.mtext[0] = P_PROGRAM_ERROR;
       err=msgsnd ( msgq_id, &message, 1, 0 );
@@ -1422,12 +1422,12 @@ int is_a_float_device(int device_id)
       exit(1); 
     }
     fclose(fs);
-    //    printf("in pulse_prog_init, about to stat %s\n",s);
+    //    fprintf(stderr,"in pulse_prog_init, about to stat %s\n",s);
 
     err = stat(s,&my_buff);
     
     if (difftime(my_buff.st_mtime,other_buff.st_mtime) < 0){
-      printf("looks like h_config has changed since pprog was compiled\n");
+      fprintf(stderr,"looks like h_config has changed since pprog was compiled\n");
       message.mtype = P_PROGRAM_READY;
       message.mtext[0] = P_PROGRAM_RECOMPILE;
       err=msgsnd ( msgq_id, &message, 1, 0 );
@@ -1442,7 +1442,7 @@ int is_a_float_device(int device_id)
 
     err= stat("/usr/local/lib/libxnmr.so",&other_buff);
     if (difftime(my_buff.st_mtime,other_buff.st_mtime) < 0){
-      printf("looks like libxnmr.so has changed since pprog was compiled\n");
+      fprintf(stderr,"looks like libxnmr.so has changed since pprog was compiled\n");
       message.mtype = P_PROGRAM_READY;
       message.mtext[0] = P_PROGRAM_RECOMPILE;
       err=msgsnd ( msgq_id, &message, 1, 0 );
@@ -1454,10 +1454,10 @@ int is_a_float_device(int device_id)
     
    
     prog_shm->prog_ready = NOT_READY;
-    //printf( "pulse program initialized on pid %d\n", getpid() );
+    // fprintf(stderr, "pulse program initialized on pid %d\n", getpid() );
 
     if (clkc == -1){
-      //   printf("in write_device() for the first time\n");
+      //   fprintf(stderr,"in write_device() for the first time\n");
       for(i=0;i<num_dev;i++){
 	if(strcmp(hardware_config[i].name,"CLKC") == 0)
 	  clkc = i;
@@ -1533,23 +1533,23 @@ int is_a_float_device(int device_id)
       
       
       if ( (clkc == -1) || (phasec == -1) || (ic == -1)||(qc == -1)||(ampc == -1)||(_ampc == -1)){
-	printf("pulse_program_init: couldn't find one of my channel C devices, check h_config.h\n");
+	fprintf(stderr,"pulse_program_init: couldn't find one of my channel C devices, check h_config.h\n");
 	exit(0);
       }
       if ( (clkb == -1) || (phaseb == -1) || (ib == -1)||(qb == -1)||(ampb == -1)||(_ampb == -1)){
-	printf("pulse_program_init: couldn't find one of my channel B devices, check h_config.h\n");
-	printf("%i %i %i %i %i %i \n",clkb,phaseb,ib,qb,ampb,_ampb);
+	fprintf(stderr,"pulse_program_init: couldn't find one of my channel B devices, check h_config.h\n");
+	fprintf(stderr,"%i %i %i %i %i %i \n",clkb,phaseb,ib,qb,ampb,_ampb);
 	exit(0);
       }
       if ( (clka == -1) || (phasea == -1) || (ia == -1)||(qa == -1)||(ampa == -1)||(_ampa == -1)){
-	printf("pulse_program_init: couldn't find one of my channel A devices, check h_config.h\n");
+	fprintf(stderr,"pulse_program_init: couldn't find one of my channel A devices, check h_config.h\n");
 	exit(0);
       }
       
       // now build a table to translate the rf channel devices from logical channels to real devices
-      //   printf("building a tran_table\n");
+      //   fprintf(stderr,"building a tran_table\n");
       if (data_shm->ch1 == 'A'){
-	//     printf("pulse.c found ch1 = A\n");
+	//     fprintf(stderr,"pulse.c found ch1 = A\n");
 	tran_table[RF1-RF_OFFSET]=RFA;
 	tran_table[PHASE1-RF_OFFSET]=PHASEA;
 	tran_table[AMP1-RF_OFFSET]=AMPA;
@@ -1557,7 +1557,7 @@ int is_a_float_device(int device_id)
 	grad_channel -= 1;
       }
       else if (data_shm->ch1 == 'B'){
-	//     printf("pulse.c found ch1 = B\n");
+	//     fprintf(stderr,"pulse.c found ch1 = B\n");
 	tran_table[RF1-RF_OFFSET]=RFB;
 	tran_table[PHASE1-RF_OFFSET]=PHASEB;
 	tran_table[AMP1-RF_OFFSET]=AMPB;
@@ -1565,7 +1565,7 @@ int is_a_float_device(int device_id)
 	grad_channel -= 2;
       }
       else if (data_shm->ch1 == 'C'){
-	//     printf("pulse.c found ch1 = C\n");
+	//     fprintf(stderr,"pulse.c found ch1 = C\n");
 	tran_table[RF1-RF_OFFSET]=RFC;
 	tran_table[PHASE1-RF_OFFSET]=PHASEC;
 	tran_table[AMP1-RF_OFFSET]=AMPC;
@@ -1573,11 +1573,11 @@ int is_a_float_device(int device_id)
 	grad_channel -= 4;
       }
       else {
-	printf("no valid channel 1 channel found!\n");
+	fprintf(stderr,"no valid channel 1 channel found!\n");
 	exit(0);
       }
       if (data_shm->ch2 == 'A'){
-	//     printf("pulse.c found ch2 = A\n");
+	//     fprintf(stderr,"pulse.c found ch2 = A\n");
 	tran_table[RF2-RF_OFFSET]=RFA;
 	tran_table[PHASE2-RF_OFFSET]=PHASEA;
 	tran_table[AMP2-RF_OFFSET]=AMPA;
@@ -1585,7 +1585,7 @@ int is_a_float_device(int device_id)
 	grad_channel -= 1;
       }
       else if (data_shm->ch2 == 'B'){
-	//     printf("pulse.c found ch2 = B\n");
+	//     fprintf(stderr,"pulse.c found ch2 = B\n");
 	tran_table[RF2-RF_OFFSET]=RFB;
 	tran_table[PHASE2-RF_OFFSET]=PHASEB;
 	tran_table[AMP2-RF_OFFSET]=AMPB;
@@ -1593,7 +1593,7 @@ int is_a_float_device(int device_id)
 	grad_channel -= 2;
       }
       else if (data_shm->ch2 == 'C'){
-	//     printf("pulse.c found ch2 = C\n");
+	//     fprintf(stderr,"pulse.c found ch2 = C\n");
 	tran_table[RF2-RF_OFFSET]=RFC;
 	tran_table[PHASE2-RF_OFFSET]=PHASEC;
 	tran_table[AMP2-RF_OFFSET]=AMPC;
@@ -1601,10 +1601,10 @@ int is_a_float_device(int device_id)
 	grad_channel -= 4;
       }
       else {
-	printf("no valid channel 2 channel found!\n");
+	fprintf(stderr,"no valid channel 2 channel found!\n");
 	exit(0);
       }
-      //      printf("grad_channel is: %i \n",grad_channel);
+      //      fprintf(stderr,"grad_channel is: %i \n",grad_channel);
       if (grad_channel == 1){
 	grad_clk = clka;
 	gradx = qa;
@@ -1627,10 +1627,10 @@ int is_a_float_device(int device_id)
 	tran_table[GRAD_ON-RF_OFFSET] = RFC;
       }
       else {
-	printf("didn't find a grad channel!\n");
+	fprintf(stderr,"didn't find a grad channel!\n");
 	exit(0);
       }
-      //   printf("event, got device numbers: %i %i %i\n",clk3,phase3,i3);
+      //   fprintf(stderr,"event, got device numbers: %i %i %i\n",clk3,phase3,i3);
     } // that was the setup we do first time only.
     
     
@@ -1706,7 +1706,7 @@ void pprog_internal_timeout(){
   struct msgbuf message;
   int result;
 
-  printf("Pulse Program timed out internally\n");
+  fprintf(stderr,"Pulse Program timed out internally\n");
   
   // let acq know we have a problem
   message.mtype = P_PROGRAM_READY;
@@ -1728,7 +1728,7 @@ void pprog_internal_timeout(){
    //   data_shm->pprog_pid = -1;  // don't set this to -1 so that acq knows what to wait() for
    shmdt( (char*) data_shm ); 
    shmdt( (char*) prog_shm ); 
-   //printf( "pulse program terminated\n" ); 
+   // fprintf(stderr, "pulse program terminated\n" ); 
    exit(1);  
    return; 
 
@@ -1745,7 +1745,7 @@ int lookup_amp(float fval)
   if (fval > 1.0) fval = 1.0;
   if (fval < -1.0) fval = -1.0;
   val = (int)( (fval+1.0)*511.);
-  //  printf("lookup_amp: %f %i\n",fval,val);
+  //  fprintf(stderr,"lookup_amp: %f %i\n",fval,val);
   return ( val);
 
 		   
@@ -1765,7 +1765,7 @@ int lookup_ampc(float fval)
   fval = atanh(fval*0.78)/1.26556;
 
   val = (int)( (fval+1.0)*511.);
-  //    printf("lookup_amp3: %f %i\n",fval,val);
+  //    fprintf(stderr,"lookup_amp3: %f %i\n",fval,val);
   return ( val);
 
 		   
@@ -1785,7 +1785,7 @@ int lookup_ampb(float fval)
   fval = atanh(fval*0.72)/0.967688;
 
   val = (int)( (fval+1.0)*511.);
-  //    printf("lookup_amp3: %f %i\n",fval,val);
+  //    fprintf(stderr,"lookup_amp3: %f %i\n",fval,val);
   return ( val);
 
 		   
@@ -1805,7 +1805,7 @@ int lookup_ampa(float fval)
   fval = atanh(fval*0.72)/0.967688;
 
   val = (int)( (fval+1.0)*511.);
-  //    printf("lookup_amp3: %f %i\n",fval,val);
+  //    fprintf(stderr,"lookup_amp3: %f %i\n",fval,val);
   return ( val);
 
 		   
@@ -1816,10 +1816,10 @@ void lookup_phase(float fval,int *ival,int *qval)
   // eventually, this will need to do a good job.
   // for now, do the simplest thing.
 
-  //  printf("lookup phase: got fval: %f\n",fval);
+  //  fprintf(stderr,"lookup phase: got fval: %f\n",fval);
   *ival = (int) ((cos(fval*M_PI/180.)+1.0)*511.51);
   *qval = (int) ((sin(fval*M_PI/180.)+1.0)*511.51);
-  //    printf("lookup phase: ival %i, qval: %i\n",*ival,*qval);
+  //    fprintf(stderr,"lookup phase: ival %i, qval: %i\n",*ival,*qval);
 
 
 }
@@ -1843,7 +1843,7 @@ void lookup_phasec(float fval,int *ival,int *qval)
 	fscanf(infile,"%i %f",&i,&table[i]);
       table_valid=1;
     }
-    else printf("couldn't open correct_phasec.txt\n");
+    else fprintf(stderr,"couldn't open correct_phasec.txt\n");
   }
   table[360]=360.;
   
@@ -1855,7 +1855,7 @@ void lookup_phasec(float fval,int *ival,int *qval)
     ivf = (int) floor(fval) % 360;
     
     f = frac * (table[ivf+1]-table[ivf])+table[ivf];
-    //  printf("for %f, frac: %f, ivf: %i using: %f\n",fval,frac,ivf,f);
+    //  fprintf(stderr,"for %f, frac: %f, ivf: %i using: %f\n",fval,frac,ivf,f);
   }
   else (f=fval);
 
@@ -1885,7 +1885,7 @@ void lookup_phaseb(float fval,int *ival,int *qval)
 	fscanf(infile,"%i %f",&i,&table[i]);
       table_valid=1;
     }
-    else printf("couldn't open correct_phaseb.txt\n");
+    else fprintf(stderr,"couldn't open correct_phaseb.txt\n");
   }
   table[360]=360.;
   
@@ -1897,7 +1897,7 @@ void lookup_phaseb(float fval,int *ival,int *qval)
     ivf = (int) floor(fval) % 360;
     
     f = frac * (table[ivf+1]-table[ivf])+table[ivf];
-    //  printf("for %f, frac: %f, ivf: %i using: %f\n",fval,frac,ivf,f);
+    //  fprintf(stderr,"for %f, frac: %f, ivf: %i using: %f\n",fval,frac,ivf,f);
   }
   else (f=fval);
 
@@ -1927,7 +1927,7 @@ void lookup_phasea(float fval,int *ival,int *qval)
 	fscanf(infile,"%i %f",&i,&table[i]);
       table_valid=1;
     }
-    else printf("couldn't open correct_phasea.txt\n");
+    else fprintf(stderr,"couldn't open correct_phasea.txt\n");
   }
   table[360]=360.;
   
@@ -1940,7 +1940,7 @@ void lookup_phasea(float fval,int *ival,int *qval)
     ivf = (int) floor(fval) % 360;
     
     f = frac * (table[ivf+1]-table[ivf])+table[ivf];
-    //     printf("for %f, frac: %f, ivf: %i using: %f\n",fval,frac,ivf,f);
+    //     fprintf(stderr,"for %f, frac: %f, ivf: %i using: %f\n",fval,frac,ivf,f);
   }
   else (f=fval);
 
@@ -1959,7 +1959,7 @@ int shift_events(int start){
   
   
   if (prog_shm->no_events >= MAX_EVENTS-2){
-    printf("shift_events: MAX number of events exceeded\n");
+    fprintf(stderr,"shift_events: MAX number of events exceeded\n");
     prog_shm->event_error = 1;
     return -1;
   }
@@ -1976,7 +1976,7 @@ int shift_events(int start){
   chip = (  hardware_config[ PP_OVER ].start_bit ) /8; 
   bit = ( hardware_config[ PP_OVER ].start_bit ) %8; 
   if (((prog_shm->prog_image[chip][start] >> bit) & 1) == 1) {
-    printf("shift_events:  found a ppo, putting only in last\n");
+    fprintf(stderr,"shift_events:  found a ppo, putting only in last\n");
     write_device(PP_OVER,0, start);
   }
   
@@ -1984,7 +1984,7 @@ int shift_events(int start){
   chip = (  hardware_config[ XTRN_TRIG ].start_bit ) /8; 
   bit = ( hardware_config[ XTRN_TRIG ].start_bit ) %8; 
   if (((prog_shm->prog_image[chip][start] >> bit) & 1) == 1) {
-    printf("shift_events:  found an XTRN_TRIG, putting only in first\n");
+    fprintf(stderr,"shift_events:  found an XTRN_TRIG, putting only in first\n");
     write_device(XTRN_TRIG,0, start+1);
   }
   
@@ -2013,7 +2013,7 @@ int shift_events(int start){
    // at a position time before the present.
 
    if (prog_shm->begun == 0 ){
-     printf("problem in pulse program.  Got a go_back before begin()\n");
+     fprintf(stderr,"problem in pulse program.  Got a go_back before begin()\n");
      prog_shm->event_error = 1;
      return -1;
    }
@@ -2024,13 +2024,13 @@ int shift_events(int start){
 
 
    if( time <= 0. || counts < 0) {
-     printf("go_back: time <=  0, ignored: %f\n",time);
+     fprintf(stderr,"go_back: time <=  0, ignored: %f\n",time);
      prog_shm->event_error = 1;
      return -1; 
    }
 
    if (prog_shm->no_events == 0){
-     printf("go_back: no events yet!! ignored\n");
+     fprintf(stderr,"go_back: no events yet!! ignored\n");
      prog_shm->event_error = 1;
      return -1;
    }
@@ -2039,13 +2039,13 @@ int shift_events(int start){
 
    if (count_dur <= 0 || duration <= 0. ) count_dur = 1; // gotta stick in at least one event!
    if (count_dur > MAX_CLOCK_CYCLES){
-     printf("go_back: got a time longer than a single event.\n");
-     printf("This is not supported\n");
+     fprintf(stderr,"go_back: got a time longer than a single event.\n");
+     fprintf(stderr,"This is not supported\n");
      prog_shm->event_error = 1;
      return -1;
    }
 
-   //   printf("in go_back: time %f, dur: %f\n",time,duration);
+   //   fprintf(stderr,"in go_back: time %f, dur: %f\n",time,duration);
 
 
 
@@ -2055,20 +2055,20 @@ int shift_events(int start){
    for (i = prog_shm->no_events-1 ; i >= 0 ; i--){
      so_far += TIME_OF(i) + 1;
      if (so_far >= counts){
-       //       printf("go_back: event %i\n",i);
+       //       fprintf(stderr,"go_back: event %i\n",i);
        event_no = i;
        i=-5;
      }
    }
    if( i == -1 ){ // then the pulse program is shorter than the time specified.
-     //     printf("ok, go_back takes us to the first event\n");
+     //     fprintf(stderr,"ok, go_back takes us to the first event\n");
      if (first_time == 1){
-       printf("go_back: increasing pulseprog length by: %12.9f s\n",(float) (counts-so_far)/(float) CLOCK_SPEED);
-       //       printf("so_far is: %lli\n",so_far);
+       fprintf(stderr,"go_back: increasing pulseprog length by: %12.9f s\n",(float) (counts-so_far)/(float) CLOCK_SPEED);
+       //       fprintf(stderr,"so_far is: %lli\n",so_far);
        first_time = 0;
      }
      shift_events(0);  // move all events from 0 on down to 1 on down.
-     //     printf("go_back: shifting from event 0\n");
+     //     fprintf(stderr,"go_back: shifting from event 0\n");
      event_no = 0;
 
      start_event = 0;
@@ -2079,25 +2079,25 @@ int shift_events(int start){
 
 
      if (counts > MAX_CLOCK_CYCLES){
-       printf("what??? go_back: counts > MAX_CLOCK_CYCLES\n");
+       fprintf(stderr,"what??? go_back: counts > MAX_CLOCK_CYCLES\n");
        prog_shm->event_error = 1;
      }
 
      if (counts-so_far > 0){ // this is pointless - counts must always be >= 0 here?
        set_timer(0,counts-so_far-1);
-       //       printf("first event, counts: %lli\n",counts);
+       //       fprintf(stderr,"first event, counts: %lli\n",counts);
      }
-     else printf("go_back: problem in timing on prepending pulse program\n");
+     else fprintf(stderr,"go_back: problem in timing on prepending pulse program\n");
 
    }
    else{ // our event goes sometime into event # event_no
      // two cases, either our event is at the start, or not at the start of an event.
 
-     //     printf("so_far: %lli, counts: %lli\n",so_far,counts);
+     //     fprintf(stderr,"so_far: %lli, counts: %lli\n",so_far,counts);
 
      if (so_far == counts){ // its at the very beginning
        start_event = event_no;
-       //       printf("go_back: back to start of event: %i\n",start_event);
+       //       fprintf(stderr,"go_back: back to start of event: %i\n",start_event);
      }
      else { // have to split this event
        counter = TIME_OF(event_no) + 1;
@@ -2119,15 +2119,15 @@ int shift_events(int start){
 
    if (counts == count_dur){ // short circuit this case
      end_event = prog_shm->no_events-1;
-     //     printf("go_back: end of duration is at the present\n");
+     //     fprintf(stderr,"go_back: end of duration is at the present\n");
    }
    else if ( count_dur > counts ){ // this event extends into the future...
-     printf("go_back:  event extends into future.  Extending program by: %lf\n",(float)(count_dur-counts)/CLOCK_SPEED);
+     fprintf(stderr,"go_back:  event extends into future.  Extending program by: %lf\n",(float)(count_dur-counts)/CLOCK_SPEED);
 
      //duplicate the last event and apply latch mask
 
      if( prog_shm->no_events >= MAX_EVENTS-1 ) { 
-       printf( "pprog: Maximum number of events exceeded\n" ); 
+       fprintf(stderr, "pprog: Maximum number of events exceeded\n" ); 
        prog_shm->event_error = 1;
        return -1; 
      } 
@@ -2157,23 +2157,23 @@ int shift_events(int start){
      for (i = prog_shm->no_events-1 ; i >= 0 ; i--){
        so_far += TIME_OF(i) + 1;
        if (so_far >= (counts-count_dur)){
-	 //       printf("go_back: event %i\n",i);
+	 //       fprintf(stderr,"go_back: event %i\n",i);
 	 event_no = i;
 	 i=-5;
        }
      }
      if( i == -1 ){ // then the pulse program is shorter than the time specified.
-       printf("go_back: this should absolutely never happen\n");
+       fprintf(stderr,"go_back: this should absolutely never happen\n");
      }
      counter = TIME_OF(event_no) + 1;
-     //     printf("go_back: so_far - counter: %lli (counts-count_dur) %lli\n",so_far-counter,(counts-count_dur));
+     //     fprintf(stderr,"go_back: so_far - counter: %lli (counts-count_dur) %lli\n",so_far-counter,(counts-count_dur));
      if ( so_far == (counts - count_dur)){ //end is matched
        end_event = event_no-1;
-       printf("go_back: end_event set matches at event: %i\n",end_event);
+       fprintf(stderr,"go_back: end_event set matches at event: %i\n",end_event);
 	 }
      else {// gotta do the split:
        shift_events(event_no);
-       //       printf("go_back: shifting events at end\n");
+       //       fprintf(stderr,"go_back: shifting events at end\n");
        
        c1 = (so_far - (counts-count_dur) - 1 );
        set_timer(event_no,c1);
@@ -2193,7 +2193,7 @@ int shift_events(int start){
    va_start( args, num ); 
    for( i=0; i<num; i++ ) { 
      device_id = (unsigned char) va_arg( args, int  ); 
-     //     printf("got device_id: %i\n",(int) device_id);
+     //     fprintf(stderr,"got device_id: %i\n",(int) device_id);
 
 
      // look to see if this device latches.  If so, write it to the end...
@@ -2206,11 +2206,11 @@ int shift_events(int start){
      // look to see if this device is a PP_OVER
      temp_start_event=start_event;
      if (device_id == PP_OVER){
-       printf("in go_back, got a PP_OVER.  what are you thinking?\n");
+       fprintf(stderr,"in go_back, got a PP_OVER.  what are you thinking?\n");
        temp_start_event = end_event;
      }
      if(device_id == XTRN_TRIG){
-       printf("in go_back, got an XTRN_TRIG\n");
+       fprintf(stderr,"in go_back, got an XTRN_TRIG\n");
        temp_end_event = start_event;
      }
 
@@ -2220,7 +2220,7 @@ int shift_events(int start){
      }
      else
        intval =  va_arg(args,unsigned int);
-     //     printf("go_back: writing device_wrap with events: %i, %i\n",temp_start_event,temp_end_event);
+     //     fprintf(stderr,"go_back: writing device_wrap with events: %i, %i\n",temp_start_event,temp_end_event);
      is_amp_phase = write_device_wrap(temp_start_event,temp_end_event,device_id,intval,fval);
      
      // now need to deal with all the special cases...
@@ -2262,13 +2262,13 @@ void deal_with_previous(int event_no,int is_amp_phase,int device_id, int intval,
   if (is_amp_phase & 2 ) temp_device_id = clkb;
   if (is_amp_phase & 4 ) temp_device_id = clkc;
   if (temp_device_id == -1){
-    printf("deal_with_previous, is_amp_phase not 1 2 or 4\n");
+    fprintf(stderr,"deal_with_previous, is_amp_phase not 1 2 or 4\n");
   }
   
   chip = (  hardware_config[ temp_device_id ].start_bit ) /8; 
   bit = ( hardware_config[ temp_device_id ].start_bit ) %8; 
   
-  //  printf("deal_with_previous: chip %i, bit: %i\n",chip,bit);
+  //  fprintf(stderr,"deal_with_previous: chip %i, bit: %i\n",chip,bit);
 
   // look for first event first
   if (event_no == 0){ // well, we're the first.  split it up.
@@ -2280,7 +2280,7 @@ void deal_with_previous(int event_no,int is_amp_phase,int device_id, int intval,
 
   else if (((prog_shm->prog_image[chip][event_no-1] >> bit) & 1) == 1 || event_no == 1) {
 
-    //    printf("found a 1 in the clock of previous event, or on second event \n");
+    //    fprintf(stderr,"found a 1 in the clock of previous event, or on second event \n");
     
     // all we do here is write the event into the previous event, and then
     // hit the clock as a one again (since write_device wrap will unhit it.)
@@ -2290,18 +2290,18 @@ void deal_with_previous(int event_no,int is_amp_phase,int device_id, int intval,
     return;
   } // five down, two to go...
   else if (((prog_shm->prog_image[chip][event_no-2] >> bit) & 1) ==  0 ){
-    //    printf("found 00 in previous clock bits\n"); // exact same as above
+    //    fprintf(stderr,"found 00 in previous clock bits\n"); // exact same as above
     write_device_wrap(event_no-1,event_no-1, device_id,intval,fval);
     write_device(temp_device_id,1,event_no-1);
     return;
   }
   else if ( ((prog_shm->prog_image[chip][event_no-2] >> bit) & 1) ==  1){
-    //    printf("got a one two bits back\n");
+    //    fprintf(stderr,"got a one two bits back\n");
     // need to split/extend event_no-1
 
     counter = TIME_OF(event_no-1);
     if (counter > 0) counter--;
-    else printf("splitting an event of a single count - its length will now be two counts\n");
+    else fprintf(stderr,"splitting an event of a single count - its length will now be two counts\n");
     shift_events(event_no-1);
 
     // writes the event into the second piece of the previous
@@ -2312,7 +2312,7 @@ void deal_with_previous(int event_no,int is_amp_phase,int device_id, int intval,
     // hit the clk on the 2nd piece of the split
     write_device(temp_device_id,1,event_no);
   }
-  else printf("deal_with_previous: unknown situation???\n");
+  else fprintf(stderr,"deal_with_previous: unknown situation???\n");
 }
 
 
@@ -2320,7 +2320,7 @@ void deal_with_previous(int event_no,int is_amp_phase,int device_id, int intval,
 
 void store_position(){
   if (currently_going_back != 0){
-    printf("incorrect usage of store_position - are you trying to nest them?\n");
+    fprintf(stderr,"incorrect usage of store_position - are you trying to nest them?\n");
     return;
   }
   position_stored = 1;
@@ -2331,7 +2331,7 @@ void store_position(){
 
 void jump_to_stored(){
   if (currently_going_back !=0 || position_stored == 0){
-    printf("incorrect usage of jump_to_stored_position\n");
+    fprintf(stderr,"incorrect usage of jump_to_stored_position\n");
     return;
   }
   currently_going_back = 1;
@@ -2341,11 +2341,11 @@ void jump_to_stored(){
 
 void return_to_present(){
   if (currently_going_back !=1 || position_stored != 1){
-    printf("incorrect usage of return_to_present\n");
+    fprintf(stderr,"incorrect usage of return_to_present\n");
     return;
   }
 
-  //  printf("return to present: got up to: %.7f before present\n",(float) how_far_back/CLOCK_SPEED);
+  //  fprintf(stderr,"return to present: got up to: %.7f before present\n",(float) how_far_back/CLOCK_SPEED);
   currently_going_back = 0;
   position_stored=0;
 }
@@ -2354,14 +2354,14 @@ void pprog_is_noisy(){
   
   prog_shm->is_noisy = 1;
   prog_shm->noisy_start_pos=0;
-  //  printf("just set is_noisy to true\n");
+  //  fprintf(stderr,"just set is_noisy to true\n");
 }
 
 
 
 void start_noisy_loop(){
   prog_shm->noisy_start_pos = prog_shm->no_events;
-  //  printf("just set noisy_start_pos to %i\n",prog_shm->no_events);
+  //  fprintf(stderr,"just set noisy_start_pos to %i\n",prog_shm->no_events);
 
 }
 
@@ -2381,13 +2381,13 @@ void start_noisy_loop(){
    // at a position time before the present.
 
    if( time <= 0 ) {
-     printf("go_back_one: time <=  0, ignored: %f\n",time);
+     fprintf(stderr,"go_back_one: time <=  0, ignored: %f\n",time);
      prog_shm->event_error = 1;
      return -1; 
    }
 
    if (prog_shm->no_events == 0){
-     printf("go_back_one: no events yet!! ignored\n");
+     fprintf(stderr,"go_back_one: no events yet!! ignored\n");
      prog_shm->event_error = 1;
      return -1;
    }
@@ -2395,7 +2395,7 @@ void start_noisy_loop(){
    
    counts = (long long int) ( ( time * (float) CLOCK_SPEED ) + 0.5 );  // yes + not - !!
 
-   //   printf("go_back_one: %lli counts\n",counts);
+   //   fprintf(stderr,"go_back_one: %lli counts\n",counts);
    // figure out where to insert our event.
 
    event_no = -5;
@@ -2403,16 +2403,16 @@ void start_noisy_loop(){
    for (i = prog_shm->no_events-1 ; i >= 0 ; i--){
      so_far += TIME_OF(i) + 1;
      if (so_far >= counts){
-       //       printf("go_back_one: event %i\n",i);
+       //       fprintf(stderr,"go_back_one: event %i\n",i);
        event_no = i;
        i=-5;
      }
    }
    if( i == -1 ){ // then the pulse program is shorter than the time specified.
-     //     printf("ok, go_back_one takes us to the first event\n");
+     //     fprintf(stderr,"ok, go_back_one takes us to the first event\n");
      counts = counts - so_far;
      if (first_time == 1){
-       printf("go_back_one: increasing pulseprog length by: %12.9f s\n",(float) counts /(float) CLOCK_SPEED);
+       fprintf(stderr,"go_back_one: increasing pulseprog length by: %12.9f s\n",(float) counts /(float) CLOCK_SPEED);
        first_time = 0;
      }
      shift_events(0);  // move all events from 0 on down to 1 on down.
@@ -2426,7 +2426,7 @@ void start_noisy_loop(){
      counts -= 1; // that's for the zeroth event
 
      if (counts > MAX_CLOCK_CYCLES){
-       printf("what??? go_back_one: counts > MAX_CLOCK_CYCLES\n");
+       fprintf(stderr,"what??? go_back_one: counts > MAX_CLOCK_CYCLES\n");
        prog_shm->event_error = 1;
      }
 
@@ -2434,7 +2434,7 @@ void start_noisy_loop(){
        counts -=1; // that's for this coming event
        shift_events(0);  // already put defaults into first event
        set_timer(event_no+1,counts);
-       //       printf("first event, counts: %lli\n",counts);
+       //       fprintf(stderr,"first event, counts: %lli\n",counts);
      }
 
      // ok, so now we can stick the requested events into the first event
@@ -2442,13 +2442,13 @@ void start_noisy_loop(){
    else{ // our event goes sometime into event # event_no
      // three cases, either our event is at the start, in the middle or at the end of this event
 
-     //     printf("so_far: %lli, counts: %lli\n",so_far,counts);
+     //     fprintf(stderr,"so_far: %lli, counts: %lli\n",so_far,counts);
 
      counter = TIME_OF(event_no) + 1;
 
      if (so_far == counts){ // its at the very beginning
        if (counter > 1) { // and the event is more than one clock cycle
-	 //	 printf("go_back_one: exactly the first of an event\n");
+	 //	 fprintf(stderr,"go_back_one: exactly the first of an event\n");
 	 shift_events(event_no);
 	 counter -= 2;
 	 set_timer(event_no+1,counter);
@@ -2456,11 +2456,11 @@ void start_noisy_loop(){
 
        }// if the counter is only for 1 cycle, we're already set.
        else{
-	 // printf("already perfect event\n");
+	 // fprintf(stderr,"already perfect event\n");
        }
      }
      else if (so_far - counter + 1 == counts){ // its exactly the last one
-       //	 printf("go_back_one: exactly the last count of an event\n");
+       //	 fprintf(stderr,"go_back_one: exactly the last count of an event\n");
 	 shift_events(event_no);
 	 counter -= 2;
 	 set_timer(event_no,counter);
@@ -2468,7 +2468,7 @@ void start_noisy_loop(){
 	 event_no += 1;
      }
      else{ // its somewhere in the middle of the event
-       //	 printf("go_back_one: somewhere in the middle of an event\n");
+       //	 fprintf(stderr,"go_back_one: somewhere in the middle of an event\n");
 	 shift_events(event_no);
 	 shift_events(event_no);
 	 c1 = (so_far - counts - 1 );
@@ -2489,12 +2489,12 @@ void start_noisy_loop(){
    for( i=0; i<num; i++ ) { 
      device_id = (unsigned char) va_arg( args, int  ); 
      if (device_id >= RF_OFFSET){ 
-       //       printf("go_back_one: translating device: %i ",device_id);
+       //       fprintf(stderr,"go_back_one: translating device: %i ",device_id);
        device_id = tran_table[device_id-RF_OFFSET];
-       //       printf("to device: %i\n",device_id);
+       //       fprintf(stderr,"to device: %i\n",device_id);
      }
      val = va_arg( args, unsigned int ); 
-     //     printf("go_back_one: device: %i, val %i\n",device_id,val);
+     //     fprintf(stderr,"go_back_one: device: %i, val %i\n",device_id,val);
      write_device( device_id, val,event_no); 
     
    } 
@@ -2502,7 +2502,7 @@ void start_noisy_loop(){
 
    if (event_no < 0 ){
      prog_shm->event_error = 1;
-     printf("go_back_one: event_no < 0\n");
+     fprintf(stderr,"go_back_one: event_no < 0\n");
    }
 
    return 0; 

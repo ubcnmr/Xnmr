@@ -199,11 +199,11 @@ gint do_zero_imag(GtkWidget *widget, double *unused)
 
   if( widget == NULL ) {
     buff = buffp[ upload_buff ];
-    //printf("do_ft- on buffer %i\n",upload_buff );
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
   }
   else {
     buff = buffp[ current ];
-    //printf("do_ft- on buffer %i\n",current );
+    // fprintf(stderr,"do_ft- on buffer %i\n",current );
   }
   if (buff == NULL){
     popup_msg("do_zero_imag panic! buff is null!",TRUE);
@@ -251,11 +251,11 @@ gint do_ft(GtkWidget *widget, double *unused)
 
   if( widget == NULL ) {
     buff = buffp[ upload_buff ];
-    //printf("do_ft- on buffer %i\n",upload_buff );
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
   }
   else {
     buff = buffp[ current ];
-    //printf("do_ft- on buffer %i\n",current );
+    // fprintf(stderr,"do_ft- on buffer %i\n",current );
   }
   if (buff == NULL){
     popup_msg("do_ft panic! buff is null!",TRUE);
@@ -265,7 +265,7 @@ gint do_ft(GtkWidget *widget, double *unused)
   /*********
 
   if(buff->win.press_pend>0) {
-    printf("ft: press_pend>0, quitting\n");
+    fprintf(stderr,"ft: press_pend>0, quitting\n");
     return TRUE;  //standard exit
   }
 
@@ -280,11 +280,11 @@ gint do_ft(GtkWidget *widget, double *unused)
   cursor_busy(buff);
   //    scale=sqrt((float) buff->param_set.npts);
   if (buff->flags & FT_FLAG){
-    //    printf("FT_FLAG is true\n");
+    //    fprintf(stderr,"FT_FLAG is true\n");
     scale = buff->param_set.npts/2.0;
   }
   else{
-    //    printf("FT_FLAG is false\n");
+    //    fprintf(stderr,"FT_FLAG is false\n");
     scale = 2.0;
   }
 
@@ -337,11 +337,11 @@ gint do_bft(GtkWidget *widget, double *unused)
 
   if( widget == NULL ) {
     buff = buffp[ upload_buff ];
-    //printf("do_ft- on buffer %i\n",upload_buff );
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
   }
   else {
     buff = buffp[ current ];
-    //printf("do_ft- on buffer %i\n",current );
+    // fprintf(stderr,"do_ft- on buffer %i\n",current );
   }
   if (buff == NULL){
     popup_msg("do_bft panic! buff is null!",TRUE);
@@ -351,7 +351,7 @@ gint do_bft(GtkWidget *widget, double *unused)
   /*********
 
   if(buff->win.press_pend>0) {
-    printf("ft: press_pend>0, quitting\n");
+    fprintf(stderr,"ft: press_pend>0, quitting\n");
     return TRUE;  //standard exit
   }
 
@@ -366,11 +366,11 @@ gint do_bft(GtkWidget *widget, double *unused)
   cursor_busy(buff);
   //    scale=sqrt((float) buff->param_set.npts);
   if (buff->flags & FT_FLAG){
-    //    printf("FT_FLAG is true\n");
+    //    fprintf(stderr,"FT_FLAG is true\n");
     scale = buff->param_set.npts/2.0;
   }
   else{
-    //    printf("FT_FLAG is false\n");
+    //    fprintf(stderr,"FT_FLAG is false\n");
     scale = 2.0;
   }
   data = g_malloc(4* buff->param_set.npts*2*2);
@@ -434,7 +434,7 @@ gint do_exp_mult( GtkWidget* widget, double* val )
 
   factor = (float) *val;
 
-  //printf( "doing exp_mult by %f\n", factor );
+  // fprintf(stderr, "doing exp_mult by %f\n", factor );
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -483,7 +483,7 @@ gint do_gaussian_mult( GtkWidget* widget, double * val)
 
   factor = *val;
 
-  //printf( "doing gaussian mult by %f\n",factor );
+  // fprintf(stderr, "doing gaussian mult by %f\n",factor );
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -559,7 +559,7 @@ gint do_zero_fill(GtkWidget * widget,double *val)
       } */  
   cursor_normal(buff);
   			    
-  //printf("do_zero_fill: got factor: %f, rounding to: %i\n",factor,new_npts);
+  // fprintf(stderr,"do_zero_fill: got factor: %f, rounding to: %i\n",factor,new_npts);
 
  return 0;
 }
@@ -602,7 +602,7 @@ gint do_left_shift(GtkWidget * widget,double *val)
     return 0;
   }
 
-  //printf("left_shift: shift is: %i\n",shift);
+  // fprintf(stderr,"left_shift: shift is: %i\n",shift);
   if (shift ==0) return 0;
   if (shift > 0){
     for( j=0; j<buff->npts2; j++ ){
@@ -646,11 +646,11 @@ gint do_left_shift_and_display(GtkWidget * widget,double *val)
   dbuff *buff;
   gint result;
 
-  //  printf("in do_left_shift_and_display with val = %lf\n",*val);
+  //  fprintf(stderr,"in do_left_shift_and_display with val = %lf\n",*val);
   result = do_left_shift( widget, val );
 
   if( widget == NULL ) {
-    printf("widget is nyull\n");
+    fprintf(stderr,"widget is nyull\n");
     buff = buffp[ upload_buff ];
   }
   else 
@@ -679,7 +679,7 @@ gint do_phase_wrapper( GtkWidget* widget, double *unused )
   }
 
   if ( ((int)buff->process_data[PH].val & GLOBAL_PHASE_FLAG)==0) {
-    //printf( "Setting phase from %f, %f, to %f, %f, (local)\n", buff->phase0_app, buff->phase1_app, buff->phase0, buff->phase1 );
+    // fprintf(stderr, "Setting phase from %f, %f, to %f, %f, (local)\n", buff->phase0_app, buff->phase1_app, buff->phase0, buff->phase1 );
 
     for( i=0; i<buff->npts2; i++ )
       do_phase( &buff->data[i*2*buff->param_set.npts], &buff->data[ i*2*buff->param_set.npts ], 
@@ -689,7 +689,7 @@ gint do_phase_wrapper( GtkWidget* widget, double *unused )
     buff->phase1_app = buff->phase1;
   }
   else {
-    //printf( "Setting phase from %f, %f, to %f, %f, (global)\n", buff->phase0_app, buff->phase1_app, phase0, phase1 );
+    // fprintf(stderr, "Setting phase from %f, %f, to %f, %f, (global)\n", buff->phase0_app, buff->phase1_app, phase0, phase1 );
     for( i=0; i<buff->npts2; i++ )
       do_phase( &buff->data[i*2*buff->param_set.npts], &buff->data[ i*2*buff->param_set.npts ], 
 		phase0 - buff->phase0_app, phase1 - buff->phase1_app, buff->param_set.npts );
@@ -747,7 +747,7 @@ gint process_local_global_toggle(GtkWidget *widget, int button )
   }
   else {
     active_process_data[PH].val = GLOBAL_PHASE_FLAG;
-    //    printf("in toggle local/global, setting active to global\n");
+    //    fprintf(stderr,"in toggle local/global, setting active to global\n");
   }
 
   return 0;
@@ -764,7 +764,7 @@ gint update_active_process_data( GtkAdjustment *adj, int button )
   if( active_process_data == NULL )
     return -1;
 
-  //printf( "updating active process data\n" );
+  // fprintf(stderr, "updating active process data\n" );
   
   f = adj -> value;
 
@@ -792,7 +792,7 @@ GtkWidget* create_process_frame()
     process_button[i].button = NULL;
   }
 
-  //printf( "creating process frame\n" );
+  // fprintf(stderr, "creating process frame\n" );
 
   snprintf(title,UTIL_LEN,"Process");
 
@@ -1053,12 +1053,12 @@ gint process_data( GtkWidget *widget, gpointer data )
 
   if( widget == NULL ) {
     p_data = acq_process_data;
-    //printf( "processing acq data\n" );
+    // fprintf(stderr, "processing acq data\n" );
   }
 
   else {
     p_data = active_process_data;
-    //printf( "processing active buffer data\n" );
+    // fprintf(stderr, "processing active buffer data\n" );
   }
 
   for( i=0; i<MAX_PROCESS_FUNCTIONS; i++ ) {
@@ -1081,12 +1081,12 @@ gint process_data( GtkWidget *widget, gpointer data )
       case SCALABLE_PROCESS_OFF:
 	break;
       default:
-	printf( "Bad processing command\n" );
+	fprintf(stderr, "Bad processing command\n" );
 	break;
       }
   }
 
-  //printf( "done processing data\n" );
+  // fprintf(stderr, "done processing data\n" );
 
   //draw canvas if this was a gtk button callback
 
@@ -1100,7 +1100,7 @@ void show_process_frame( process_data_t* process_set )
 {
   int i;
 
-  //printf( "Showing process frame\n" );
+  // fprintf(stderr, "Showing process frame\n" );
 
   active_process_data = process_set;
 
@@ -1122,7 +1122,7 @@ void show_process_frame( process_data_t* process_set )
 	  break;
     
 	default:
-	  printf( "process button %i: invalid status is %i\n" ,i,process_set[i].status);
+	  fprintf(stderr, "process button %i: invalid status is %i\n" ,i,process_set[i].status);
 	  break;
 	}
     }
@@ -1140,7 +1140,7 @@ void show_process_frame( process_data_t* process_set )
     }
   else{
     gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON(r_global_button  ), TRUE ); 
-  //printf( "done showing process frame\n" );
+  // fprintf(stderr, "done showing process frame\n" );
   }
   return;
 }
@@ -1177,20 +1177,20 @@ gchar psrb(int bits,int init){
   char first;
 
   if (bits < 3 || bits > PSRBMAX || bits == 8 || bits ==12 || bits == 13 || bits == 14 || bits == 16){
-    printf("psrb error: bits = %i. bailing\n",bits);
+    fprintf(stderr,"psrb error: bits = %i. bailing\n",bits);
     return 0;
   }
 
 			   
 
   if (inited == 0 && init == 0){
-    printf("psrb error.  Not init'ed yet, and init = 0.  Initing anyway\n");
+    fprintf(stderr,"psrb error.  Not init'ed yet, and init = 0.  Initing anyway\n");
     init = 1;
   }
 
 
   if (init == 0 && inited_bits != bits){
-    printf("psrb error.  Inited but with wrong number of bits.  Re-initing\n");
+    fprintf(stderr,"psrb error.  Inited but with wrong number of bits.  Re-initing\n");
     init = 1;
   }
   
@@ -1268,7 +1268,7 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
       }
   */
   
-  printf("cross_correlate: num_seq is %i\n",num_seq);
+  fprintf(stderr,"cross_correlate: num_seq is %i\n",num_seq);
       
   xsize = buff->param_set.npts;
   if (xsize < len[ num_bits - 1]*2){
@@ -1284,7 +1284,7 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
   mreg = g_malloc(sizeof(char) * xsize);
 
 
-  //  printf("in do_cross_correlate, bits: %i\n",(int) *bits);
+  //  fprintf(stderr,"in do_cross_correlate, bits: %i\n",(int) *bits);
 
   mreg[0] = psrb(num_bits,1);
   for (i=1;i<xsize;i++)
@@ -1326,8 +1326,8 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
  
 
   }
-  printf("cross_correlate: avg1/n %f 2: %f\n",avg1/len[num_bits-1],avg2/len[num_bits-1]);
-  printf("cross_correlate: len[num_bits]: %i\n",len[num_bits-1]);
+  fprintf(stderr,"cross_correlate: avg1/n %f 2: %f\n",avg1/len[num_bits-1],avg2/len[num_bits-1]);
+  fprintf(stderr,"cross_correlate: len[num_bits]: %i\n",len[num_bits-1]);
 
   buff_resize(buff,len[num_bits-1],buff->npts2);
   if (widget !=NULL || upload_buff == current) update_npts(len[num_bits-1]); 
@@ -1567,7 +1567,7 @@ gint do_zero_fill_2d(GtkWidget * widget,double *val)
 
 
 
-  //printf("do_zero_fill: got factor: %f, rounding to: %i\n",factor,new_npts);
+  // fprintf(stderr,"do_zero_fill: got factor: %f, rounding to: %i\n",factor,new_npts);
 
  return 0;
 }
@@ -1624,11 +1624,11 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 
   if( widget == NULL ) {
     buff = buffp[ upload_buff ];
-    //printf("do_ft- on buffer %i\n",upload_buff );
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
   }
   else {
     buff = buffp[ current ];
-    //printf("do_ft- on buffer %i\n",current );
+    // fprintf(stderr,"do_ft- on buffer %i\n",current );
   }
   if (buff == NULL){
     popup_msg("do_ft_2d panic! buff is null!",TRUE);
@@ -1638,7 +1638,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   /*********
 
   if(buff->win.press_pend>0) {
-    printf("ft: press_pend>0, quitting\n");
+    fprintf(stderr,"ft: press_pend>0, quitting\n");
     return TRUE;  //standard exit
   }
 
@@ -1656,7 +1656,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     spared=2.0;
   do_zero_fill_2d(widget,&spared);
 
-    //  printf("in 2dft just did zero fill\n");
+    //  fprintf(stderr,"in 2dft just did zero fill\n");
   cursor_busy(buff);
   //  scale=sqrt((float) buff->npts2/2);
   if (buff->flags & FT_FLAG2)
@@ -1666,10 +1666,10 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 
   if (buff->is_hyper == FALSE){
     //    popup_msg("hypercomplex flag not set, doing real FT?",TRUE);
-    printf("hypercomplex flag not set, doing real FT\n");
+    fprintf(stderr,"hypercomplex flag not set, doing real FT\n");
     new_data = g_malloc(buff->npts2 * sizeof(float) );
-    //  printf("2dft did malloc, 2dnpts = %i\n",buff->npts2);
-    if (new_data == NULL) printf("failed to malloc!\n");
+    //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
+    if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
 
     // copy out
     for(i=0;i<buff->param_set.npts*2  ;i++){
@@ -1704,8 +1704,8 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   }
   else{
     new_data = g_malloc(buff->npts2 * sizeof(float));
-    //  printf("2dft did malloc, 2dnpts = %i\n",buff->npts2);
-    if (new_data == NULL) printf("failed to malloc!\n");
+    //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
+    if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
     // copy out
     for(i=0;i<buff->param_set.npts*2  ;i++){
       for(j=0;j<buff->npts2/2;j++){
@@ -1730,7 +1730,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       }
     }
   }
-  //  printf("2dft about to free buffer\n");
+  //  fprintf(stderr,"2dft about to free buffer\n");
 
   cursor_normal(buff);
   g_free(new_data);
@@ -1767,7 +1767,7 @@ gint do_exp_mult_2d( GtkWidget* widget, double * val )
 
   factor = (float) *val;
 
-  //printf( "doing exp_mult by %f\n", factor );
+  // fprintf(stderr, "doing exp_mult by %f\n", factor );
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -1789,7 +1789,7 @@ gint do_exp_mult_2d( GtkWidget* widget, double * val )
   if (i==1)
     dwell2=1./sw2;
   else {
-    printf("can't find dwell2 or sw2, bailing out of em2d\n");
+    fprintf(stderr,"can't find dwell2 or sw2, bailing out of em2d\n");
     return 0;
   }
 
@@ -1841,7 +1841,7 @@ gint do_offset_cal_2D( GtkWidget *widget, double *unused )
     return 0;
     
   }
-  //  printf("%d %d\n\n", buff->param_set.npts, buff->npts2);
+  //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
 
   if (buff->is_hyper == 1){
     for( j=0;j<2*buff->param_set.npts;j++) {
@@ -1876,7 +1876,7 @@ gint do_offset_cal_2D( GtkWidget *widget, double *unused )
 
 
   else{ // isn't hypercomplex
-    printf("doing real baseline correct\n");
+    fprintf(stderr,"doing real baseline correct\n");
     for( j=0;j<2*buff->param_set.npts;j++) {
       count = 0;
       offset = 0.0;
@@ -1934,8 +1934,8 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
     return 0;
     
   }
-  //  printf("%d %d\n\n", buff->param_set.npts, buff->npts2);
-  printf("npts2: %i\n",buff->npts2);
+  //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
+  fprintf(stderr,"npts2: %i\n",buff->npts2);
 
 
   if (buff->npts2 < 8 ) return 0; // forget it!
@@ -1950,10 +1950,10 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
     spared=2.0;
 
   new_data = g_malloc(buff->npts2 * sizeof(float)*spared );
-  //  printf("2dft did malloc, 2dnpts = %i\n",buff->npts2);
-  if (new_data == NULL) printf("failed to malloc!\n");
+  //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
+  if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
 
-    //  printf("in 2dft just did zero fill\n");
+    //  fprintf(stderr,"in 2dft just did zero fill\n");
   cursor_busy(buff);
   scale=(float) buff->npts2/2*spared;
 
@@ -2001,7 +2001,7 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
 
     }
   }
-  //  printf("2dft about to free buffer\n");
+  //  fprintf(stderr,"2dft about to free buffer\n");
 
   cursor_normal(buff);
   g_free(new_data);

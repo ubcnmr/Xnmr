@@ -52,6 +52,7 @@
 #define PHASE90  1
 #define PHASE180 2
 #define PHASE270 3
+#define PHASE_POWER 4
 
 /*
  * This shared memory structure is used to share data, parameters and signal instructions

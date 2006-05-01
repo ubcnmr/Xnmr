@@ -46,13 +46,13 @@ struct timeval last_time, current_time;
 
 
 void do_destroy_all_mutex_wrap(){
-  //  printf("in do_destroy_all_mutex_wrap\n");
+  //  fprintf(stderr,"in do_destroy_all_mutex_wrap\n");
   gdk_threads_enter();
-  //  printf("about to call do_destroy_all()\n");
+  //  fprintf(stderr,"about to call do_destroy_all()\n");
   do_destroy_all();
-  //  printf("about to call gdk_threads_leave()\n");
+  //  fprintf(stderr,"about to call gdk_threads_leave()\n");
   gdk_threads_leave();
-  //  printf("about to leave do_destroy_all_mutex_wrap()\n");
+  //  fprintf(stderr,"about to leave do_destroy_all_mutex_wrap()\n");
   return;
 }
 
@@ -82,14 +82,14 @@ void *sig_handler_thread_routine(void *dummy)
   data_shm->ui_pid = getpid();
   
   do{
-    //    printf("xnmr_ipc: about to wait for signal\n");
+    //    fprintf(stderr,"xnmr_ipc: about to wait for signal\n");
     sigwait(&sigset,&sig);
-    //    printf("xnmr_ipc: calling acq_signal_handler\n");
+    //    fprintf(stderr,"xnmr_ipc: calling acq_signal_handler\n");
     gdk_threads_enter();
     if (sig == SIG_UI_ACQ)
       acq_signal_handler();
     else if (sig == SIGQUIT || sig == SIGTERM || sig == SIGINT){
-      printf("signal thread, got a QUIT TERM or INT\n");
+      fprintf(stderr,"signal thread, got a QUIT TERM or INT\n");
       data_shm->ui_pid = -1; // also done elsewhere but what the heck
       g_idle_add((GtkFunction)do_destroy_all_mutex_wrap,NULL);
     }
@@ -105,7 +105,7 @@ int init_ipc_signals()
 {
   gint dummy=0;
   pthread_t sig_handler_thread;
-  //  printf("Xnmr in init_ipc_signals\n");
+  //  fprintf(stderr,"Xnmr in init_ipc_signals\n");
   sigset_t sigset;
 
   sigemptyset( &sigset );
@@ -126,7 +126,7 @@ int init_ipc_signals()
   */
 
   pthread_create(&sig_handler_thread,NULL,&sig_handler_thread_routine,&dummy);
-  printf("just created thread, mypid is: %i\n",getpid());
+  fprintf(stderr,"just created thread, mypid is: %i\n",getpid());
 
 
 
@@ -164,7 +164,7 @@ int xnmr_init_shm()
 
   // this will fail if shm exists:
   data_shm_id = shmget( DATA_SHM_KEY, sizeof( struct data_shm_t ), IPC_CREAT | IPC_EXCL|0660);
-  printf("xnmr_ipc: data_shm_id: %i\n",data_shm_id);
+  fprintf(stderr,"xnmr_ipc: data_shm_id: %i\n",data_shm_id);
 
   if( data_shm_id < 0 ) { // so if shared mem exists:
     existed = 1;
@@ -183,7 +183,7 @@ int xnmr_init_shm()
       exit(1);
     }
        
-    //printf( "Xnmr linked into acq that was already running on pid %d\n", data_shm->acq_pid );
+    //fprintf(stderr, "Xnmr linked into acq that was already running on pid %d\n", data_shm->acq_pid );
     
     //don't set pid yet!
     connected = TRUE;
@@ -200,13 +200,13 @@ int xnmr_init_shm()
   connected = TRUE;
 
   if (existed == 0){  // then we created above
-    printf("Xnmr: created shared memory, copying string: %s into version\n",XNMR_ACQ_VERSION);
+    fprintf(stderr,"Xnmr: created shared memory, copying string: %s into version\n",XNMR_ACQ_VERSION);
     strncpy(data_shm->version,XNMR_ACQ_VERSION,VERSION_LEN);
   }
   else{
-    printf("Xnmr: shared memory existed, version string contained: %s\n",data_shm->version);
+    fprintf(stderr,"Xnmr: shared memory existed, version string contained: %s\n",data_shm->version);
     if (strcmp(data_shm->version,XNMR_ACQ_VERSION) != 0){
-      printf("Xnmr: XNMR_ACQ_VERSION mismatch\n");
+      fprintf(stderr,"Xnmr: XNMR_ACQ_VERSION mismatch\n");
       shmctl(data_shm_id,IPC_RMID,NULL); // mark it for removal if we detect a mismatch
       release_shm();
       exit(1);
@@ -220,7 +220,7 @@ int xnmr_init_shm()
    *  Now set up some default values
    */
 
-  //printf( "shared memory created\n" );
+  //fprintf(stderr, "shared memory created\n" );
   
   //  data_shm->ui_pid = getpid();
 
@@ -271,17 +271,17 @@ void start_acq()
 	char mystr[2],i;
 	mystr[0]=7;
 	mystr[1]=0;
-	printf("*********************************************\n");
-	printf("*                                           *\n");
-	printf("*             FAILED TO LAUNCH ACQ          *\n");
-	printf("*                                           *\n");
-	printf("* You'll need to use ipcclean in the Xnmr   *\n");
-	printf("*           directory and put               *\n");
-	printf("*      a valid acq in /usr/local/bin/       *\n");
-	printf("*                                           *\n");
-	printf("*********************************************\n");
+	fprintf(stderr,"*********************************************\n");
+	fprintf(stderr,"*                                           *\n");
+	fprintf(stderr,"*             FAILED TO LAUNCH ACQ          *\n");
+	fprintf(stderr,"*                                           *\n");
+	fprintf(stderr,"* You'll need to use ipcclean in the Xnmr   *\n");
+	fprintf(stderr,"*           directory and put               *\n");
+	fprintf(stderr,"*      a valid acq in /usr/local/bin/       *\n");
+	fprintf(stderr,"*                                           *\n");
+	fprintf(stderr,"*********************************************\n");
 	for(i=0;i<5;i++){
-	  printf(mystr);
+	  fprintf(stderr,mystr);
 	  fflush(stdout);
 	  sleep(1);
 	}
@@ -293,7 +293,7 @@ void start_acq()
   }
 
   else {
-    //printf( "Xnmr_ipc: acq already launched on pid %d\n", pid );
+    //fprintf(stderr, "Xnmr_ipc: acq already launched on pid %d\n", pid );
   }
   return;
 }
@@ -309,24 +309,24 @@ int wait_for_acq()
   c = data_shm->acq_sig_ui_meaning;
  
   //  while( c == NO_SIGNAL ) {
-    printf( "ui on pid %d: waiting for response from acq\n", getpid() );
+    fprintf(stderr, "ui on pid %d: waiting for response from acq\n", getpid() );
     if (c == 0)
       pause( );
     c = data_shm->acq_sig_ui_meaning;
-        printf( "ui: received a signal %i\n",c );
+        fprintf(stderr, "ui: received a signal %i\n",c );
     //  } 
   data_shm->acq_sig_ui_meaning = NO_SIGNAL;
 
   if( c == ACQ_LAUNCHED ) {
-    //printf( "Xnmr: verified that acq has started\n" );
+    //fprintf(stderr, "Xnmr: verified that acq has started\n" );
       return ACQ_LAUNCHED;
   }
   if (c == ACQ_LAUNCH_FAIL) {
-    printf("ui: acq said it didn't start\n");
+    fprintf(stderr,"ui: acq said it didn't start\n");
     return -1;
   }
 
-  printf( "ui received an unusual signal %d\n", c );
+  fprintf(stderr, "ui received an unusual signal %d\n", c );
   return -1;
 }
 
@@ -345,12 +345,12 @@ void end_acq()
 {
   pid_t c;
 
-  if (data_shm->ui_pid !=-1) printf("in end_acq and ui_pid = %i\n",data_shm->ui_pid);
+  if (data_shm->ui_pid !=-1) fprintf(stderr,"in end_acq and ui_pid = %i\n",data_shm->ui_pid);
   //  data_shm->ui_pid = -1;
 
   c = data_shm->acq_pid;
   if( c > 0 ) {
-    //    printf( "Xnmr_ipc is terminating acq\n" );
+    //    fprintf(stderr, "Xnmr_ipc is terminating acq\n" );
     kill( c, SIGTERM );
     wait( NULL );
   }
@@ -362,14 +362,14 @@ int send_sig_acq( char sig )
 
   pid =  data_shm->acq_pid;
   if( pid > 0 ){
-    //    printf( "xnmr_ipc sending signal %d to acq on pid %d\n", sig, pid );
+    //    fprintf(stderr, "xnmr_ipc sending signal %d to acq on pid %d\n", sig, pid );
     data_shm->ui_sig_acq_meaning = sig;
     kill( pid, SIG_UI_ACQ );
     return 0;
   }
   
 
-  printf( "signal not sent!!\n" );
+  fprintf(stderr, "signal not sent!!\n" );
   return -1;  
 
 }
@@ -410,7 +410,7 @@ void set_acqn_labels()
   my_time = tv.tv_sec*1e6+tv.tv_usec +data_shm->time_remaining*1e6/CLOCK_SPEED;
   completion_time = (time_t) (my_time/1e6);
   comp_time = ctime(&completion_time);
-  //  printf("%s\n",comp_time);
+  //  fprintf(stderr,"%s\n",comp_time);
   if(strlen(comp_time)>6) comp_time[strlen(comp_time)-6] = 0; // get rid of the year
   if(strlen(comp_time)>10) {
     cpoint = strchr(comp_time+9,' '); // looks like there is always a space for 2 digits of date
@@ -425,14 +425,14 @@ void set_acqn_labels()
   snprintf( s,UTIL_LEN*2, "%2d:%2d:%2d\n%s\nacq buff: %i",hour,min,sec,comp_time,upload_buff);
   gtk_label_set_text( GTK_LABEL(time_remaining_label),s);
 
-  //  printf("left set labels\n");
+  //  fprintf(stderr,"left set labels\n");
 
 
 }
 
 void set_acqn_labels_mutex_wrap(){
   gdk_threads_enter();
-  //  printf("in set_acqn_labels_mutex_wrap\n");
+  //  fprintf(stderr,"in set_acqn_labels_mutex_wrap\n");
   set_acqn_labels();
   gdk_threads_leave();
 }
@@ -482,7 +482,7 @@ gint upload_and_draw_canvas( dbuff *buff )
     upload_data( buff );
     // I think this was leftover from Nicolet
     //    update_sw_dwell();
-    //    printf("last: %ld\n",data_shm->last_acqn);
+    //    fprintf(stderr,"last: %ld\n",data_shm->last_acqn);
     draw_canvas( buff );
     redraw = 0;
     last_draw();
@@ -495,7 +495,7 @@ gint idle_button_up( GtkWidget *button )
 
 {
   gdk_threads_enter();
-  //  printf( "in idle_button_up\n" );
+  //  fprintf(stderr, "in idle_button_up\n" );
   gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( button ), FALSE );
   gdk_threads_leave();
   return FALSE;
@@ -507,20 +507,20 @@ gint idle_queue( GtkWidget *button )
   int valid,bnum;
   gdk_threads_enter();
 
-  //  printf("in idle_queue\n");
+  //  fprintf(stderr,"in idle_queue\n");
   if (queue.num_queued ==0){
-    printf("in idle_queue, but none in queue!\n");
+    fprintf(stderr,"in idle_queue, but none in queue!\n");
 
   }
   else{
     valid =  gtk_tree_model_get_iter_first(GTK_TREE_MODEL(queue.list),&queue.iter);
     if (valid != 1){
-      printf("in idle queue but nothing in queue!\n");
+      fprintf(stderr,"in idle queue but nothing in queue!\n");
       return 0;
     }
     gtk_tree_model_get(GTK_TREE_MODEL(queue.list),&queue.iter,
 		       BUFFER_COLUMN,&bnum,-1);
-    //    printf("got buff at top of queue: %i\n",bnum);
+    //    fprintf(stderr,"got buff at top of queue: %i\n",bnum);
     
     gtk_list_store_remove(GTK_LIST_STORE(queue.list),&queue.iter);
     
@@ -529,7 +529,7 @@ gint idle_queue( GtkWidget *button )
     make_active(buffp[bnum]);
     
     set_queue_label();
-    //    printf("num left in queue: %i\n",queue.num_queued);
+    //    fprintf(stderr,"num left in queue: %i\n",queue.num_queued);
     
     gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), TRUE );
   }
@@ -547,14 +547,14 @@ gint reload_wrapper( gpointer data )
 
   // check to make sure dwell is done correctly - Obsolete - from Nicolet scope days.
   /*  if (data_shm->time_per_point < 0){
-    printf("Scope didn't return dwell time\n");
+    fprintf(stderr,"Scope didn't return dwell time\n");
   }
   else{
     if( (int) 100*buffp[upload_buff]->param_set.dwell != (int) (100*data_shm->time_per_point*1e6 +1) ){ // how can this ever be?  seems like upload on every scan should pick it up?
       popup_msg("looks like you had the wrong dwell");
 
-      //    printf("old dwell: %f\n",buffp[upload_buff]->param_set.dwell);
-      // printf("new dwell: %f\n",data_shm->time_per_point*1e6);
+      //    fprintf(stderr,"old dwell: %f\n",buffp[upload_buff]->param_set.dwell);
+      // fprintf(stderr,"new dwell: %f\n",data_shm->time_per_point*1e6);
       buffp[upload_buff]->param_set.dwell=data_shm->time_per_point*1e6;
       buffp[upload_buff]->param_set.sw=1.0/data_shm->time_per_point;
       if (upload_buff == current) update_sw_dwell();
@@ -644,7 +644,7 @@ void acq_signal_handler()
     {
     case NEW_DATA_READY:
 
-      //printf( "xnmr received signal NEW_DATA_READY\n" );
+      // fprintf(stderr, "xnmr received signal NEW_DATA_READY\n" );
       if (redraw == 0 && draw_time_check()  ){ 
 	/* only set it to draw again if its finished from the last time.
 
@@ -688,7 +688,7 @@ void acq_signal_handler()
     
     
     case ACQ_DONE:
-      //      printf( "Xnmr_ipc received signal ACQ_DONE\n" );
+      //      fprintf(stderr, "Xnmr_ipc received signal ACQ_DONE\n" );
 
       redraw = 1;
       
@@ -705,9 +705,9 @@ void acq_signal_handler()
 	g_idle_add((GtkFunction) set_acqn_labels_mutex_wrap,NULL);
 
 	path_strcpy(buffp[upload_buff]->path_for_reload,data_shm->save_data_path);
-  //	printf("xnmr_ipc put: %s\n",buffp[upload_buff]->path_for_reload);
+  //	fprintf(stderr,"xnmr_ipc put: %s\n",buffp[upload_buff]->path_for_reload);
 	//	if (data_shm->num_acqs_2d == 1 && data_shm->acqn != 0)
-	//  printf("got ACQ_DONE from ACQ_RUNNING, only completed %li of %li acqns\n",
+	//  fprintf(stderr,"got ACQ_DONE from ACQ_RUNNING, only completed %li of %li acqns\n",
 	//     data_shm->acqn,data_shm->num_acqs );
 	//	g_idle_add ( (GtkFunction) set_window_title, buffp[upload_buff]);
 	break;//carl added
@@ -745,11 +745,11 @@ void acq_signal_handler()
 	case ACQ_RUNNING:
 	  if (data_shm->mode == NORMAL_MODE){
 	    g_idle_add( (GtkFunction) idle_button_up, start_button );
-	    //	    printf("calling idle button up for acq and save\n");
+	    //	    fprintf(stderr,"calling idle button up for acq and save\n");
 	  }
 	  else{
 	    g_idle_add( (GtkFunction) idle_button_up, start_button_nosave );
-	    //	    printf("calling idle_button up for acq nosave\n");
+	    //	    fprintf(stderr,"calling idle_button up for acq nosave\n");
 	  }
 	  //	  data_shm->mode = NO_MODE; // do this when the button comes up
 
@@ -773,7 +773,7 @@ void acq_signal_handler()
       break;
     case NO_SIGNAL:
       // this happens (I think) if we get queued by acq a second time before we're done with the first.
-      //      printf("xnmr_ipc: got NO_SIGNAL\n");
+      //      fprintf(stderr,"xnmr_ipc: got NO_SIGNAL\n");
       return;
       break;
     default:
@@ -783,7 +783,7 @@ void acq_signal_handler()
   //other signals are not picked up by this routine, but by wait_for_acq instead
 
   if( data_shm->acq_sig_ui_meaning != ACQ_LAUNCHED ) {
-    printf( "Xnmr_ipc recieved an unidentified signal %d\n", data_shm->acq_sig_ui_meaning );
+    fprintf(stderr, "Xnmr_ipc recieved an unidentified signal %d\n", data_shm->acq_sig_ui_meaning );
     data_shm->acq_sig_ui_meaning = NO_SIGNAL;
   }
 
@@ -796,9 +796,9 @@ int upload_data( dbuff* buff )    //uploads the shm data to the active buffer, r
   int i;
   char s[UTIL_LEN];
 
-  //printf( "uploading data to buffer %d\n", upload_buff );
+  // fprintf(stderr, "uploading data to buffer %d\n", upload_buff );
   /*  if( data_shm->time_per_point > 0 ){
-    //    printf( "xnmr_ipc: upload: uploading dwell time to buffer %d\n", upload_buff );
+    //    fprintf(stderr, "xnmr_ipc: upload: uploading dwell time to buffer %d\n", upload_buff );
     buff->param_set.dwell=data_shm->time_per_point*1000000;
     buff->param_set.sw=(long int)1.0/data_shm->time_per_point;
   }
@@ -831,10 +831,10 @@ int upload_data( dbuff* buff )    //uploads the shm data to the active buffer, r
   }
   for( i=0; i<buff->param_set.npts*2; i++ ){
     buff->data[i] = (float)  data_shm->data_image[i];
-    //printf("%li %f %f\n",data_shm->data_image[i],buff->data[i], (float )data_shm->data_image[i]);
+    // fprintf(stderr,"%li %f %f\n",data_shm->data_image[i],buff->data[i], (float )data_shm->data_image[i]);
   }
 
-  //printf( "upload completed\n" );
+  // fprintf(stderr, "upload completed\n" );
 
   return 0;
   }
@@ -842,7 +842,7 @@ int upload_data( dbuff* buff )    //uploads the shm data to the active buffer, r
 
 gint release_ipc_stuff()
 {
-  //  printf( "release_ipc_stuff, acq_in_progress is %i\n",acq_in_progress );
+  //  fprintf(stderr, "release_ipc_stuff, acq_in_progress is %i\n",acq_in_progress );
 
   if( acq_in_progress == ACQ_STOPPED )
     {

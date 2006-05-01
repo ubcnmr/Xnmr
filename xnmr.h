@@ -12,7 +12,6 @@
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <math.h>
-
 #include "buff.h"
 
 
@@ -37,6 +36,9 @@ extern float  phase0,phase1;
 extern float  phase20,phase21;
 extern GdkCursor  *cursorclock;
 extern char no_acq;
+
+extern script_widget_type script_widgets;
+
 /* function prototypes */
 
 //void open_phase(dbuff *buff,int action,GtkWidget *widget);

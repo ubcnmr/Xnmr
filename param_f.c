@@ -75,9 +75,9 @@ gint am_i_queued(int test_bnum){
   while (valid){
     gtk_tree_model_get(GTK_TREE_MODEL(queue.list),&queue.iter,
 		       BUFFER_COLUMN,&bnum,-1);
-    //    printf("am_i_queued: checking buffer: %i\n",bnum);
+    //    fprintf(stderr,"am_i_queued: checking buffer: %i\n",bnum);
     if (test_bnum == bnum){
-      //      printf("yes, I'm queued\n");
+      //      fprintf(stderr,"yes, I'm queued\n");
       return TRUE;
     }
     valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(queue.list),&queue.iter);
@@ -123,15 +123,15 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
   static char norecur = 0;
 
 
-  /*     printf("coming into update_param, value: %f\n", 
+  /*     fprintf(stderr,"coming into update_param, value: %f\n", 
   	  adj->value); 
-     printf("parameter is: %s, val_f %f, val_i %i\n",param->name,param->f_val, 
+     fprintf(stderr,"parameter is: %s, val_f %f, val_i %i\n",param->name,param->f_val, 
      param->i_val);  */
 
 
      if (norecur == 1){ 
        norecur = 0; 
-       //       printf("resetting no recur\n");
+       //       fprintf(stderr,"resetting no recur\n");
        return; 
        } 
     
@@ -142,7 +142,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     if (doing_2d_update == 0 && from_make_active == 0 ){ // ok, so we're not doing 2d update 
       if(allowed_to_change_repeat(current) == FALSE){  
         //user punched a value 
-	//        printf("can't change value during acquistion\n");    
+	//        fprintf(stderr,"can't change value during acquistion\n");    
         switch(param->type) 
   	{ 
   	case 'i': 
@@ -190,7 +190,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
         break; 
       
       default: 
-        printf( "invalid type for parameter\n" ); 
+        fprintf(stderr, "invalid type for parameter\n" ); 
         break; 
       } 
     if ((acq_in_progress==ACQ_REPEATING || acq_in_progress==ACQ_REPEATING_AND_PROCESSING)  
@@ -212,16 +212,16 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
        simply setting the value doesn't invoke the callback
       if(norecur == 1){
       norecur = 0;
-      printf("update_t_param: doing norecur\n");
+      fprintf(stderr,"update_t_param: doing norecur\n");
       return FALSE; 
       } */
 
     if (param == NULL) {
-      //      printf("got param == null, must be a direct activate callback\n");
+      //      fprintf(stderr,"got param == null, must be a direct activate callback\n");
       n_param = event;
     }
     else {
-      //      printf("got a param, is a focus out\n");
+      //      fprintf(stderr,"got a param, is a focus out\n");
       n_param = param;
     }
 
@@ -234,24 +234,24 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       }
     }
     if (n_param == NULL){
-      printf("couldn't find the paramter!!!\n");
+      fprintf(stderr,"couldn't find the paramter!!!\n");
       return FALSE;
       }*/
-    //    printf("param is %0x, should be:c %0x\n",param,n_param);
+    //    fprintf(stderr,"param is %0x, should be:c %0x\n",param,n_param);
 
 
     if ( strncmp(n_param->t_val,gtk_entry_get_text(ent),PARAM_T_VAL_LEN)==0){
-      //      printf("t_param, got same value...\n"); // happens on focus loss with no change
+      //      fprintf(stderr,"t_param, got same value...\n"); // happens on focus loss with no change
       return FALSE;
     }
     /*
     if (n_param != param){
-      printf("update_t_param: different param from ent passed in\n");
+      fprintf(stderr,"update_t_param: different param from ent passed in\n");
       } 
     */
 
     if (allowed_to_change(current) == FALSE ){ 
-      //      printf("Can't change params while in progress\n"); 
+      //      fprintf(stderr,"Can't change params while in progress\n"); 
       //      norecur = 1; 
       gtk_entry_set_text(ent,n_param->t_val); 
       //      norecur = 0;
@@ -265,19 +265,19 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       case 't': 
 	strncpy(tempstr,gtk_entry_get_text(ent),UTIL_LEN);
 	if (isdigit((int)tempstr[0])){
-	  //	  printf("first char is a digit, reformatting\n");
+	  //	  fprintf(stderr,"first char is a digit, reformatting\n");
 	  sscanf(tempstr,"%lf",&temp); 
 	  snprintf(tempstr,UTIL_LEN,"%.7f",temp); 
 	}
         strncpy(n_param->t_val,tempstr,PARAM_T_VAL_LEN); 
 	//        norecur=1; 
         gtk_entry_set_text(ent,tempstr); 
-	//	printf("storing %s\n",tempstr);
+	//	fprintf(stderr,"storing %s\n",tempstr);
 	//	norecur = 0;
         break; 
       
       default: 
-        printf( "invalid type: %c for parameter\n",param->type ); 
+        fprintf(stderr, "invalid type: %c for parameter\n",param->type ); 
         break; 
       } 
    
@@ -293,11 +293,11 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
      //  we open a new buffer...  
 
     if( current_param_set != acq_param_set ) { 
-      //    printf("not updating sw/dwell\n"); 
+      //    fprintf(stderr,"not updating sw/dwell\n"); 
       return; 
     } 
 
-    //printf( "updating dwell time\n" ); 
+    // fprintf(stderr, "updating dwell time\n" ); 
     if (GTK_ADJUSTMENT(sw_adj)->value !=current_param_set->sw){
       gtk_adjustment_set_value( GTK_ADJUSTMENT( sw_adj ), current_param_set->sw); 
 
@@ -330,7 +330,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     int rec;
 
     if( current_param_set != acq_param_set ) { 
-      //printf( "not updating 2d buttons\n" ); 
+      // fprintf(stderr, "not updating 2d buttons\n" ); 
       return; 
     } 
     doing_2d_update=1; 
@@ -357,7 +357,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
   	break; 
 
         default: 
-  	printf( "Xnmr: update_2d_buttons: invalid type for parameter"); 
+  	fprintf(stderr, "Xnmr: update_2d_buttons: invalid type for parameter"); 
   	break; 
         } 
     } 
@@ -393,7 +393,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
   	break; 
 
         default: 
-  	printf( "Xnmr: update_2d_buttons: invalid type for parameter\n" ); 
+  	fprintf(stderr, "Xnmr: update_2d_buttons: invalid type for parameter\n" ); 
   	break; 
         } 
     } 
@@ -409,7 +409,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   // need this in case we destroy a widget that has the focus.
 
   gdk_threads_enter();
-  //  printf("showing parameter frame in mutex wrap\n");
+  //  fprintf(stderr,"showing parameter frame in mutex wrap\n");
   show_parameter_frame(current_param_set);
   
   gdk_threads_leave();
@@ -425,14 +425,14 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     char last_exec[ PATH_LENGTH ] = "";
     
 
-    //    printf("in update_paths\n");
+    //    fprintf(stderr,"in update_paths\n");
     /*    if (data != NULL){
-      printf("in update_paths, with data not Null, must be focus out\n");
+      fprintf(stderr,"in update_paths, with data not Null, must be focus out\n");
       } */
 
     /* don't need norecur here.  These boxes don't get an event on a set text...  
     if (norecur==1) {
-      printf("update_paths: coming through with norecur = 1\n");
+      fprintf(stderr,"update_paths: coming through with norecur = 1\n");
       norecur=0; // entries don't seem to need this...
       return FALSE; 
       } */
@@ -442,7 +442,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     if ( widget == prog_text_box ){
       strncpy(last_exec,current_param_set->exec_path,PATH_LENGTH);
       if( strncmp(last_exec,gtk_entry_get_text(GTK_ENTRY(widget)),PATH_LENGTH) == 0) {
-	//	printf("same prog as last time\n");
+	//	fprintf(stderr,"same prog as last time\n");
 	return FALSE;
        }
      }
@@ -455,14 +455,14 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       else lpath = s-1; // in case our save path has no / in it?
       
       if (strncmp(lpath+1,gtk_entry_get_text(GTK_ENTRY(widget)),PATH_LENGTH) == 0){
-	//	printf("same save as last time\n");
+	//	fprintf(stderr,"same save as last time\n");
 	return FALSE;
       }
     }
 
 
     if (allowed_to_change(current) == FALSE){ 
-      //       printf("can't change value during acquistion\n"); 
+      //       fprintf(stderr,"can't change value during acquistion\n"); 
        if (no_update_open == 0)
 	 popup_no_update("Can't change value in acquiring or queued window");  
 
@@ -470,13 +470,13 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 
       if (widget == prog_text_box){
 	//	norecur = 1;
-	//	printf("resetting the program\n");
+	//	fprintf(stderr,"resetting the program\n");
 	gtk_entry_set_text(GTK_ENTRY(prog_text_box),last_exec);
 	//	norecur = 0;
       }
       else{ // reset old save name.
 	//	norecur = 1;
-	//	printf("resetting the save name\n");
+	//	fprintf(stderr,"resetting the save name\n");
 	gtk_entry_set_text( GTK_ENTRY( save_text_box ), lpath +1  ); 
 	//	norecur = 0;
       }
@@ -494,13 +494,13 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     //set the new path 
 
     if( widget == prog_text_box ) { 
-      //printf( "Previous pprog path: %s\n", old_exec ); 
+      // fprintf(stderr, "Previous pprog path: %s\n", old_exec ); 
       path_strcpy( current_param_set->exec_path, gtk_entry_get_text( GTK_ENTRY( prog_text_box) )); 
-      //      printf( "new pprog path: %s\n", current_param_set->exec_path); 
+      //      fprintf(stderr, "new pprog path: %s\n", current_param_set->exec_path); 
     } 
     else if( widget == save_text_box ) { 
       path_strcpy(s,gtk_entry_get_text(GTK_ENTRY ( save_text_box)));
-      //      printf("update paths, new path is: %s\n",s);
+      //      fprintf(stderr,"update paths, new path is: %s\n",s);
 
       
       // then look for any other / (at end)
@@ -533,7 +533,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 	strncpy(lpath+1,s,PATH_LENGTH - strlen(current_param_set->save_path)-1);
       }
       update_param_win_title(&buffp[current]->param_set);
-      //      printf( "update_paths: new save path: %s\n", current_param_set->save_path); 
+      //      fprintf(stderr, "update_paths: new save path: %s\n", current_param_set->save_path); 
     }
      
     /* 
@@ -547,9 +547,9 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     
     if( strcmp( old_exec, current_param_set->exec_path) ) {       
       path_strcpy ( s, current_param_set->exec_path); 
-      //      printf("trying to load param_file\n");
+      //      fprintf(stderr,"trying to load param_file\n");
       if (load_param_file( s, current_param_set ) != -1 ){ // this if is new CM Aug 24, 2004
-	//	printf("back from load without -1\n");
+	//	fprintf(stderr,"back from load without -1\n");
 
 	g_idle_add ((GtkFunction) show_parameter_frame_mutex_wrap, current_param_set) ; 
 
@@ -560,9 +560,9 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 
 
 	widget = gtk_window_get_focus(panwindow);
-	if (widget == prog_text_box ) printf("get_focus says its the prog text box\n");
-	printf("focus: %0x\n",widget);
-	printf("acqs_adj: %0x\n",acqs_adj);
+	if (widget == prog_text_box ) fprintf(stderr,"get_focus says its the prog text box\n");
+	fprintf(stderr,"focus: %0x\n",widget);
+	fprintf(stderr,"acqs_adj: %0x\n",acqs_adj);
 
 	gtk_widget_grab_focus(GTK_WIDGET(prog_text_box));
 	// this unselects the text in the program box.
@@ -585,7 +585,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     //need this to prevent infinte looping in here? 
 
     if (norecur == 1){
-      //      printf("update_acqn, got norecur\n");
+      //      fprintf(stderr,"update_acqn, got norecur\n");
       norecur = 0;
       return;
     }
@@ -593,39 +593,39 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     //    if (allowed_to_change(current) == FALSE && !(adj == GTK_ADJUSTMENT(npts_adj) && current == upload_buff)){  // npts should be allowed to change in the acq buff.
     if (allowed_to_change(current) == FALSE && adj != GTK_ADJUSTMENT(npts_adj)){ // npts should be allowed anytime, but not acq_npts below
       // not allowed to change.  reset
-      //      printf("in update_acqn, not allowing change\n");
+      //      fprintf(stderr,"in update_acqn, not allowing change\n");
       if (adj ==  GTK_ADJUSTMENT(acqs_adj)){
 	norecur = 1;
-	//	printf("update acqn: num_acqs\n");
+	//	fprintf(stderr,"update acqn: num_acqs\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_adj),current_param_set->num_acqs);
 	//	norecur = 0;
       }
       else if (adj ==  GTK_ADJUSTMENT(npts_adj)){
 	norecur = 1;
-	//	printf("update acqn: npts\n");
+	//	fprintf(stderr,"update acqn: npts\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(npts_adj),current_param_set->npts);
 	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(acqs_2d_adj)){
 	norecur = 1;
-	//	printf("update aqcn: acqs_2d\n");
+	//	fprintf(stderr,"update aqcn: acqs_2d\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_2d_adj),current_param_set->num_acqs_2d);
 	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(dwell_adj)){
 	norecur = 1;
-	//	printf("update aqcn: dwell\n");
+	//	fprintf(stderr,"update aqcn: dwell\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(dwell_adj),current_param_set->dwell);
 	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(sw_adj)){
 	norecur = 1;
-	//	printf("update aqcn: sw_adj\n");
+	//	fprintf(stderr,"update aqcn: sw_adj\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(sw_adj),current_param_set->sw);
 	//	norecur = 0;
       }
       else{
-	printf("in update_acqn with unknown widget...\n");
+	fprintf(stderr,"in update_acqn with unknown widget...\n");
       }
       if (no_update_open == 0)
 	popup_no_update("Can't change parameter value in acquiring or queued window");  
@@ -641,7 +641,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 
     } 
     else if (adj== GTK_ADJUSTMENT( sw_adj )){ 
-      //    printf("in sw adj\n"); 
+      //    fprintf(stderr,"in sw adj\n"); 
       current_param_set->sw = adj->value; 
       if (!doing_sw_dwell) { 
         doing_sw_dwell=TRUE; 
@@ -651,7 +651,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       } 
     } 
     else if (adj == GTK_ADJUSTMENT( dwell_adj )){ 
-      //    printf("in dwell adj\n"); 
+      //    fprintf(stderr,"in dwell adj\n"); 
       current_param_set->dwell = adj->value; 
       if(!doing_sw_dwell){ 
         doing_sw_dwell=TRUE; 
@@ -663,17 +663,17 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       if (adj->value != current_param_set->npts){ 
         buff_resize(buffp[current],adj->value,buffp[current]->npts2); 
 	if (allowed_to_change(current) == TRUE){
-	  //	  printf("resetting acq_npts in buff %i",current);
+	  //	  fprintf(stderr,"resetting acq_npts in buff %i",current);
 	  buffp[current]->acq_npts = adj->value;  /* always set this here, if we're doing a 
 						       zero fill, the zf routine will restore it  */
 	}
         draw_canvas(buffp[current]);   
-	//	printf(" resized to %f\n",adj->value);
+	//	fprintf(stderr," resized to %f\n",adj->value);
       } 
     } 
 	   
     else { 
-      printf( "Error occured in update_acqn\n" ); 
+      fprintf(stderr, "Error occured in update_acqn\n" ); 
       return; 
     } 
 
@@ -692,7 +692,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     switch( acq_in_progress ) 
       { 
       case ACQ_STOPPED: 
-        //printf( "loading acqns from current buffer\n" ); 
+        // fprintf(stderr, "loading acqns from current buffer\n" ); 
         if(no_acq ==FALSE){ 
   
   	data_shm->num_acqs = current_param_set->num_acqs; 
@@ -700,16 +700,16 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
         } 
         break; 
       case ACQ_RUNNING: 
-        //printf( "not uploading acqn\n" ); 
+        // fprintf(stderr, "not uploading acqn\n" ); 
         break; 
       case ACQ_REPEATING: 
       case ACQ_REPEATING_AND_PROCESSING: 
-        //printf( "loading acqns from acq buffer\n" ); 
+        // fprintf(stderr, "loading acqns from acq buffer\n" ); 
         data_shm->num_acqs = acq_param_set->num_acqs; 
         data_shm->num_acqs_2d = acq_param_set->num_acqs_2d; 
         break; 
       default: 
-        printf( "send_acq: invalid mode\n" ); 
+        fprintf(stderr, "send_acq: invalid mode\n" ); 
         break; 
       } 
 
@@ -723,11 +723,11 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     switch( acq_in_progress ) 
       { 
       case ACQ_STOPPED: 
-        //printf( "uploading params from current buffer\n" ); 
+        // fprintf(stderr, "uploading params from current buffer\n" ); 
         p_set = current_param_set; 
         break; 
       case ACQ_RUNNING: 
-        //printf( "not uploading params\n" ); 
+        // fprintf(stderr, "not uploading params\n" ); 
         p_set = NULL; 
         return; 
         break; 
@@ -741,22 +741,22 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   	 * because all they do is copy a single variable.  Generating the 
   	 * parameter string is a lot of work that could be avoided 
   	  */
-	  //  	printf( "skipping parameter upload\n" ); 
+	  //  	fprintf(stderr, "skipping parameter upload\n" ); 
   	return; 
         } 
 
-        //printf( "uploading params from acq buffer\n" ); 
+        // fprintf(stderr, "uploading params from acq buffer\n" ); 
         p_set = acq_param_set; 
         break; 
       default: 
-        printf( "send_params: invalid mode\n" ); 
+        fprintf(stderr, "send_params: invalid mode\n" ); 
         return; 
         break; 
       } 
     if(no_acq ==FALSE){ 
       make_param_string( p_set, data_shm->parameters ); 
     } 
-    //printf( "new parameter string is:\n%s", data_shm->parameters ); 
+    // fprintf(stderr, "new parameter string is:\n%s", data_shm->parameters ); 
     return; 
 
   } 
@@ -767,22 +767,22 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     switch( acq_in_progress ) 
       { 
       case ACQ_STOPPED: 
-        //      printf( "uploading path from current buffer\n" ); 
+        //      fprintf(stderr, "uploading path from current buffer\n" ); 
         if(no_acq ==FALSE){ 
   	path_strcpy( data_shm->pulse_exec_path, current_param_set->exec_path); 
 
 	path_strcpy(data_shm->save_data_path,current_param_set->save_path); 
-	//	printf("send paths: put %s in shm\n",data_shm->save_data_path);
+	//	fprintf(stderr,"send paths: put %s in shm\n",data_shm->save_data_path);
         } 
         break; 
       case ACQ_REPEATING: 
       case ACQ_REPEATING_AND_PROCESSING: 
       case ACQ_RUNNING: 
-        printf( "not uploading path\n" ); 
+        fprintf(stderr, "not uploading path\n" ); 
         break; 
         break; 
       default: 
-        printf( "send_paths: invalid mode\n" ); 
+        fprintf(stderr, "send_paths: invalid mode\n" ); 
         break; 
       } 
     return; 
@@ -796,7 +796,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     GtkWidget *button,*vbox; 
     int i; 
 
-    //printf( "creating the parameter frame\n" ); 
+    // fprintf(stderr, "creating the parameter frame\n" ); 
 
     for( i=0; i<MAX_PARAMETERS; i++ ) { 
       param_button[i].adj = NULL; 
@@ -996,26 +996,26 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 
 
 
-    //    printf("in load_param_file with %s\n",fileN);
+    //    fprintf(stderr,"in load_param_file with %s\n",fileN);
     // first look in ~/Xnmr/prog/  then in /usr/share/Xnmr/prog/
     path_strcpy(s,getenv("HOME"));
     path_strcat(s,"/Xnmr/prog/");
     path_strcat(s , fileN);
     
-    //    printf("now looking in: %s\n",s);
+    //    fprintf(stderr,"now looking in: %s\n",s);
     fs = fopen( s, "r" ); 
     
     if( fs == NULL ) { 
       path_strcpy(s,"/usr/share/Xnmr/prog/");
       path_strcat(s,fileN);
-      //      printf("now looking in: %s\n",s);
+      //      fprintf(stderr,"now looking in: %s\n",s);
       fs = fopen( s, "r" ); 
       if( fs == NULL){
 	if (buffp[current] == NULL) // if the buffer doesn't exist yet, delay the popup
 	  g_idle_add ((GtkFunction) popup_msg_mutex_wrap,"Can't find pulse program");
 	else
 	  popup_msg("Can't find pulse program",TRUE);
-	//	printf( "Can't open parameter file %s\n", fileN ); 
+	//	fprintf(stderr, "Can't open parameter file %s\n", fileN ); 
 	return -1; 
       } 
     }
@@ -1029,7 +1029,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
        popup_msg("Can't find parameter file",TRUE);
       return -1;
     }
-    //    printf("got param file on: %s\n",s);
+    //    fprintf(stderr,"got param file on: %s\n",s);
     
     
  
@@ -1045,7 +1045,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       param_set->parameter[i].unit=1; 
     } 
  
-    //printf( "loading %s\n", fileN ); 
+    // fprintf(stderr, "loading %s\n", fileN ); 
 
     //Start parsing the file 
 
@@ -1066,7 +1066,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   	switch( type ) 
   	  { 
   	  case 'i': 
-  	    //printf( "loading parameter %d of type int\n",i ); 
+  	    // fprintf(stderr, "loading parameter %d of type int\n",i ); 
   	    param_set->parameter[i].type = 'i'; 
   	    sscanf( s, PARAMETER_FILE_FORMAT_INT, param_set->parameter[i].name, &param_set->parameter[i].i_val,  
   		    &param_set->parameter[i].i_min, &param_set->parameter[i].i_max, &param_set->parameter[i].i_step, &param_set->parameter[i].i_page ); 
@@ -1074,15 +1074,15 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   	      if (strcmp(param_set->parameter[i].name,old_param_set.parameter[j].name) == 0){ 
   		param_set->parameter[i].i_val = old_param_set.parameter[j].i_val; 
   		  // must also do 2d 
-  		//  printf("copied old val from %s\n",old_param_set.parameter[j].name); 
+  		//  fprintf(stderr,"copied old val from %s\n",old_param_set.parameter[j].name); 
 
 
   		if (old_param_set.parameter[j].type == 'I'){ 
-  		  //		  printf("old param was an array\n"); 
+  		  //		  fprintf(stderr,"old param was an array\n"); 
   		  param_set->parameter[i].type = 'I'; 
   		  param_set->parameter[i].size=old_param_set.parameter[j].size; 
   		  param_set->parameter[i].i_val_2d=g_malloc(param_set->parameter[i].size *sizeof(gint)); 
-		  //		  printf("load_param_file: malloc\n");
+		  //		  fprintf(stderr,"load_param_file: malloc\n");
   		  for(k=0;k<param_set->parameter[i].size;k++)  
   		    param_set->parameter[i].i_val_2d[k]=old_param_set.parameter[j].i_val_2d[k]; 
 		  
@@ -1095,14 +1095,14 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   	    break; 
 
   	  case 'f': 
-  	    //printf( "loading parameter %d of type float\n",i ); 
+  	    // fprintf(stderr, "loading parameter %d of type float\n",i ); 
   	    param_set->parameter[i].type = 'f'; 
   	    sscanf( s, PARAMETER_FILE_FORMAT_DOUBLE, param_set->parameter[i].name, &param_set->parameter[i].f_val,   
   		    &param_set->parameter[i].f_min,  
   		    &param_set->parameter[i].f_max, &param_set->parameter[i].f_step,  
   		    &param_set->parameter[i].f_page, &param_set->parameter[i].f_digits, 
   		    &param_set->parameter[i].unit_c); 
-  	    //	    printf("got unit %c\n",param_set->parameter[i].unit_c); 
+  	    //	    fprintf(stderr,"got unit %c\n",param_set->parameter[i].unit_c); 
   	    switch (param_set->parameter[i].unit_c){ 
   	    case 'M': 
   	      param_set->parameter[i].unit=1e6; 
@@ -1136,24 +1136,24 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 		if ( old_param_set.parameter[j].type == 't') { // was a string, is now a double
 		  sscanf(old_param_set.parameter[j].t_val,"%lf",&param_set->parameter[i].f_val);
 		  param_set->parameter[j].f_val /= param_set->parameter[j].unit;
-		  //		  printf("was string, now double, got val %f\n",param_set->parameter[i].f_val);
+		  //		  fprintf(stderr,"was string, now double, got val %f\n",param_set->parameter[i].f_val);
 		}
 		else if (old_param_set.parameter[j].type == 'f' || old_param_set.parameter[j].type =='F') { 
 		  param_set->parameter[i].f_val = old_param_set.parameter[j].f_val*old_param_set.parameter[j].unit/param_set->parameter[i].unit; 
-		  //		printf("copied old val from %s\n",old_param_set.parameter[j].name); 
+		  //		fprintf(stderr,"copied old val from %s\n",old_param_set.parameter[j].name); 
   		  // must also do 2d 
 		  if (old_param_set.parameter[j].type == 'F'){ 
-		    //		  printf("old param was an array\n"); 
+		    //		  fprintf(stderr,"old param was an array\n"); 
 		    param_set->parameter[i].type = 'F'; 
 		    param_set->parameter[i].size=old_param_set.parameter[j].size; 
 		    param_set->parameter[i].f_val_2d=g_malloc(param_set->parameter[i].size *sizeof(double)); 
-		    //		  printf("load_param_file: malloc\n");
+		    //		  fprintf(stderr,"load_param_file: malloc\n");
 		    for(k=0;k<param_set->parameter[i].size;k++)  
 		      param_set->parameter[i].f_val_2d[k]=old_param_set.parameter[j].f_val_2d[k]; 
 		 
 		  }
 		}
-		else printf("new param is float, old isn't f, F or t for param: %s\n",param_set->parameter[i].name);
+		else fprintf(stderr,"new param is float, old isn't f, F or t for param: %s\n",param_set->parameter[i].name);
   		j=old_param_set.num_parameters; 
   	      }
   	    }
@@ -1162,10 +1162,10 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   	    break; 
 
   	  case 't': 
-  	    //printf( "loading parameter %d of type text\n",i ); 
+  	    // fprintf(stderr, "loading parameter %d of type text\n",i ); 
 	    if (message_printed == 0){
-	      printf("\n\ntext parameters are no longer needed for double. Change types to double in pulse progs and use GET_PARAMETER_DOUBLE\n");
-	      printf("also change frequency lines in param file to: sf1 f 55.84 0 500 .001 .01 7 -\n\n");
+	      fprintf(stderr,"\n\ntext parameters are no longer needed for double. Change types to double in pulse progs and use GET_PARAMETER_DOUBLE\n");
+	      fprintf(stderr,"also change frequency lines in param file to: sf1 f 55.84 0 500 .001 .01 7 -\n\n");
 	      message_printed = 1;
 	    }
 
@@ -1180,7 +1180,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 		else if (old_param_set.parameter[i].type == 't'){ // assume it was also a 't'
 		  strncpy(param_set->parameter[i].t_val,old_param_set.parameter[j].t_val,PARAM_T_VAL_LEN); 
 		}
-		else printf("new parameter is t, old unrecognized for param: %s\n",param_set->parameter[i].name);
+		else fprintf(stderr,"new parameter is t, old unrecognized for param: %s\n",param_set->parameter[i].name);
   		j=old_param_set.num_parameters; 
   	      } 
   	    } 
@@ -1189,7 +1189,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   	    break; 
 	    
   	  default: 
-  	    printf( "invalid parameter type. . . ignoring\n" ); 
+  	    fprintf(stderr, "invalid parameter type. . . ignoring\n" ); 
   	    break; 
   	  } 
 
@@ -1209,7 +1209,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       else if(old_param_set.parameter[i].type == 'I'){ 
 	g_free(old_param_set.parameter[i].i_val_2d); 
       } 
-      else printf("%s had size bigger than 1, but type was: %c\n",old_param_set.parameter[i].name, 
+      else fprintf(stderr,"%s had size bigger than 1, but type was: %c\n",old_param_set.parameter[i].name, 
   		  old_param_set.parameter[i].type); 
     */
 
@@ -1221,7 +1221,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 
   gint param_spin_pressed( GtkWidget* widget, GdkEventButton *event, gpointer data ) 
   { 
-    //printf( "new active button is %d\n", (int) data ); 
+    // fprintf(stderr, "new active button is %d\n", (int) data ); 
     active_button = (int) data; 
     return FALSE;  // new for gtk+-2.0
   } 
@@ -1235,11 +1235,11 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     current_param_set = param_set; 
     active_button = -1; 
 
-    //printf( "showing parameter frame\n" ); 
+    // fprintf(stderr, "showing parameter frame\n" ); 
 
     //Clear out the previous parameter set 
 
-    //printf( "removing %d buttons\n", num_buttons ); 
+    // fprintf(stderr, "removing %d buttons\n", num_buttons ); 
 
     for( i=0; i<num_buttons; i++ ) { 
 
@@ -1293,7 +1293,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
      *  Now we have to create some buttons 
       */
 
-    //printf( "building %d buttons\n", param_set->num_parameters ); 
+    // fprintf(stderr, "building %d buttons\n", param_set->num_parameters ); 
     tab_height = 3+(param_set->num_parameters+2)/3;
     if (tab_height <  10) tab_height = 10;
     gtk_table_resize(GTK_TABLE(param_table),tab_height,6);
@@ -1302,7 +1302,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 
       strcpy( s, "" ); 
 
-      //printf( "trying to build a button of type %c\n", param_set->parameter[i].type ); 
+      // fprintf(stderr, "trying to build a button of type %c\n", param_set->parameter[i].type ); 
 
       switch( param_set->parameter[i].type ) 
         { 
@@ -1369,7 +1369,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 	  break; 
 	  
         default: 
-	  printf( "invalid type : %c can't build button %d\n", param_set->parameter[i].type, i ); 
+	  fprintf(stderr, "invalid type : %c can't build button %d\n", param_set->parameter[i].type, i ); 
 	  break; 
         } 
     } 
@@ -1392,7 +1392,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 
     new_size = (int) (adj->value); 
     old_size = popup_data.size; 
-    //    printf( "resizing popup from %d to %d\n", old_size, new_size ); 
+    //    fprintf(stderr, "resizing popup from %d to %d\n", old_size, new_size ); 
 
     if( new_size == old_size ) 
       return; 
@@ -1400,7 +1400,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     new_hbox = g_malloc( sizeof( GtkWidget* ) * new_size ); 
     new_adj = g_malloc( sizeof( GtkObject* ) * new_size ); 
     new_spb = g_malloc( sizeof( GtkWidget* ) * new_size ); 
-    //    printf("resize popup: malloc\n");
+    //    fprintf(stderr,"resize popup: malloc\n");
 
     if( new_size > old_size ) { 
       //first, copy the existing boxes 
@@ -1433,7 +1433,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   	  new_spb[i] = gtk_spin_button_new( GTK_ADJUSTMENT( new_adj[i] ),  0.5, popup_data.param->f_digits ); 
   	  break; 
   	default: 
-  	  printf( "invalid parameter type in resize popup\n" ); 
+  	  fprintf(stderr, "invalid parameter type in resize popup\n" ); 
   	  break; 
   	} 
         gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( new_spb[i] ), GTK_UPDATE_IF_VALID ); 
@@ -1631,7 +1631,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     popup_data.param = &current_param_set->parameter[ *button ]; 
     popup_data.button_number = *button; 
 
-    //printf( "showing popup, button is %d, type is %c\n", *button, popup_data.param->type ); 
+    // fprintf(stderr, "showing popup, button is %d, type is %c\n", *button, popup_data.param->type ); 
 
     gtk_frame_set_label( GTK_FRAME( popup_data.frame ), current_param_set->parameter[ *button ].name ); 
 
@@ -1704,7 +1704,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
         break; 
 
       default: 
-        printf( "invalid parameter type in show_2d_popup\n" ); 
+        fprintf(stderr, "invalid parameter type in show_2d_popup\n" ); 
         break; 
       } 
 
@@ -1781,7 +1781,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       case 'i': 
         popup_data.param->type = 'I'; 
 	popup_data.param->i_val_2d = g_malloc( sizeof( gint ) * popup_data.size );
-	//	printf("ok_pressed: malloc\n");
+	//	fprintf(stderr,"ok_pressed: malloc\n");
 
         if (popup_data.bnum == current){ 
 	  gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), popup_data.size ); 
@@ -1794,7 +1794,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       case 'f': 
         popup_data.param->type = 'F'; 
         popup_data.param->f_val_2d = g_malloc( sizeof(double) * popup_data.size ); 
-	//	printf("ok_pressed: malloc\n");
+	//	fprintf(stderr,"ok_pressed: malloc\n");
 
         if (popup_data.bnum == current){ 
 	  gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), popup_data.size ); 
@@ -1811,7 +1811,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
         if( popup_data.size != popup_data.param->size ) { 
   	g_free( popup_data.param->i_val_2d ); 
   	popup_data.param->i_val_2d = g_malloc( sizeof( gint ) * popup_data.size ); 
-	//	printf("ok_pressed: malloc\n");
+	//	fprintf(stderr,"ok_pressed: malloc\n");
 
 	if (popup_data.bnum == current) 
 	  gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), popup_data.size ); 
@@ -1823,7 +1823,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
         if( popup_data.size != popup_data.param->size ) { 
   	g_free( popup_data.param->f_val_2d ); 
   	popup_data.param->f_val_2d = g_malloc( sizeof( double ) * popup_data.size ); 
-	//	printf("ok_pressed: malloc\n");
+	//	fprintf(stderr,"ok_pressed: malloc\n");
 
   	if (popup_data.bnum == current) 
   	  gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), popup_data.size ); 
@@ -1832,7 +1832,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
         break; 
 
       default: 
-        printf( "Xnmr: apply_pressed: invalid parameter type\n" ); 
+        fprintf(stderr, "Xnmr: apply_pressed: invalid parameter type\n" ); 
         break; 
       } 
 
@@ -1847,7 +1847,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   	  popup_data.param->f_val_2d[i] = GTK_ADJUSTMENT( popup_data.adj[i] ) -> value; 
   	break; 
       default: 
-  	printf( "Xnmr: apply_pressed: invalid parameter type\n" ); 
+  	fprintf(stderr, "Xnmr: apply_pressed: invalid parameter type\n" ); 
   	break; 
        
       } 
@@ -1889,7 +1889,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 	gtk_label_set_text( GTK_LABEL( param_button[ popup_data.button_number ].label ), s ); 
       // should this be  only if current?
 
-      //      printf("put name: %s in button label\n",s);
+      //      fprintf(stderr,"put name: %s in button label\n",s);
       g_free( popup_data.param->f_val_2d ); 
 	popup_data.param->f_val_2d = NULL;   // is this necessary? - I think so
 
@@ -1898,7 +1898,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     case 'f': 
       break; 
     default: 
-      printf( "invalid parameter type in unarray_pressed\n" ); 
+      fprintf(stderr, "invalid parameter type in unarray_pressed\n" ); 
       break; 
     } 
     popup_data.param->size = 0;  
@@ -1912,7 +1912,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       if (buffp[popup_data.bnum]->param_set.parameter[i].size > max) 
 	max = buffp[popup_data.bnum]->param_set.parameter[i].size;
     }
-    //    printf("unarray: max size was %i\n",max);
+    //    fprintf(stderr,"unarray: max size was %i\n",max);
     if (popup_data.bnum == current) 
       gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), max ); 
     else buffp[popup_data.bnum]->param_set.num_acqs_2d = max;
@@ -1937,7 +1937,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 
   void destroy_popup( GtkWidget *widget, gpointer data ) 
   { 
-    printf( "destroying popup\n" ); 
+    fprintf(stderr, "destroying popup\n" ); 
     g_free( popup_data.adj ); 
     g_free( popup_data.spin_hbox ); 
     g_free( popup_data.sp_button ); 
@@ -1978,7 +1978,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       return;
     }
     path_strcpy( path, buff->path_for_reload); 
-    //    printf("in reload, path is: %s\n",path);
+    //    fprintf(stderr,"in reload, path is: %s\n",path);
     if (strcmp(path,"") == 0 ) return;
     do_load( buff, path); 
 
@@ -2017,7 +2017,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 gint popup_no_update_ok(GtkWidget *widget,gpointer *data)
 {
 
-  //  printf("in popup_no_update_ok\n");
+  //  fprintf(stderr,"in popup_no_update_ok\n");
 
   if (no_update_open == 1)
     no_update_open = 0;
