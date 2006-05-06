@@ -26,7 +26,8 @@
      then fit it with a tanh, put the inverse in here.  no problem.
   2) phase was not really harder...
     a) to feed transmitter output through atten ( 40-60dB or so?) then into receiver.
-    using pulse program phase_sweep, with dwell = 25u, pw1 = 50u.
+    using pulse program phase_sweep, with dwell = 25u, pw1 = 50u. (as written, looks like
+    about a 32 point left shift).
     b) export the data - make sure the first point in the data file corresponds to phase =0
     b) use read_phases to read them out (always reads from acq_tempexport.txt)
     c) reverse_pairs to reverse them. - reads from stdin, use pipes:  < infile >outfile

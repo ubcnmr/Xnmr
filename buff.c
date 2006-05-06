@@ -45,6 +45,7 @@ reload wrapper                             (from end of acquisition)
 #include <stdlib.h>
 #include <wordexp.h>
 #include <string.h>
+#include <signal.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -6617,25 +6618,46 @@ void set_queue_label(){
 
 
 
-void readscript(){
+
+// remote control/scripting starts here...
+
+void readscript(GtkAction *action,dbuff *buff){
   pthread_t script_thread;
-  pthread_create(&script_thread,NULL,&readscript_thread_routine,&dummy);
+  pthread_create(&script_thread,NULL,&readscript_thread_routine,buff);
   fprintf(stderr,"done creating thread, returning\n");
   return;
 }
 
 
-void *readscript_thread_routine(){
+void *readscript_thread_routine(void *buff){
   char iline[200],oline[200];
+  int bnum;
+  int rval;
+
+  // this signal stuff shouldn't be necessary here... done in xnmr.c right at beginning.
+  sigset_t sigset;
+
+  sigemptyset(&sigset);
+  sigaddset(&sigset,SIG_UI_ACQ);
+  sigaddset(&sigset,SIGQUIT);;
+  sigaddset(&sigset,SIGTERM);
+  sigaddset(&sigset,SIGINT);
+
+  pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 
 
+  bnum = ((dbuff *)buff)->buffnum; // changes only if set by script.
 
   fprintf(stderr,"in readscript, waiting for input\n");
   
   do{
     fgets(iline,200,stdin);
     fprintf(stderr,"got input: %s",iline);
-    if (script_handler(iline,oline,1) == 0){ // the 1 is to tell is we're from stdin
+    gdk_threads_enter();
+    rval = script_handler(iline,oline,1,&bnum);
+    gdk_threads_leave();
+
+    if (rval == 0){ // the 1 is to tell is we're from stdin
       fprintf(stderr,"%s\n",oline);
       fprintf(stderr,"readscript_thread_routine exiting\n");
       pthread_exit(NULL);
@@ -6646,150 +6668,7 @@ void *readscript_thread_routine(){
 }
 
 
-int script_handler(char *input,char *output, int source){
 
-  int eo;
-  if (strncmp("EXIT",input,4)==0) return 0;
-
-  /* priorities: 
-
-     acquire  
-     file open
-     file save_as
-     file append
-
-     socket i/o
-
-     set parameters
-     set npts, sw etc
-
-  */
-
-    if (strncmp("PROCESS",input,7)==0){
-      fprintf(stderr,"processing\n");
-      gdk_threads_enter();
-      gtk_button_clicked(GTK_BUTTON(script_widgets.process_button));
-      gdk_threads_leave();
-      fprintf(stderr,"done\n");
-      strcpy(output,"OK");
-      return 1;
-    }
-    
-    if (strncmp("ACQUIRE",input,7) == 0){
-      if (acq_in_progress != ACQ_STOPPED){
-	strcpy(output,"ACQ_BUSY");
-	return 0;
-      }
-      gdk_threads_enter();
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(script_widgets.acquire_button),TRUE);
-      gdk_threads_leave();
-      if (acq_in_progress == ACQ_STOPPED){
-	fprintf(stderr,"said start, but stopped\n");
-	strcpy(output,"ACQ NOT STARTED");
-	return 0;
-      }
-      strcpy(output,"ACQ STARTED");
-      script_widgets.acquire_notify = source; // one for stdout, will be 2 for socket.
-      return 1;
-    }
-    if (strncmp("LOAD ",input,5) == 0){
-      // remove trailing \n, replace with 0
-      char *s2;
-      s2=strstr(input,"\n");
-      if (s2 != NULL){
-	fprintf(stderr,"got a newline\n");
-	*s2 = 0;
-      }
-
-      if (strnlen(input,200) < 6){
-	strcpy(output,"NO FILENAME");
-	return 0;
-      }
-      if (input[5] != '/'){
-	char s3[PATH_LENGTH];
-	path_strcpy(s3,input+5);
-	getcwd(input+5,PATH_LENGTH-5);
-	path_strcat(input,"/");
-	path_strcat(input,s3);
-	fprintf(stderr,"fixed filename to: %s\n",input);
-      }
-
-      //      fprintf(stderr,"calling do_load with input: %s, current is %i\n",input+5,current);
-      
-      gdk_threads_enter();
-      eo = do_load(buffp[current],input+5);
-      gdk_threads_leave();
-
-      if (eo == -1){
-	strcpy(output,"FILE NOT LOADED");
-	return 0;
-      }
-      strcpy(output,"FILE LOADED");
-      return 1;
-    }
-    if (strncmp("SAVE ",input,5) == 0){
-      char *s2;
-      s2=strstr(input,"\n");
-      if (s2 != NULL){
-	fprintf(stderr,"got a newline\n");
-	*s2 = 0;
-      }
-      
-      if (strnlen(input,200) < 6){
-	strcpy(output,"NO FILENAME");
-	return 0;
-      }
-
-      if (input[5] != '/'){
-	char s3[PATH_LENGTH];
-	path_strcpy(s3,input+5);
-	getcwd(input+5,PATH_LENGTH-5);
-	path_strcat(input,"/");
-	path_strcat(input,s3);
-	fprintf(stderr,"fixed filename to: %s\n",input);
-      }
-
-
-      /* we have to make the directory */
-      if( mkdir( input+5, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
-	if( errno != EEXIST ) {
-	  strcpy(output,"CANT MKDIR");
-	  return 0 ;
-	}
-      }
-
-      gdk_threads_enter();
-      eo=do_save(buffp[current],input+5);
-      gdk_threads_leave();
-      if (eo == 0){
-	strcpy(output,"NOT SAVED");
-	return 0;
-      }
-
-      strcpy(output,"FILE SAVED");
-      return 1;
-    }
-
-
-    if (strncmp("APPEND",input,6) == 0){
-      gdk_threads_enter();
-      eo=file_append(NULL,buffp[current]);
-      gdk_threads_leave();
-      if (eo == 0){
-	strcpy(output,"APPEND FAILED");
-	return 0;
-      }
-      strcpy(output,"APPENDED");
-      return 1;
-    }
-
-    strcpy(output,"NOT UNDERSTOOD");
-    return 1;
-
-	
-
-
-}
 // some globals for the socket stuff.
 struct sockaddr_un my_addr;
 struct sockaddr_un from;
@@ -6814,7 +6693,7 @@ void script_notify_acq_complete(){
 }
 
 
-void socket_script(){
+void socket_script(GtkAction *action, dbuff *buff){
   // open a socket for remote control
   pthread_t socket_thread;
 
@@ -6854,7 +6733,7 @@ void socket_script(){
   chmod (my_addr.sun_path,0666);
   
   
-  pthread_create(&socket_thread,NULL,&readsocket_thread_routine,&dummy);
+  pthread_create(&socket_thread,NULL,&readsocket_thread_routine,buff);
   socket_thread_open = 1;
 
   fprintf(stderr,"done creating socket thread, returning\n");
@@ -6864,10 +6743,25 @@ void socket_script(){
 
 }
 
-void *readsocket_thread_routine(){
+void *readsocket_thread_routine(void *buff){
   char iline[PATH_LENGTH],oline[PATH_LENGTH];
   int fromlen,rlen;
+  int bnum,rval;
 
+  // this signal stuff shouldn't be necessary - signals blocked in xnmr.c before threads
+  // created.
+  sigset_t sigset;
+
+  sigemptyset(&sigset);
+  sigaddset(&sigset,SIG_UI_ACQ);
+  sigaddset(&sigset,SIGQUIT);;
+  sigaddset(&sigset,SIGTERM);
+  sigaddset(&sigset,SIGINT);
+
+  pthread_sigmask(SIG_BLOCK,&sigset,NULL);
+
+
+  bnum = ((dbuff *)buff)->buffnum;
 
   do{
     fromlen = 108;
@@ -6876,7 +6770,11 @@ void *readsocket_thread_routine(){
 
     fprintf(stderr,"got input: %s",iline);
 
-    if (script_handler(iline,oline,2) == 0){ // the 2 says we're from a socket
+    gdk_threads_enter();
+    rval = script_handler(iline,oline,2,&bnum); // the 2 says we're from a socket
+    gdk_threads_leave();
+
+    if (rval == 0){ 
       sendto(fds,oline,strnlen(oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
       fprintf(stderr,"%s\n",oline);
       fprintf(stderr,"readsocket_thread_routine exiting\n");
@@ -6889,6 +6787,264 @@ void *readsocket_thread_routine(){
     fprintf(stderr,"%s\n",oline);
 
   }while (1);
+
+
+}
+
+int script_handler(char *input,char *output, int source,int *bnum){
+
+  int eo;
+  if (strncmp("EXIT",input,4)==0) return 0;
+
+
+  // handles  events for the various remote control mechanisms
+  // assumes that we're already inside a gdk_threads_enter / leave pair.
+
+
+  fprintf(stderr,"in script handler for buffer: %i\n",*bnum);
+
+  if (buffp[*bnum] == NULL){
+    strcpy(output,"BUFFER NO LONGER EXISTS");
+    return 0;
+  }
+  else
+    CHECK_ACTIVE(buffp[*bnum]);
+
+  /* priorities: 
+
+     acquire  
+     file open
+     file save_as
+     file append
+     socket i/o
+     set parameters
+     set buffer #
+
+     file new (returns buffer #)
+     set npts, sw etc
+
+  */
+
+    if (strncmp("PROCESS",input,7)==0){
+      fprintf(stderr,"processing\n");
+      gtk_button_clicked(GTK_BUTTON(script_widgets.process_button));
+      fprintf(stderr,"done\n");
+      strcpy(output,"OK");
+      return 1;
+    }
+    
+    if (strncmp("ACQUIRE",input,7) == 0){
+      if (acq_in_progress != ACQ_STOPPED){
+	strcpy(output,"ACQ_BUSY");
+	return 0;
+      }
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(script_widgets.acquire_button),TRUE);
+      if (acq_in_progress == ACQ_STOPPED){
+	fprintf(stderr,"said start, but stopped\n");
+	strcpy(output,"ACQ NOT STARTED");
+	return 0;
+      }
+      strcpy(output,"ACQ STARTED");
+      script_widgets.acquire_notify = source; // one for stdout, will be 2 for socket.
+      return 1;
+    }
+    if (strncmp("LOAD ",input,5) == 0){
+      // remove trailing \n, replace with 0
+      char *s2;
+      s2=strstr(input,"\n");
+      if (s2 != NULL){
+	fprintf(stderr,"got a newline\n");
+	*s2 = 0;
+      }
+
+      if (strnlen(input,200) < 6){
+	strcpy(output,"NO FILENAME");
+	return 0;
+      }
+      if (input[5] != '/'){
+	char s3[PATH_LENGTH];
+	path_strcpy(s3,input+5);
+	getcwd(input+5,PATH_LENGTH-5);
+	path_strcat(input,"/");
+	path_strcat(input,s3);
+	fprintf(stderr,"fixed filename to: %s\n",input);
+      }
+
+      //      fprintf(stderr,"calling do_load with input: %s, current is %i\n",input+5,current);
+      
+      eo = do_load(buffp[current],input+5);
+
+      if (eo == -1){
+	strcpy(output,"FILE NOT LOADED");
+	return 0;
+      }
+      strcpy(output,"FILE LOADED");
+      return 1;
+    }
+    if (strncmp("SAVE ",input,5) == 0){
+      char *s2;
+      s2=strstr(input,"\n");
+      if (s2 != NULL){
+	fprintf(stderr,"got a newline\n");
+	*s2 = 0;
+      }
+      
+      if (strnlen(input,200) < 6){
+	strcpy(output,"NO FILENAME");
+	return 0;
+      }
+
+      if (input[5] != '/'){
+	char s3[PATH_LENGTH];
+	path_strcpy(s3,input+5);
+	getcwd(input+5,PATH_LENGTH-5);
+	path_strcat(input,"/");
+	path_strcat(input,s3);
+	fprintf(stderr,"fixed filename to: %s\n",input);
+      }
+
+
+      /* we have to make the directory */
+      if( mkdir( input+5, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
+	if( errno != EEXIST ) {
+	  strcpy(output,"CANT MKDIR");
+	  return 0 ;
+	}
+      }
+
+      eo=do_save(buffp[current],input+5);
+      if (eo == 0){
+	strcpy(output,"NOT SAVED");
+	return 0;
+      }
+
+      strcpy(output,"FILE SAVED");
+      return 1;
+    }
+
+
+    if (strncmp("APPEND",input,6) == 0){
+      eo=file_append(NULL,buffp[current]);
+      if (eo == 0){
+	strcpy(output,"APPEND FAILED");
+	return 0;
+      }
+      strcpy(output,"APPENDED");
+      return 1;
+    }
+    if (strncmp("PARAM ",input,6) == 0){
+      // set a parameter value.  Extract the param name:
+      char pname[PARAM_NAME_LEN];
+      int i,ival,ret;
+      double fval;
+      
+      sscanf(input+6,"%s",pname);
+      //      fprintf(stderr,"got param name: %s\n",pname);
+
+      // need to find the parameter and see what type it is.
+
+
+      for( i=0; i < buffp[current]->param_set.num_parameters; i++ ) {
+
+	if (strncmp(buffp[current]->param_set.parameter[i].name,pname,PARAM_NAME_LEN) == 0){
+	  //	  fprintf(stderr,"got match at param # %i\n",i);
+
+	  if (buffp[current]->param_set.parameter[i].type == 'I'){ // its a 2d int, make 1d:
+	    if (buffp[current]->param_set.parameter[i].i_val_2d != NULL)
+	      g_free(buffp[current]->param_set.parameter[i].i_val_2d);
+	    buffp[current]->param_set.parameter[i].type = 'i';
+	  }
+	  if (buffp[current]->param_set.parameter[i].type == 'F'){ // its a 2d float, make 1d:
+	    if (buffp[current]->param_set.parameter[i].f_val_2d != NULL)
+	      g_free(buffp[current]->param_set.parameter[i].f_val_2d);
+	    buffp[current]->param_set.parameter[i].type = 'f';
+	  }
+	  if (buffp[current]->param_set.parameter[i].type == 'i'){ 
+
+	    // its an int, try to get an int value
+	    ret = sscanf(input,"PARAM %s %i\n",pname,&ival);
+	    if (ret != 2){
+	      //	      fprintf(stderr,"didn't match an integer?, ret = %i, ival is %i\n",ret,ival);
+	      strcpy(output,"NO INTEGER FOUND");
+	      return 0;
+	    }
+	    buffp[current]->param_set.parameter[i].i_val = ival;
+	    show_parameter_frame( &buffp[current]->param_set );
+	    //	    fprintf(stderr,"updated param %s to %i\n",pname,ival);
+	    strcpy(output,"PARAM updated");
+	    return 1;
+	  }
+	  else
+	  if (buffp[current]->param_set.parameter[i].type == 'f'){ 
+
+	    // its a float, try to get a float value
+	    ret = sscanf(input,"PARAM %s %lf\n",pname,&fval);
+	    if (ret != 2){
+	      //	      fprintf(stderr,"didn't match a float?,ret is %i, fval is %lf\n",ret,fval);
+	      strcpy(output,"NO FLOAT FOUND");
+	      return 0;
+	    }
+	    buffp[current]->param_set.parameter[i].f_val = fval;
+	    show_parameter_frame( &buffp[current]->param_set );
+	    //	    fprintf(stderr,"updated param %s to %lf\n",pname,fval);
+	    strcpy(output,"PARAM updated");
+	    return 1;	    
+	  }
+	  else{
+	    //	    fprintf(stderr,"parameter wasn't a float or int\n");
+	    strcpy(output,"INVALID PARAMETER");
+	    return 0;
+	  }
+	}      
+      }
+      strcpy(output,"NO SUCH PARAM");
+      return 0;
+    }
+
+    if (strncmp("BUFFER ",input,7) == 0){
+      // change to buffer #...
+      int ibnum;
+      if (sscanf(input+7,"%i",&ibnum) != 1){
+	strcpy(output,"COULDN'T FIND BUFFER NUMBER");
+	return 0;
+      }
+      if (buffp[ibnum] == NULL){
+	strcpy(output,"REQUEST BUFFER DOESNT EXIST");
+	return 0;
+      }
+      fprintf(stderr,"making buff %i active\n",ibnum);
+      CHECK_ACTIVE(buffp[ibnum]);
+
+      *bnum = ibnum;
+      strcpy(output,"OK");
+      return 1;
+
+    }
+    if (strncmp("NEW",input,3) == 0){
+      int old_current;
+      old_current = current;
+      file_new(NULL,NULL);
+      if (current == old_current){
+	strcpy(output,"FAILED");
+	return 0;
+      }
+      *bnum = current;
+      sprintf(output,"OK %i",current);
+      return 1;
+
+
+
+    }
+
+
+
+
+    // next command here...
+
+    strcpy(output,"NOT UNDERSTOOD");
+    return 1;
+
+	
 
 
 }

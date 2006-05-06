@@ -152,8 +152,10 @@ typedef struct {
 #define BC2D1 11
 #define EM2D 12
 #define ZF2D 13
-#define FT2D 14
-#define BC2D2 15
+#define UNWIND 14
+#define FT2D 15
+#define MAG2D 16
+#define BC2D2 17
 
 
 #endif

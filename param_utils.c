@@ -372,7 +372,7 @@ int load_p_string( char* params, unsigned int acqs_2d, parameter_set_t* param_se
 	    break;
 	    
 	  default:
-	    fprintf(stderr, "bad result is attempting to read parameters from shm\n" );
+	    fprintf(stderr, "bad result in attempting to read parameters from shm\n" );
 	    break;
 	  }
 	break;

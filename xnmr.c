@@ -208,6 +208,18 @@ int main(int argc,char *argv[])
   //first, we have to block SIGUSR1 in case ACQ is already launched and running
   // or just not enable the signals till later?
   //block_signal();
+  { // May 6, 2006 CM
+    sigset_t sigset;
+    
+    sigemptyset(&sigset);
+    sigaddset(&sigset,SIG_UI_ACQ);
+    sigaddset(&sigset,SIGQUIT);;
+    sigaddset(&sigset,SIGTERM);
+    sigaddset(&sigset,SIGINT);
+    
+    sigprocmask(SIG_BLOCK,&sigset,NULL);
+  }
+
 
   /* initialize the gtk stuff */
 

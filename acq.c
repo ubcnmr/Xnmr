@@ -4,22 +4,24 @@
 // it will also generate "simulated" data
 //
 
-#define NOHARDWARE
-#define NO_PORT_INTERRUPT
-#define NO_RT_SCHED
+//#define NOHARDWARE
+//#define NO_PORT_INTERRUPT
+//#define NO_RT_SCHED
 
 
 
 // for rtai interrupts, uncomment both.
 // for old-style interrupts, comment both
 
-//#define OLD_PORT_INTERRUPT 
+#define OLD_PORT_INTERRUPT 
 //#define RTAI_INTERRUPT
 
 // we should read the first two of these out of /proc/pci
 
 #define PULSE_PORT 0xb000
 #define DSP_PORT 0xb400
+
+
 #define AD9850_PORT 0x378
 
 
@@ -411,7 +413,8 @@ int init_signals()
   sigemptyset( &sigset );
   sa1.sa_handler = ui_signal_handler;
   sa1.sa_mask = sigset;
-  sa1.sa_flags = SA_NOMASK; //This allows the signal handler to be interrupted by itself  
+  //  sa1.sa_flags = SA_NOMASK; //This allows the signal handler to be interrupted by itself  
+  sa1.sa_flags = SA_NODEFER; // better name for SA_NOMASK
   sa1.sa_restorer = NULL;
   
   sigaction( SIG_UI_ACQ, &sa1, &sa2  );
@@ -607,17 +610,24 @@ int accumulate_data( int* buffer )
 
 	four1(tdata-1,data_shm->npts,-1);
 
+
+
 	// unscramble the FT'd data
 	for( i = 0 ; i < data_shm->npts ; i++ ){
 	  spare = tdata[i]/scale;
 	  tdata[i] = tdata[i+data_shm->npts]/scale;
 	  tdata[i+data_shm->npts] = spare;
 	}
+	// deal with baseline offset:
+	tdata[data_shm->npts] = (tdata[data_shm->npts+2]
+				 +tdata[data_shm->npts-2])/2.;
+	//	tdata[data_shm->npts+1] = (tdata[data_shm->npts+3]
+	//		  +tdata[data_shm->npts-1])/2.;
 	     
 	
 	// then add powers:
 	for(i = 0; i < data_shm->npts*2; i += 2){
-	  data_shm->data_image[i] += tdata[i]*tdata[i]+tdata[i+1]*tdata[i+1];
+	  data_shm->data_image[i] += (tdata[i]*tdata[i]+tdata[i+1]*tdata[i+1]);
 
 	  // for testing:
 	  //data_shm->data_image[i] += tdata[i];
@@ -826,7 +836,8 @@ int run()
   // open the parallel port interrupt device:
 #ifdef OLD_PORT_INTERRUPT
   int_fd = open( "/dev/PP_irq0", O_RDONLY );
-  fprintf(stderr,"on open of /dev/PP_irq0, got fd: %i\n",int_fd);
+
+  //  fprintf(stderr,"on open of /dev/PP_irq0, got fd: %i\n",int_fd);
 #endif
 
 #ifndef NOHARDWARE
@@ -1199,8 +1210,12 @@ else{
 	
 	if (first_time == 1 && done >=0 ){
 	  first_time = 0;
+
 	  // give the user some zeros for feedback
-	  send_sig_ui( NEW_DATA_READY );
+	  // well, this is actually a bit weird since most pulse programs will get the
+	  // first data nearly instantly - best not to.
+
+	  //	  send_sig_ui( NEW_DATA_READY );
 
 #ifndef NOHARDWARE
 	  pulse_hardware_load_timer();
@@ -1299,13 +1314,13 @@ else{
 	  
 	  if( done >= 0 ) {
 #ifdef OLD_PORT_INTERRUPT
-	    fprintf(stderr, "acq: waiting for an interrupt\n" );
+	    //	    fprintf(stderr, "acq: waiting for an interrupt\n" );
 	    while( read( int_fd, buffer, 1 ) <= 0 && done >=0)
 	      {
 		perror( "acq: PP_irq read broken" );
 		fflush(stdout);
 	      }
-	    fprintf(stderr, "acq: interrupt received\n" );
+	    //	    fprintf(stderr, "acq: interrupt received\n" );
 #endif
 #ifdef RTAI_INTERRUPT
 	    do{
@@ -1591,7 +1606,8 @@ else{
 	  if (first_time == 1 && done >=0 ){
 	    first_time = 0;
 	    // give the user some 0's for feedback
-	    send_sig_ui( NEW_DATA_READY );
+	    // see above
+	    //	    send_sig_ui( NEW_DATA_READY );
 
 	  }
   

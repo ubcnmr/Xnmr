@@ -63,10 +63,6 @@ void *sig_handler_thread_routine(void *dummy)
   int sig;
 
 
-
-
-
-
   sigemptyset( &sigset );
 
   sigaddset(&sigset,SIGQUIT);
@@ -74,6 +70,7 @@ void *sig_handler_thread_routine(void *dummy)
   sigaddset(&sigset,SIGINT);
   sigaddset(&sigset,SIG_UI_ACQ);
 
+  // this blocking shouldn't be necessary - done in xnmr.c before threads created.
   //  sigprocmask(SIG_UNBLOCK,&sigset,NULL);
   pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 

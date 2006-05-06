@@ -125,7 +125,7 @@ main(){
   // do some testing:
   // for Xnmr:
   // after every write, read a response, except read twice after ACQUIRE
-
+  /*
   tell_xnmr("LOAD acq_temp");
   read_xnmr(oline);
 

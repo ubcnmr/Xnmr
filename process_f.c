@@ -1434,6 +1434,21 @@ GtkWidget* create_process_frame_2d()
   process_button[nu].func = do_zero_fill_2d;
   gtk_widget_show(button);
 
+  /*
+   * UNWIND 
+   */
+
+
+  nu=UNWIND;
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle),  (void*) nu);
+  gtk_widget_show(process_button[nu].button);
+  button = gtk_button_new_with_label( "Unwind phase" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(unwind_2d_and_display), NULL);
+  process_button[nu].func = unwind_2d;
+  gtk_widget_show(button);
 
 
   /*
@@ -1450,6 +1465,24 @@ GtkWidget* create_process_frame_2d()
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_ft_2d_and_display), NULL);
   process_button[nu].func = do_ft_2d;
   gtk_widget_show(button);
+
+  nu=MAG2D;
+    /* 
+     * convert hyper complex to simple 2d taking the magnitude in the second dimension
+     */
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle),  (void*) nu);
+  gtk_widget_show(process_button[nu].button);
+  button = gtk_button_new_with_label( "MAG2D" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_mag_2d_and_display), NULL);
+  process_button[nu].func = do_mag_2d;
+  gtk_widget_show(button);
+
+
+
+
 
   
   /*
@@ -1594,6 +1627,106 @@ gint do_zero_fill_2d_and_display(GtkWidget * widget,double *val)
 }
 
 
+//un
+
+gint unwind_2d_and_display( GtkWidget *widget, double *unused )
+{
+  dbuff *buff;
+  gint result;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  result = unwind_2d( widget, unused );
+
+  draw_canvas( buff );
+   return result;
+}
+
+gint unwind_2d(GtkWidget *widget, double *unused)
+
+{
+  /* unwind some phase from the second dimension 
+     for crackpot autoshimming feature. */
+
+  dbuff *buff;
+  int i,j;
+  float re,im,freq,phase;
+  float mag,ph;
+  double tau;
+  int npts,npts2;
+
+  if( widget == NULL ) {
+    buff = buffp[ upload_buff ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
+  }
+  else {
+    buff = buffp[ current ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",current );
+  }
+  if (buff == NULL){
+    popup_msg("unwind_2d panic! buff is null!",TRUE);
+    return 0;
+  }
+  
+   
+  if (buff->is_hyper == FALSE){
+    popup_msg("Not hyper, can't unwind phase",TRUE);
+    return TRUE;
+  }
+  
+  // need to find a tau in the parameter set.
+
+    i = pfetch_float(&buff->param_set,"tau",&tau,0);
+    if (i == 0) {
+      popup_msg("no parameter tau found for phase unwind",TRUE);
+      return TRUE;
+    }
+    fprintf(stderr,"got tau: %lf\n",tau);
+
+    npts = buff->param_set.npts;
+    npts2 = buff->npts2;
+
+    for (i=0;i<npts;i++){
+      // what's the freq at this point?
+      freq = - ( (double) i * buff->param_set.sw/npts
+		 - (double) buff->param_set.sw/2.);
+      // so the phase to unwind is:
+      phase = freq*tau*2*M_PI;
+
+      for(j=0;j<npts2/2;j++){
+	re = buff->data[(2*j)*npts*2+2*i];
+	im = buff->data[(2*j+1)*npts*2+2*i];
+	mag = sqrt(re*re+im*im);
+	ph = atan2(im,re);
+	ph = ph-phase;
+	buff->data[(2*j)*npts*2+2*i] = mag*cos(ph);
+	buff->data[(2*j+1)*npts*2+2*i] = mag*sin(ph);
+
+	re = buff->data[(2*j)*npts*2+2*i+1];
+	im = buff->data[(2*j+1)*npts*2+2*i+1];
+	mag = sqrt(re*re+im*im);
+	ph = atan2(im,re);
+	ph = ph-phase;
+	buff->data[(2*j)*npts*2+2*i+1] = mag*cos(ph);
+	buff->data[(2*j+1)*npts*2+2*i+1] = mag*sin(ph);
+
+
+
+
+      }
+    }
+
+
+  return TRUE;
+  
+}
+
+//un
+
+
 gint do_ft_2d_and_display( GtkWidget *widget, double *unused )
 {
   dbuff *buff;
@@ -1734,6 +1867,77 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 
   cursor_normal(buff);
   g_free(new_data);
+  return TRUE;
+  
+}
+
+
+
+gint do_mag_2d_and_display( GtkWidget *widget, double *unused )
+{
+  dbuff *buff;
+  gint result;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  result = do_mag_2d( widget, unused );
+
+  draw_canvas( buff );
+   return result;
+}
+
+gint do_mag_2d(GtkWidget *widget, double *unused)
+
+{
+  /* take magnitude in second dimension */
+
+  dbuff *buff;
+  int i,j;
+
+  if( widget == NULL ) {
+    buff = buffp[ upload_buff ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
+  }
+  else {
+    buff = buffp[ current ];
+  }
+  if (buff == NULL){
+    popup_msg("do_mag_2d panic! buff is null!",TRUE);
+    return 0;
+  }
+
+  /*********
+
+  if(buff->win.press_pend>0) {
+    fprintf(stderr,"mag2d: press_pend>0, quitting\n");
+    return TRUE;  //standard exit
+  }
+
+  **********/
+
+
+  if (!buff->is_hyper){
+    popup_msg("buff wasn't hyper, can't take mag2d",TRUE);
+    return TRUE;
+  }
+
+  // turn off the is_hyper flag:
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),FALSE);
+
+  for (j=0;j<buff->npts2/2;j++){
+    for(i=0;i<buff->param_set.npts*2;i++)
+      buff->data[j*buff->param_set.npts*2+i] = 
+	sqrt(buff->data[2*j*buff->param_set.npts*2+i]*buff->data[2*j*buff->param_set.npts*2+i]
+	     +buff->data[(2*j+1)*buff->param_set.npts*2+i]*buff->data[(2*j+1)*buff->param_set.npts*2+i]);
+  }				     
+    // free the extra memory:
+    buff_resize(buff,buff->param_set.npts,buff->npts2/2);
+  
+
+
   return TRUE;
   
 }

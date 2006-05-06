@@ -252,12 +252,12 @@ void queue_window(GtkAction *action, dbuff *buff);
 void remove_queue(GtkWidget *widget, gpointer dum);
 void set_queue_label();
 
-void readscript();
-void *readscript_thread_routine();
-void *readsocket_thread_routine();
-int script_handler(char *input,char *output,int source);
+void readscript(GtkAction *action,dbuff *buff);
+void *readscript_thread_routine(void *buff);
+void *readsocket_thread_routine(void *buff);
+int script_handler(char *input,char *output,int source,int *bnum);
 void script_notify_acq_complete();
-void socket_script();
+void socket_script(GtkAction *action,dbuff *buff);
 #endif
 
 

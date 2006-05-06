@@ -1,10 +1,10 @@
 still to do:
 
-
-- queueing experiments, sigh...
+- should ensure that rf amplitude gets set to zero if the pulse is turned off,
+  and turned back on for the next pulse.  
+  Ick.  Probably easiest to do this in Xnmr_preproc?
 - fractional left shift
 - left shift in 2nd dim.
-- fitting!
 
 
 With Gtk+-2.0 can get rid of text fields for freq - should redo params
@@ -34,7 +34,6 @@ Both these seem hard...
 	not important - leave the pulse program as suid for now.
 	could compile pulse programs as dlls, then could drop permissions after its
 	loaded.  Seems like a lot of work for a security problem.
-- some sort of flag needs to be drawn in the acq buffer.
 - doubled params in param file should give error ?
 
 --------------------------------------
@@ -66,6 +65,9 @@ still to do in the far future (maybe?):
 
 
 done:
+- some sort of flag needs to be drawn in the acq buffer.
+- fitting!
+- queueing experiments, sigh...
 - in Gtk+-2.0, old text params don't get copied correctly? (reproducability?)
 - check for oen when going to sleep to wait for ppo in noisy mode.
 - deal with shm problem - if we have a running Xnmr. then start another Xnmr 
