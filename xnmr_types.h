@@ -156,7 +156,7 @@ typedef struct {
 #define FT2D 15
 #define MAG2D 16
 #define BC2D2 17
-
+#define SHIM_INT 18
 
 #endif
 

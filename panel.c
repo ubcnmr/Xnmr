@@ -307,7 +307,9 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       /* this is raise of the button was not triggered by the user, 
 	 but by a call to gtk_toggle_button_set_active from idle_button_up*/
       if (script_widgets.acquire_notify != 0)
-	script_notify_acq_complete();
+	g_idle_add_full(G_PRIORITY_LOW, (GtkFunction) script_notify_acq_complete,NULL,NULL);
+      // make sure this is done only after all the end of acquisition work is complete.
+      //	script_notify_acq_complete();
     } 
   }
   //  fprintf(stderr,"got to end of start button\n");

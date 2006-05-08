@@ -1499,6 +1499,22 @@ GtkWidget* create_process_frame_2d()
   process_button[nu].func = do_offset_cal_2D;
   gtk_widget_show(button);
 
+  /* 
+   * SHIM_INT - integrate for 2D shimming
+   */
+
+  nu=SHIM_INT;
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT( process_button[nu].button ), "toggled", G_CALLBACK( process_button_toggle ),  (void*) nu);
+  gtk_widget_show( process_button[nu].button );
+  button = gtk_button_new_with_label( "Shim Integrate" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(shim_integrate_and_display), NULL);
+  process_button[nu].func = shim_integrate;
+  gtk_widget_show(button);
+
+ 
 
 
 
@@ -2214,3 +2230,78 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
   return 0;
 }
 
+
+gint shim_integrate_and_display( GtkWidget *widget, double *unused )
+{
+  dbuff *buff;
+  gint result;
+
+  result = shim_integrate( widget, unused );
+
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  draw_canvas( buff );
+  return result;
+}
+
+
+gint shim_integrate( GtkWidget *widget, double *unused )
+
+{
+  dbuff *buff;
+  char output[UTIL_LEN];
+  float integral;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("shim_integrate panic! buff is null!",TRUE);
+    return 0;
+    
+  }
+  //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
+
+
+  integral = do_shim_integrate(buff);
+
+  snprintf(output,UTIL_LEN,"Shim integral is: %f",integral);
+  popup_msg(output,TRUE);
+
+  return 0;
+}
+
+
+float do_shim_integrate(dbuff *buff){
+
+  int i, j,i1,i2,j1,j2;
+  float integral = 0.;
+  float freq1,freq2;
+
+  // find region to integrate...
+
+  i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);
+  i2=(int) (buff->disp.xx2 * (buff->param_set.npts-1) +.5);
+
+  j1=(int) (buff->disp.yy1 * (buff->npts2-1) +.5);
+  j2=(int) (buff->disp.yy2 * (buff->npts2-1) +.5);
+
+  fprintf(stderr, "limits are: %i to %i and %i to %i\n",i1,i2,j1,j2);
+
+  for( i=i1;i<=i2;i++) {
+
+    freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
+		 - (double) buff->param_set.sw/2.) *2 * M_PI;
+    for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
+      freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
+      integral += freq2*freq1*buff->data[2*i + j* 2*buff->param_set.npts];
+           
+    }
+  }
+  return integral;
+}

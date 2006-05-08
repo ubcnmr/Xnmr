@@ -693,10 +693,10 @@ void acq_signal_handler()
   
       case ACQ_REPEATING_AND_PROCESSING:
 	g_idle_add((GtkFunction) upload_and_draw_canvas_with_process_mutex_wrap,buffp[ upload_buff ] );
-	break;//carl added
+	break;
       case ACQ_REPEATING:
 	g_idle_add((GtkFunction) upload_and_draw_canvas_mutex_wrap,buffp[ upload_buff ] );
-	break;//carl added
+	break;
       case ACQ_RUNNING:    
 	g_idle_add((GtkFunction) reload_wrapper, buffp[ upload_buff ] );
 	g_idle_add((GtkFunction) set_acqn_labels_mutex_wrap,NULL);
@@ -707,7 +707,7 @@ void acq_signal_handler()
 	//  fprintf(stderr,"got ACQ_DONE from ACQ_RUNNING, only completed %li of %li acqns\n",
 	//     data_shm->acqn,data_shm->num_acqs );
 	//	g_idle_add ( (GtkFunction) set_window_title, buffp[upload_buff]);
-	break;//carl added
+	break;
       }
     case ACQ_ERROR:
     case PPROG_ALREADY_RUNNING:

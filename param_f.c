@@ -1965,7 +1965,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       buffp[current]->phase0_app = 0;
       buffp[current]->phase1_app = 0;
       buffp[current]->phase20_app = 0;
-      buffp[current]->phase21_app = 0;  done in the upload_data*/
+      buffp[current]->phase21_app = 0;  done in the upload_data */
       return; // don't do anything if we're in the uploading, just do upload 
     }
 
