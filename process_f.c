@@ -1695,52 +1695,52 @@ gint unwind_2d(GtkWidget *widget, double *unused)
   
   // need to find a tau in the parameter set.
 
-    i = pfetch_float(&buff->param_set,"tau",&tau,0);
-    if (i == 0) {
-      popup_msg("no parameter tau found for phase unwind",TRUE);
-      return TRUE;
+  i = pfetch_float(&buff->param_set,"tau",&tau,0);
+  if (i == 0) {
+    popup_msg("no parameter tau found for phase unwind",TRUE);
+    return TRUE;
+  }
+  fprintf(stderr,"got tau: %lf\n",tau);
+  
+  npts = buff->param_set.npts;
+  npts2 = buff->npts2;
+  
+  for (i=0;i<npts;i++){
+    // what's the freq at this point?
+    freq = - ( (double) i * buff->param_set.sw/npts
+	       - (double) buff->param_set.sw/2.);
+    // so the phase to unwind is:
+    phase = freq*tau*2*M_PI;
+    
+    for(j=0;j<npts2/2;j++){
+      re = buff->data[(2*j)*npts*2+2*i];
+      im = buff->data[(2*j+1)*npts*2+2*i];
+      mag = sqrt(re*re+im*im);
+      ph = atan2(im,re);
+      ph = ph-phase;
+      buff->data[(2*j)*npts*2+2*i] = mag*cos(ph);
+      buff->data[(2*j+1)*npts*2+2*i] = mag*sin(ph);
+      
+      re = buff->data[(2*j)*npts*2+2*i+1];
+      im = buff->data[(2*j+1)*npts*2+2*i+1];
+      mag = sqrt(re*re+im*im);
+      ph = atan2(im,re);
+      ph = ph-phase;
+      buff->data[(2*j)*npts*2+2*i+1] = mag*cos(ph);
+      buff->data[(2*j+1)*npts*2+2*i+1] = mag*sin(ph);
+      
+      
+      
+      
     }
-    fprintf(stderr,"got tau: %lf\n",tau);
-
-    npts = buff->param_set.npts;
-    npts2 = buff->npts2;
-
-    for (i=0;i<npts;i++){
-      // what's the freq at this point?
-      freq = - ( (double) i * buff->param_set.sw/npts
-		 - (double) buff->param_set.sw/2.);
-      // so the phase to unwind is:
-      phase = freq*tau*2*M_PI;
-
-      for(j=0;j<npts2/2;j++){
-	re = buff->data[(2*j)*npts*2+2*i];
-	im = buff->data[(2*j+1)*npts*2+2*i];
-	mag = sqrt(re*re+im*im);
-	ph = atan2(im,re);
-	ph = ph-phase;
-	buff->data[(2*j)*npts*2+2*i] = mag*cos(ph);
-	buff->data[(2*j+1)*npts*2+2*i] = mag*sin(ph);
-
-	re = buff->data[(2*j)*npts*2+2*i+1];
-	im = buff->data[(2*j+1)*npts*2+2*i+1];
-	mag = sqrt(re*re+im*im);
-	ph = atan2(im,re);
-	ph = ph-phase;
-	buff->data[(2*j)*npts*2+2*i+1] = mag*cos(ph);
-	buff->data[(2*j+1)*npts*2+2*i+1] = mag*sin(ph);
-
-
-
-
-      }
-    }
-
-
+  }
+  
+  
   return TRUE;
   
 }
 
-//un
+
 
 
 gint do_ft_2d_and_display( GtkWidget *widget, double *unused )
@@ -1798,7 +1798,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   /* do a zero fill with a factor of 1 to make 
      sure we have a power of two as npts 
 
-  - no, do a factor of 2 so we have room to put in the imaginaries - if not hyper*/
+  - or, do a factor of 2 so we have room to put in the imaginaries - if not hyper*/
   if (buff->is_hyper)
     spared= 1.0;
   else
@@ -2279,12 +2279,15 @@ gint shim_integrate( GtkWidget *widget, double *unused )
 
 gint  do_shim_integrate(dbuff *buff,float *int1,float *int2){
 
-  int i, j,i1,i2,j1,j2;
+  int i, j,i1,i2,j1,j2,npts2;
   float freq1,freq2;
 
   *int1=0.;
   *int2=0.;
   
+  npts2 = buff->npts2;
+  if (buff->is_hyper)
+    if (npts2 %2 == 1) npts2 -= 1;
   // find region to integrate...
 
   i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);

@@ -941,6 +941,8 @@ void draw_raster(dbuff *buff)
   npts1=buff->param_set.npts;
   npts2=buff->npts2;
 
+  if (buff->is_hyper) npts2 = buff->npts2/2;
+
   /* first figure out start and end points */
   i1=(int) (buff->disp.xx1 * (npts1-1) +.5);
   i2=(int) (buff->disp.xx2 * (npts1-1) +.5);
@@ -956,9 +958,12 @@ void draw_raster(dbuff *buff)
   if (j1==j2){
     if(j2>0) j1=j2-1;
     else j2=j1+1;
-    if (j2 >= buff->npts2/(1+buff->is_hyper)) j2=j2-1; // in case of hyper with only 2 pts
   }
 
+  if (buff->is_hyper){
+    j1 *= 2;
+    j2 *= 2;
+  }
   if (i1==i2) {
     if (i2 >0 ) i1=i2-1;
     else i2=i1+1;
@@ -1046,7 +1051,7 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
 		    ,float *data,int npts, GdkColor *col,int ri){
   int x,y,i1,i2,x2,y2,exint,eyint,i;
   /* first point */
-
+  int npts2;
 
   // ri is real or imag = 0 or 1
 
@@ -1067,7 +1072,8 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     eyint= extrayoff*buff->disp.yscale/2.;
   }
   else if (buff->disp.dispstyle == SLICE_COL){ // only if we're phasing on a column
-    
+    if (npts %2 == 1) npts2 -= 1;// in case npts is odd...
+
     i1=(int) (buff->disp.yy1 * (npts-1)+.5);
     i2=(int) (buff->disp.yy2 * (npts-1)+.5);
     
@@ -1108,6 +1114,8 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
 
 
  for(i=i1+1;i<=i2;i++){
+   // this x2 value looks like it goes from 1 to sizex - that's right!
+   // since the 0 col is reserved for a coloured border
    x2= (i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
    y2=(int) -((data[i*2+ri]
 	       +buff->disp.yoffset)*buff->win.sizey*
@@ -1193,16 +1201,17 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
   else{
     i1 = (int) (buff->disp.yy1 * (buff->npts2/2-1)+.5);
     i2 = (int) (buff->disp.yy2 * (buff->npts2/2-1)+.5);
-    i1 *= 2;
+    i1 *= 2; 
     i2 *= 2;
+    fprintf(stderr,"2d points: %i %i\n",i1,i2);
   }
 
 
   if (i1==i2) {
     if (i2 >0 ) 
-      i1=i2-1;
+      i1=i2-(1+buff->is_hyper);
     else 
-      i2=i1+1;
+      i2=i1+(1+buff->is_hyper);
   }
 
 
@@ -2075,6 +2084,12 @@ void integrate(GtkAction *action, dbuff *buff)
   }
   if (doing_int == 1) return;
 
+  if(buff->disp.dispstyle != SLICE_ROW ){
+    popup_msg("Can only integrate on a row, sorry",TRUE);
+  }
+
+
+
   doing_int = 1;
   buff->win.press_pend=2;
 
@@ -2178,7 +2193,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  //now do integrate
  
  for (j = 0; j<buff->npts2;j+=buff->is_hyper+1){      //do each slice and output all to screen
-   count=0;
+   count=0; // if there's an odd number and its hyper, we'll do the extra...
    integral=0;
    for (i = MIN(pt1,pt2); i <= MAX(pt1,pt2);i++){
      count +=1;
@@ -2229,8 +2244,8 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 {
 
 
-  if (doing_int !=1){
-    fprintf(stderr,"in integrate_press_event, but not doing_2nd!\n");
+  if (doing_int != 1){
+    fprintf(stderr,"in integrate_press_event, but not doing_int!\n");
     doing_int =0;
     return;
   }
@@ -2352,12 +2367,24 @@ gint expand_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   int sizex,sizey;
   int xval,yval;
   int i1,i2,j1,j2;
+  int npts2;
+  
+  npts2 = buff->npts2;
+  if (buff->is_hyper) 
+    npts2 = buff->npts2/2;
 
   i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);
   i2=(int) (buff->disp.xx2 * (buff->param_set.npts-1) +.5);
 
-  j1=(int) (buff->disp.yy1 * (buff->npts2-1) +.5);
-  j2=(int) (buff->disp.yy2 * (buff->npts2-1) +.5);
+  j1=(int) (buff->disp.yy1 * (npts2-1) +.5);
+  j2=(int) (buff->disp.yy2 * (npts2-1) +.5);
+
+  // these only get used for chunkifying in raster mode, so this is unecessary:
+  if (buff->is_hyper){
+    j1 *= 2;
+    j2 *= 2;
+  }
+
 
   sizex=buff->win.sizex;
   sizey=buff->win.sizey;
@@ -2675,16 +2702,23 @@ gint do_auto2(dbuff *buff)
   int i1,i2,i,recadd;
   int flag;
   float spare; 
+  int npts2;
 
   min = 0;
   max = 0;
-
+  
+  npts2 = buff->npts2;
+  if (buff->is_hyper) npts2 =buff->npts2/2;
   
     i1= (int) (buff->disp.yy1*(buff->npts2-1)+.5);
     i2= (int) (buff->disp.yy2*(buff->npts2-1)+.5);
 
-    if (buff->is_hyper && i1 %2 ==1) i1-=1;
-    if (buff->is_hyper && i2 %2 ==1) i2-=1;
+    if (buff->is_hyper){
+      i1 *= 2;
+      i2 *= 2;
+    }
+    //    if (buff->is_hyper && i1 %2 ==1) i1-=1;
+    //    if (buff->is_hyper && i2 %2 ==1) i2-=1;
     
     recadd=2*buff->param_set.npts;
 
@@ -2880,17 +2914,18 @@ gint press_in_win_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff)
 
     if(buff->disp.dispstyle==SLICE_COL){
       buff->disp.record=pix_to_x(buff,event->x);
-
       // if it returns an even number, make it odd
-
-      if(buff->is_hyper && buff->disp.record %2 ==1) buff->disp.record-=1;
+      
+      // never needed, pix_to_x does the right thing...
+      //      if(buff->is_hyper && buff->disp.record %2 ==1) buff->disp.record-=1;
+      //      fprintf(stderr,"setting record to %i\n",buff->disp.record);
 
     }
     if(buff->disp.dispstyle==RASTER){
       buff->disp.record2=pix_to_x(buff,event->x);
       buff->disp.record=pix_to_y(buff,event->y);
 
-      if (buff->is_hyper && buff->disp.record %2 ==1) buff->disp.record -=1;
+      //      if (buff->is_hyper && buff->disp.record %2 ==1) buff->disp.record -=1;
 
     }
     //    snprintf(title,UTIL_LEN,"pixels: %i %i",(int) event->x,(int) event->y);
@@ -3097,11 +3132,13 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),buff->is_hyper);
     return TRUE;
   }
+
   if(GTK_TOGGLE_BUTTON(widget)->active){
 
     /* ok, just said that it is hypercomplex */
-    if (buff->npts2==1){
-      /* if there's only one point, forget it */
+    if (buff->npts2 < 4){
+      /* if there's less than four points, forget it */
+      norecur = 1;
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE);
       return TRUE;
     }
@@ -3114,11 +3151,14 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
 
     
     /* if npts is odd, deal with it */
+
+    /*
     if ( buff->npts2 %2 ==1){
-      buff->npts2 -=1; /* throw away last record */
+      buff->npts2 -=1; // throw away last record 
       buff->data=g_realloc(buff->data,2*4*buff->param_set.npts*buff->npts2);
       //fprintf(stderr,"points are odd, killing last\n");
-    }
+      } */
+
     // if we're on an odd record, deal with it 
     if (buff->disp.record %2 ==1){
       buff->disp.record -=1;
@@ -3143,11 +3183,18 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
 }
 
 gint plus_button(GtkWidget *widget,dbuff *buff){
-char title[UTIL_LEN];
+  char title[UTIL_LEN];
+  int npts2;
+
   CHECK_ACTIVE(buff);
 
+  npts2 = buff->npts2;
+
+  if (buff->is_hyper)
+    if (npts2 %2 == 1) npts2 -= 1;
+
   if(buff->disp.dispstyle ==SLICE_ROW)
-    if (buff->disp.record < buff->npts2-(buff->is_hyper+1)) {
+    if (buff->disp.record < npts2-(buff->is_hyper+1)) {
       buff->disp.record += 1+buff->is_hyper;
       if (buff->buffnum == current) update_2d_buttons_from_buff( buff );
     }
@@ -3403,7 +3450,12 @@ gint do_load( dbuff* buff, char* path )
     buff->disp.dispstyle = SLICE_ROW;
     gtk_label_set_text(GTK_LABEL(buff->win.slice_2d_lab),"Slice");
     gtk_label_set_text(GTK_LABEL(buff->win.row_col_lab),"Row");
+
   }
+  if (buff->npts2 < 4)
+    if (buff->is_hyper)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),FALSE);// can't be hyper if there's less than 4
+
 
 
   // ct was added late to the param file, it may or may not be there.
@@ -3702,6 +3754,11 @@ gint pix_to_x(dbuff * buff,int xval){
   
   npts1=buff->param_set.npts;
   npts2=buff->npts2;
+
+  if (buff->is_hyper)
+    npts2 = buff->npts2/2; // gives the number of pairs
+
+
   i1=(int) (buff->disp.xx1 * (npts1-1) +.5);
   i2=(int) (buff->disp.xx2 * (npts1-1) +.5);
   
@@ -3710,26 +3767,33 @@ gint pix_to_x(dbuff * buff,int xval){
 
   ret=0;
   if (buff->disp.dispstyle ==SLICE_ROW){
+    // here the left edge is i1, the right edge is i2
     xppt= (float) (buff->win.sizex-1.0)/(i2-i1);
     ret=(xval+xppt/2-1)/xppt+i1; 
-    if (ret >= buff->param_set.npts)
-      ret = buff->param_set.npts-1;
+    if (ret >= npts1)
+      ret = npts1-1;
     if (ret <0) ret =0;
   }
   else if (buff->disp.dispstyle == RASTER){
       xppt= (float) buff->win.sizex/(i2-i1+1);
       ret=  (xval-1)/xppt+i1; 
-    if (ret >= buff->param_set.npts)
-      ret = buff->param_set.npts-1;
+    if (ret >= npts1)
+      ret = npts1-1;
     if (ret <0) ret =0;
 
   }
   else if (buff->disp.dispstyle ==SLICE_COL){
     yppt= (float) (buff->win.sizex-1.0)/(j2-j1);
     ret= (xval+yppt/2-1)/yppt+j1;
-    if (ret >= buff->npts2) ret = buff->npts2-1;
+    if (ret >= npts2) ret = npts2-1;
     if (ret <0) ret =0;
-  }    
+
+    // now if we're hyper:
+    if (buff->is_hyper)
+      ret *= 2; 
+      //      if (ret %2 == 1) ret =-1; // must be odd if we're hyper
+      //      if (ret > npts2-2) ret = npts2-2; // in case there's an odd # of records
+  }
 
   return ret;
 }
@@ -3742,21 +3806,25 @@ gint pix_to_y(dbuff * buff,int yval){
 
   npts1=buff->param_set.npts;
   npts2=buff->npts2;
+  if (buff->is_hyper) npts2 = buff->npts2/2;
+
   i1=(int) (buff->disp.xx1 * (npts1-1) +.5);
   i2=(int) (buff->disp.xx2 * (npts1-1) +.5);
 
   j1=(int) (buff->disp.yy1 * (npts2-1) +.5);
   j2=(int) (buff->disp.yy2 * (npts2-1) +.5);
 
-  if (buff->is_hyper){
+  /*  if (buff->is_hyper){
     if (j1 %2 ==1) j1-=1;
     if (j2 %2 ==0) j2+=1; // different from draw_raster!!
-  }
+    } 
 
+  
   if (j1==j2){
-    if(j2>0) j1=j2-2;
-    else j2=j1+2;
-  }
+    if(j2>0) j1=j2-1;
+    else j2=j1+1;
+    }  */
+
   yval=buff->win.sizey+1-yval;
 
   // only get here in RASTER
@@ -3769,6 +3837,8 @@ gint pix_to_y(dbuff * buff,int yval){
   //  fprintf(stderr,"pix_to_y: j1, j2: %i %i, yval: %i, ret: %i\n",j1,j2,yval,ret);
   if (ret >= buff->npts2) ret =buff->npts2-1;
   if (ret <0) ret =0;
+  if (buff->is_hyper) ret *= 2;
+
   return ret;
 
 
@@ -3791,7 +3861,7 @@ void set_window_title(dbuff *buff)
 void file_export(GtkAction *action,dbuff *buff)
 {
 
-  int i1,i2,j1,j2,i,j,npts,hd=0;
+  int i1,i2,j1,j2,i,j,npts,hd=0,npts2;
   double dwell2,sw2;
   char fileN[PATH_LENGTH];
   FILE *fstream;
@@ -3859,12 +3929,20 @@ void file_export(GtkAction *action,dbuff *buff)
     else   
    if (buff->disp.dispstyle == SLICE_COL){
     j = 2*npts;
-    i1=(int) (buff->disp.yy1 * (buff->npts2-1)+.5);
-    i2=(int) (buff->disp.yy2 * (buff->npts2-1)+.5);
+    
+    npts2 = buff->npts2;
+    if (buff->is_hyper)
+      if (npts2 %2 == 1) npts2 -=1;
+    
+    i1=(int) (buff->disp.yy1 * (npts2-1)+.5);
+    i2=(int) (buff->disp.yy2 * (npts2-1)+.5);
 
-
-    if (buff->is_hyper && i1 %2 == 1) i1 -= 1;
-    if(buff->is_hyper && i2 %2 ==1) i2-=1;
+    if (buff->is_hyper){
+      i1 *= 2;
+      i2 *= 2;
+    }
+    //    if (buff->is_hyper && i1 %2 == 1) i1 -= 1;
+    //    if(buff->is_hyper && i2 %2 ==1) i2-=1;
 
 
     if (i1==i2) {
@@ -3924,15 +4002,22 @@ void file_export(GtkAction *action,dbuff *buff)
    }
   else { // must be two-d
 
+    npts2 = buff->npts2;
+    if (buff->is_hyper)
+      if (npts2 %2 == 1) npts2 -=1;
 
     i1=(int) (buff->disp.xx1 * (npts-1) +.5);
     i2=(int) (buff->disp.xx2 * (npts-1) +.5);
     
-    j1=(int) (buff->disp.yy1 * (buff->npts2-1)+.5);
-    j2=(int) (buff->disp.yy2 * (buff->npts2-1)+.5);
+    j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
+    j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
     
-    if (buff->is_hyper && j1 %2 == 1) j1 -= 1;
-    if(buff->is_hyper && j2 %2 ==1) j2-=1;
+    if (buff->is_hyper){
+      j1 *= 2;
+      j2 *= 2;
+    }
+    //    if (buff->is_hyper && j1 %2 == 1) j1 -= 1;
+    //   if(buff->is_hyper && j2 %2 ==1) j2-=1;
 
 
     fprintf(fstream,"#x point, ");
@@ -4026,7 +4111,7 @@ return;
 void file_export_binary(GtkAction *action,dbuff *buff)
 {
 
-  int i1,i2,j1,j2,i,j,npts,ny,m,hd=0;
+  int i1,i2,j1,j2,i,j,npts,ny,m,hd=0,npts2;
   double dwell2,sw2;
   char fileN[PATH_LENGTH];
   FILE *fstream;
@@ -4059,16 +4144,22 @@ void file_export_binary(GtkAction *action,dbuff *buff)
   
 
   // routine exports what is viewable on screen now.
-
+  npts2 = buff->npts2;
+  if (buff->is_hyper)
+    if (npts2 %2 == 1) npts2 -=1;
 
     i1=(int) (buff->disp.xx1 * (npts-1) +.5);
     i2=(int) (buff->disp.xx2 * (npts-1) +.5);
     
-    j1=(int) (buff->disp.yy1 * (buff->npts2-1)+.5);
-    j2=(int) (buff->disp.yy2 * (buff->npts2-1)+.5);
+    j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
+    j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
     
-    if (buff->is_hyper && j1 %2 == 1) j1 -= 1;
-    if(buff->is_hyper && j2 %2 ==1) j2-=1;
+    if (buff->is_hyper){
+      j1 *= 2;
+      j2 *= 2;
+    }
+    //    if (buff->is_hyper && j1 %2 == 1) j1 -= 1;
+    //    if(buff->is_hyper && j2 %2 ==1) j2-=1;
     
     //get dwell in second dimension
     
@@ -4658,12 +4749,16 @@ void reset_dsp_and_synth(GtkAction *action,dbuff *buff){
 void calc_rms(GtkAction *action,dbuff *buff)
 {
 
-  int i,j;
+  int i,j,npts2;
 
   float sum=0,sum2=0,avg,avgi,rms,rmsi,sumi=0,sum2i=0;
   char out_string[UTIL_LEN];
   CHECK_ACTIVE(buff);
- for (j = 0; j<buff->npts2;j+=buff->is_hyper+1){      //do each slice and output all to screen
+
+  npts2 = buff->npts2;
+  if (npts2 % 2 == 1) npts2 -= 1;
+
+ for (j = 0; j<npts2;j+=buff->is_hyper+1){      //do each slice and output all to screen
    sum=0.;
    sum2=0.;
    sumi=0.;
