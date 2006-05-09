@@ -492,8 +492,9 @@ gint idle_button_up( GtkWidget *button )
 
 {
   gdk_threads_enter();
-  //  fprintf(stderr, "in idle_button_up\n" );
+  //fprintf(stderr, "in idle_button_up\n" );
   gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( button ), FALSE );
+  //fprintf(stderr,"leaving idle_button up\n");
   gdk_threads_leave();
   return FALSE;
 }

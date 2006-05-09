@@ -309,7 +309,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       if (script_widgets.acquire_notify != 0)
 	g_idle_add_full(G_PRIORITY_LOW, (GtkFunction) script_notify_acq_complete,NULL,NULL);
       // make sure this is done only after all the end of acquisition work is complete.
-      //	script_notify_acq_complete();
+	//      	script_notify_acq_complete();
     } 
   }
   //  fprintf(stderr,"got to end of start button\n");

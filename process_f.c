@@ -2254,7 +2254,7 @@ gint shim_integrate( GtkWidget *widget, double *unused )
 {
   dbuff *buff;
   char output[UTIL_LEN];
-  float integral;
+  float int1,int2;
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -2268,21 +2268,23 @@ gint shim_integrate( GtkWidget *widget, double *unused )
   //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
 
 
-  integral = do_shim_integrate(buff);
+  do_shim_integrate(buff,&int1,&int2);
 
-  snprintf(output,UTIL_LEN,"Shim integral is: %f",integral);
+  snprintf(output,UTIL_LEN,"Shim integrals are: %f, %f",int1,int2);
   popup_msg(output,TRUE);
 
   return 0;
 }
 
 
-float do_shim_integrate(dbuff *buff){
+gint  do_shim_integrate(dbuff *buff,float *int1,float *int2){
 
   int i, j,i1,i2,j1,j2;
-  float integral = 0.;
   float freq1,freq2;
 
+  *int1=0.;
+  *int2=0.;
+  
   // find region to integrate...
 
   i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);
@@ -2299,9 +2301,11 @@ float do_shim_integrate(dbuff *buff){
 		 - (double) buff->param_set.sw/2.) *2 * M_PI;
     for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
       freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
-      integral += freq2*freq1*buff->data[2*i + j* 2*buff->param_set.npts];
+      *int1 += freq2*freq1*buff->data[2*i + j* 2*buff->param_set.npts];
+      *int2 += buff->data[2*i + j* 2*buff->param_set.npts];
            
     }
   }
-  return integral;
+  fprintf(stderr,"shim integrals: %f %f\n",*int1,*int2);
+  return 1;
 }

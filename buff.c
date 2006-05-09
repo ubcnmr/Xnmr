@@ -6969,7 +6969,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	      return 0;
 	    }
 	    gtk_adjustment_set_value( GTK_ADJUSTMENT(param_button[i].adj), (double) ival);
-	    //	    buffp[current]->param_set.parameter[i].i_val = ival;
+	    //buffp[current]->param_set.parameter[i].i_val = ival;
 	    //	    show_parameter_frame( &buffp[current]->param_set );
 	    //	    fprintf(stderr,"updated param %s to %i\n",pname,ival);
 	    strcpy(output,"PARAM updated");
@@ -6988,9 +6988,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	   
 	    gtk_adjustment_set_value( GTK_ADJUSTMENT(param_button[i].adj), (double) fval);
 	    //	    buffp[current]->param_set.parameter[i].f_val = fval;
-	    //	    g_idle_add ((GtkFunction) show_parameter_frame_mutex_wrap, &buffp[current]->param_set) ; 
-
-	    //	    show_parameter_frame( &buffp[current]->param_set );
+	    //      show_parameter_frame( &buffp[current]->param_set );
 	    //	    fprintf(stderr,"updated param %s to %lf\n",pname,fval);
 	    strcpy(output,"PARAM updated");
 	    return 1;	    
@@ -7039,10 +7037,10 @@ int script_handler(char *input,char *output, int source,int *bnum){
     }
 
     if (strncmp("SHIM_INT",input,8) == 0){
-      float integral;
-      integral = do_shim_integrate(buffp[*bnum]);
+      float int1,int2;
+      do_shim_integrate(buffp[*bnum],&int1,&int2);
       
-      sprintf(output,"INTEGRAL: %f",integral);
+      sprintf(output,"INTEGRALS: %f %f",int1,int2);
       return 1;
     }
 
