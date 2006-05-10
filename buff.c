@@ -1189,8 +1189,9 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
   int i,i1,i2,x,x2,y,y2,exint,eyint,recadd;
   float *data;
   int ndpoints;
-
+  
   data=buff->data;
+
 
 
   if (buff->is_hyper == 0){
@@ -3401,6 +3402,7 @@ gint do_load( dbuff* buff, char* path )
   unsigned int new_npts2=0;
   unsigned int new_acq_npts;
   unsigned long sw,acqns;
+  float swf;
   float dwell;
 
   //  fprintf(stderr, "do_load: got path: %s while current dir is: %s\n", path,getcwd(fileN,PATH_LENGTH));
@@ -3432,9 +3434,10 @@ gint do_load( dbuff* buff, char* path )
 
   fscanf( fstream, "%s\n", buff->param_set.exec_path );
   fscanf( fstream, 
-     "npts = %u\nacq_npts = %u\nna = %lu\nna2 = %u\nsw = %lu\ndwell = %f\n", 
-	  &new_npts1,&new_acq_npts,&acqns, &new_npts2 ,&sw,&dwell);
+     "npts = %u\nacq_npts = %u\nna = %lu\nna2 = %u\nsw = %f\ndwell = %f\n", 
+	  &new_npts1,&new_acq_npts,&acqns, &new_npts2 ,&swf,&dwell);
   //  fprintf(stderr,"do_load: np1 %u na %u np2 %u sw: %lu dwell: %f\n",new_npts1,acqns,new_npts2,sw,dwell);
+  sw= (unsigned long ) (swf+0.1);
   buff_resize( buff, new_npts1, new_npts2 );
 
   //this resets the acq_npts in the buff struct, so fix it 
