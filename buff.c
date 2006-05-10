@@ -3128,6 +3128,7 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
   }
   CHECK_ACTIVE(buff);
 
+
   if(buff->win.press_pend >0){
     norecur=1;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),buff->is_hyper);
@@ -3140,6 +3141,7 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
     if (buff->npts2 < 4){
       /* if there's less than four points, forget it */
       norecur = 1;
+      buff->is_hyper = 0;
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE);
       return TRUE;
     }
@@ -3166,21 +3168,23 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
       snprintf(title,UTIL_LEN,"p1: %u",buff->disp.record);
       gtk_label_set_text(GTK_LABEL(buff->win.p1_label),title);
     }
-    if(buff->is_hyper) fprintf(stderr,"hyper was already TRUE!!!\n");
-    buff->is_hyper=TRUE;
-    draw_canvas(buff);
+    if(buff->is_hyper == FALSE){
+      buff->is_hyper=TRUE;
+      draw_canvas(buff);
+    }
     return TRUE;
   }
 
   /* that's it if we made it hypercomplex,
      otherwise undo the above, but we could be arriving here 
      just for ticking the box incorrectly */
-  if(buff->win.press_pend > 0 || buff->npts2==1) return TRUE;
-  buff->is_hyper = FALSE;
-  draw_canvas(buff);
-  return TRUE;
+  if (buff->is_hyper) {
+    buff->is_hyper = FALSE;
+    draw_canvas(buff);
+    return TRUE;
+  }
      
-
+  return TRUE;
 }
 
 gint plus_button(GtkWidget *widget,dbuff *buff){
@@ -3457,7 +3461,7 @@ gint do_load( dbuff* buff, char* path )
   }
   if (buff->npts2 < 4)
     if (buff->is_hyper)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),FALSE);// can't be hyper if there's less than 4
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),FALSE);// can't be hyper if there's less than 4
 
 
 
@@ -7141,6 +7145,25 @@ int script_handler(char *input,char *output, int source,int *bnum){
       sprintf(output,"INTEGRALS: %f %f",int1,int2);
       return 1;
     }
+    if (strncmp("HYPER ON",input,8) == 0){
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buffp[current]->win.hypercheck),TRUE);
+      if (buffp[current]->is_hyper){
+	strcpy(output,"MADE HYPER");
+	return 1;
+      }
+      strcpy(output,"FAILED");
+      return 0;      
+    }
+    if (strncmp("HYPER OFF",input,9) == 0){
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buffp[current]->win.hypercheck),FALSE);
+      if (buffp[current]->is_hyper == 0){
+	strcpy(output,"MADE NOT HYPER");
+	return 1;
+      }
+      strcpy(output,"FAILED");
+      return 0;
+    }
+
 
 
     // next command here...
