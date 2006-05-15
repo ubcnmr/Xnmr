@@ -295,6 +295,7 @@ dbuff *create_buff(int num){
     buff_resize( buff, 2048, 1 );
     buff->acq_npts=buff->param_set.npts;
     buff->ct = 0;
+    buff->script_open = 0;
     path_strcpy ( buff->path_for_reload,"");
 
     // create buttons now so they exist before call to clone_from_acq
@@ -951,10 +952,12 @@ void draw_raster(dbuff *buff)
   j2=(int) (buff->disp.yy2 * (npts2-1) +.5);
 
   //if  is_hyper, both j1 and j2 must be even
+  /*
   if (buff->is_hyper){
     if (j1 %2 ==1) j1-=1;
     if (j2 %2 ==1) j2-=1;
   }
+  */
   if (j1==j2){
     if(j2>0) j1=j2-1;
     else j2=j1+1;
@@ -964,6 +967,8 @@ void draw_raster(dbuff *buff)
     j1 *= 2;
     j2 *= 2;
   }
+
+
   if (i1==i2) {
     if (i2 >0 ) i1=i2-1;
     else i2=i1+1;
@@ -1204,7 +1209,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     i2 = (int) (buff->disp.yy2 * (buff->npts2/2-1)+.5);
     i1 *= 2; 
     i2 *= 2;
-    fprintf(stderr,"2d points: %i %i\n",i1,i2);
+    //    fprintf(stderr,"2d points: %i %i\n",i1,i2);
   }
 
 
@@ -1390,6 +1395,10 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
     return TRUE;
   }
 
+  if (buff->script_open != 0  && from_do_destroy_all == 0){
+    popup_msg("Can't close this window - it has a script handler running",TRUE);
+    return TRUE;
+  }
 
   if (phase_data.buffnum == bnum && phase_data.is_open == 1){
     phase_buttons(GTK_WIDGET(phase_data.cancel),NULL);
@@ -1413,7 +1422,6 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
   /* if this is the last buffer, clean up and get out, let acq run */
 
- 
 
 
   //  fprintf(stderr,"upload_buff is: %i, acq_in_progress is : %i\n",upload_buff,acq_in_progress);
@@ -2711,8 +2719,8 @@ gint do_auto2(dbuff *buff)
   npts2 = buff->npts2;
   if (buff->is_hyper) npts2 =buff->npts2/2;
   
-    i1= (int) (buff->disp.yy1*(buff->npts2-1)+.5);
-    i2= (int) (buff->disp.yy2*(buff->npts2-1)+.5);
+    i1= (int) (buff->disp.yy1*(npts2-1)+.5);
+    i2= (int) (buff->disp.yy2*(npts2-1)+.5);
 
     if (buff->is_hyper){
       i1 *= 2;
@@ -2874,6 +2882,10 @@ gint offset_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 void make_active(dbuff *buff){
 
+  if (buff == NULL){
+    fprintf(stderr,"make_active: buffer no longer exists\n");
+    return;
+  }
     last_current = current;
     current = buff->buffnum;
 
@@ -3245,7 +3257,7 @@ gint row_col_routine(GtkWidget *widget,dbuff *buff){
   if (buff->win.press_pend >0 || phase_data.is_open == 1) return TRUE;
 
 
-  if(strncmp(gtk_label_get_text(GTK_LABEL(buff->win.row_col_lab)),"Row",3)==0 && buff->npts2>1){
+  if(strncmp(gtk_label_get_text(GTK_LABEL(buff->win.row_col_lab)),"Row",3) == 0 && buff->npts2>(1+2*buff->is_hyper)){
     gtk_label_set_text(GTK_LABEL(buff->win.row_col_lab),"Column");
     if (buff->disp.dispstyle==SLICE_ROW)
     buff->disp.dispstyle=SLICE_COL;
@@ -4133,7 +4145,7 @@ void file_export_binary(GtkAction *action,dbuff *buff)
     return;
   }
 
-  if (buff->npts2 <2  ||  buff->disp.dispstyle != RASTER){
+  if (buff->npts2 < 2  ||  buff->disp.dispstyle != RASTER){
     popup_msg("Export binary only works for 2D data",TRUE);
     return;
   }
@@ -6722,9 +6734,22 @@ void set_queue_label(){
 
 
 // remote control/scripting starts here...
+int socket_thread_open = 0;
+int interactive_thread_open = 0;
 
 void readscript(GtkAction *action,dbuff *buff){
   pthread_t script_thread;
+
+  if (buff->script_open != 0){
+    popup_msg("This buffer has a script handler running already!",TRUE);
+    return;
+  }
+  if (interactive_thread_open != 0){
+    popup_msg("There is an interactive script thread open already!",TRUE);
+    return;
+  }
+  interactive_thread_open = 1;
+  buff->script_open = 1;
   pthread_create(&script_thread,NULL,&readscript_thread_routine,buff);
   fprintf(stderr,"done creating thread, returning\n");
   return;
@@ -6762,6 +6787,8 @@ void *readscript_thread_routine(void *buff){
     if (rval == 0){ // the 1 is to tell is we're from stdin
       fprintf(stderr,"%s\n",oline);
       fprintf(stderr,"readscript_thread_routine exiting\n");
+      interactive_thread_open = 0;
+      ((dbuff*)buff)->script_open = 0;
       pthread_exit(NULL);
     } 
     fprintf(stderr,"%s\n",oline);
@@ -6775,7 +6802,6 @@ void *readscript_thread_routine(void *buff){
 struct sockaddr_un my_addr;
 struct sockaddr_un from;
 int fds;
-int socket_thread_open = 0;
 
 void script_notify_acq_complete(){
 
@@ -6800,15 +6826,20 @@ void socket_script(GtkAction *action, dbuff *buff){
   pthread_t socket_thread;
 
   struct stat buf;
+  
+  if (buff->script_open != 0){
+    popup_msg("This buffer has a script thread open already!",TRUE);
+    return;
+  }
 
   if (socket_thread_open == 1){
     popup_msg("Socket thread already listening",TRUE);
     return;
   }
-  if (no_acq == TRUE){
+  /*  if (no_acq == TRUE){
     popup_msg("Can't open socket in no_acq mode",TRUE);
     return;
-  }
+    } */
 
   my_addr.sun_family = AF_UNIX;
   strncpy(my_addr.sun_path,"/tmp/Xnmr_remote",17);
@@ -6837,6 +6868,7 @@ void socket_script(GtkAction *action, dbuff *buff){
   
   pthread_create(&socket_thread,NULL,&readsocket_thread_routine,buff);
   socket_thread_open = 1;
+  buff->script_open = 1;
 
   fprintf(stderr,"done creating socket thread, returning\n");
   return;
@@ -6883,6 +6915,7 @@ void *readsocket_thread_routine(void *buff){
 
       unlink(my_addr.sun_path);
       socket_thread_open = 0;
+      ((dbuff *) buff)->script_open = 1;
       pthread_exit(NULL);
     }
     sendto(fds,oline,strnlen(oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
@@ -7117,10 +7150,16 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	strcpy(output,"REQUEST BUFFER DOESNT EXIST");
 	return 0;
       }
+      if (buffp[ibnum]->script_open != 0){
+	strcpy(output,"REQUEST BUFFER ALREADY HAS HANDLER");
+	return 0;
+      }
       fprintf(stderr,"making buff %i active\n",ibnum);
       CHECK_ACTIVE(buffp[ibnum]);
-
+      
+      buffp[*bnum]->script_open = 0;
       *bnum = ibnum;
+      buffp[*bnum]->script_open = 1;
       strcpy(output,"OK");
       return 1;
 

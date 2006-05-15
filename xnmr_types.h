@@ -116,6 +116,7 @@ typedef struct {
   parameter_set_t param_set;
   process_data_t process_data[ MAX_PROCESS_FUNCTIONS ];
   GtkWidget *scales_dialog;
+  char script_open;
 } dbuff;
 
 

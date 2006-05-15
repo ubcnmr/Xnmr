@@ -1829,8 +1829,11 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       // do the ft
 
       // correct the first point if we're going forward...
-      if (buff->flags & FT_FLAG2)
+      if (buff->flags & FT_FLAG2){
 	new_data[0] /= 2.;
+	if (buff->is_hyper)
+	  new_data[1] /=2.;
+      }
       four1(new_data-1,buff->npts2/2,1);
 
       // descramble
