@@ -6915,7 +6915,7 @@ void *readsocket_thread_routine(void *buff){
 
       unlink(my_addr.sun_path);
       socket_thread_open = 0;
-      ((dbuff *) buff)->script_open = 1;
+      ((dbuff *) buff)->script_open = 0;
       pthread_exit(NULL);
     }
     sendto(fds,oline,strnlen(oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
@@ -7204,6 +7204,86 @@ int script_handler(char *input,char *output, int source,int *bnum){
     }
 
 
+    if (strncmp("ADD_SUB SB1",input,11) == 0){
+      // set the source buffer 1 to:
+      int inum,j;
+      sscanf(input+11,"%i",&inum);
+      for (j=0;j<num_buffs;j++){
+	if (add_sub.index[j] == inum){
+	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff1),inum);
+	  add_sub_changed(add_sub.s_buff1,NULL);
+	  strcpy(output,"SOURCE BUFF 1 CHANGED");
+	  return 1;
+	}
+      }
+      strcpy(output,"BUFFER NOT FOUND");
+      return 0;
+    }
+
+    if (strncmp("ADD_SUB SB2",input,11) == 0){
+      // set the source buffer 1 to:
+      int inum,j;
+      sscanf(input+11,"%i",&inum);
+      for (j=0;j<num_buffs;j++){
+	if (add_sub.index[j] == inum){
+	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff2),inum);
+	  add_sub_changed(add_sub.s_buff1,NULL);
+	  strcpy(output,"SOURCE BUFF 2 CHANGED");
+	  return 1;
+	}
+      }
+      strcpy(output,"BUFFER NOT FOUND");
+      return 0;
+    }
+
+    if (strncmp("ADD_SUB DB",input,10) == 0){
+      // set the source buffer 1 to:
+      int inum,j;
+      sscanf(input+10,"%i",&inum);
+      for (j=0;j<num_buffs;j++){
+	if (add_sub.index[j] == inum){
+	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_buff),inum+1);
+	  add_sub_changed(add_sub.dest_buff,NULL);
+	  strcpy(output,"DESTINATION CHANGED");
+	  return 1;
+	}
+      }
+      strcpy(output,"BUFFER NOT FOUND");
+      return 0;
+    }
+
+    if (strncmp("ADD_SUB SM1",input,11) == 0){
+      // set the source buffer 1 to:
+      float fval;
+      sscanf(input+11,"%f",&fval);
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(add_sub.mult1),fval);
+      strcpy(output,"SOURCE 1 MULTIPLIER CHANGED");
+      return 1;
+    }
+
+    if (strncmp("ADD_SUB SM2",input,11) == 0){
+      // set the source buffer 1 to:
+      float fval;
+      sscanf(input+11,"%f",&fval);
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(add_sub.mult2),fval);
+      strcpy(output,"SOURCE 2 MULTIPLIER CHANGED");
+      return 1;
+    }
+    if (strncmp("ADD_SUB REC EACH",input,16) == 0){
+      gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record1),0);
+      add_sub_changed(add_sub.s_record1,NULL);
+      gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record2),0);
+      add_sub_changed(add_sub.s_record2,NULL);
+      gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),0);
+      add_sub_changed(add_sub.dest_record,NULL);
+      strcpy(output,"RECORDS SET TO EACH");
+      return 1;
+    }
+    if ( strncmp("ADD_SUB APPLY",input,13) == 0){
+      add_sub_buttons(add_sub.apply,NULL);
+      strcpy(output,"APPLIED");
+      return 1;
+    }
 
     // next command here...
 
@@ -7211,6 +7291,5 @@ int script_handler(char *input,char *output, int source,int *bnum){
     return 1;
 
 	
-
 
 }
