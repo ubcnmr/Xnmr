@@ -97,9 +97,6 @@ gint do_mag_2d_and_display(GtkWidget *widget, double *spare);
 gint unwind_2d(GtkWidget *widget, double *spare);
 gint unwind_2d_and_display(GtkWidget *widget, double *spare);
 
-gint shim_integrate(GtkWidget *widget, double *spare);
-gint shim_integrate_and_display(GtkWidget *widget, double *spare);
-gint do_shim_integrate(dbuff *buff,float *int1,float *int2);
 
 
 gchar psrb(int bits,int init);

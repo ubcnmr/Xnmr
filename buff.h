@@ -258,6 +258,10 @@ void *readsocket_thread_routine(void *buff);
 int script_handler(char *input,char *output,int source,int *bnum);
 void script_notify_acq_complete();
 void socket_script(GtkAction *action,dbuff *buff);
+
+void shim_integrate(GtkWidget *action, dbuff *buff);
+gint do_shim_integrate(dbuff *buff,float *int1,float *int2);
+
 #endif
 
 

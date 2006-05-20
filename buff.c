@@ -147,6 +147,7 @@ dbuff *create_buff(int num){
     { "SignaltoNoiseOld",NULL,"_Signal to Noise old",NULL,"Use old S2N values",G_CALLBACK(signal2noiseold)},
     { "Integrate",NULL,"Integrate",NULL,"Start integrate",G_CALLBACK(integrate)},
     { "IntegrateOld",NULL,"_Integrate old",NULL,"Use old integrate values",G_CALLBACK(integrateold)},
+    { "ShimIntegrate",NULL,"_Shim Integrate",NULL,"Integrate for autoshimming",G_CALLBACK(shim_integrate)},
     { "Clone",NULL,"_Clone from acq buff","<control>C","Clone current from acq",G_CALLBACK(clone_from_acq)},
     { "Setsf",NULL,"Set sf",NULL,"Set spectrometer frequency",G_CALLBACK(set_sf1)},
     { "RMS", NULL,"_RMS",NULL,"Calculate RMS of Entire spectrum",G_CALLBACK(calc_rms)},
@@ -197,6 +198,7 @@ dbuff *create_buff(int num){
    "     <separator/>"
    "     <menuitem action='Integrate'/>"
    "     <menuitem action='IntegrateOld'/>"
+   "     <menuitem action='ShimIntegrate'/>"
    "     <separator/>"
    "     <menuitem action='Clone'/>"
    "     <menuitem action='Setsf'/>"
@@ -5629,6 +5631,15 @@ if the number of records on the input records doesn't match for "each each", err
   // set the ft_flag to whatever the first source buff says:
   buffp[dbnum]->flags = buffp[sbnum1]->flags;
 
+  // and copy the phase from the first source buff
+  buffp[dbnum]->phase0_app = buffp[sbnum1]->phase0_app;
+  buffp[dbnum]->phase1_app = buffp[sbnum1]->phase1_app;
+  buffp[dbnum]->phase20_app = buffp[sbnum1]->phase20_app;
+  buffp[dbnum]->phase21_app = buffp[sbnum1]->phase21_app;
+  buffp[dbnum]->phase0 = buffp[sbnum1]->phase0;
+  buffp[dbnum]->phase1 = buffp[sbnum1]->phase1;
+  buffp[dbnum]->phase20 = buffp[sbnum1]->phase20;
+  buffp[dbnum]->phase21 = buffp[sbnum1]->phase21;
 
 
   // do the each's first:
@@ -6788,7 +6799,7 @@ void *readscript_thread_routine(void *buff){
       fprintf(stderr,"%s\n",oline);
       fprintf(stderr,"readscript_thread_routine exiting\n");
       interactive_thread_open = 0;
-      ((dbuff*)buff)->script_open = 0;
+      buffp[bnum]->script_open = 0;
       pthread_exit(NULL);
     } 
     fprintf(stderr,"%s\n",oline);
@@ -6915,7 +6926,7 @@ void *readsocket_thread_routine(void *buff){
 
       unlink(my_addr.sun_path);
       socket_thread_open = 0;
-      ((dbuff *) buff)->script_open = 0;
+      buffp[bnum]->script_open = 0;
       pthread_exit(NULL);
     }
     sendto(fds,oline,strnlen(oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
@@ -7173,10 +7184,33 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	return 0;
       }
       *bnum = current;
+      buffp[old_current]->script_open = 0;
+      buffp[current]->script_open = 1;
       sprintf(output,"OK %i",current);
       return 1;
     }
 
+    if (strncmp("CLOSE ",input,6) == 0){
+      int inum;
+      sscanf(input,"CLOSE %i",&inum);
+      fprintf(stderr,"got close buffer # %i\n",inum);
+      if (inum < MAX_BUFFERS && inum >= 0){
+	if (buffp[inum]->script_open == 0){
+	  file_close(NULL,buffp[inum]);
+	  strcpy(output,"OK");
+	  return 1;
+      }
+      strcpy(output,"HAS SCRIPT OPEN");
+      return 0;
+      }
+      strcpy(output,"INVALID BNUM");
+      return 0;
+    }
+
+    if(strncmp("GET BUFFER",input,10)==0){
+      sprintf(output,"BUFFER %i",current);
+      return 1;
+    }
     if (strncmp("SHIM_INT",input,8) == 0){
       float int1,int2;
       do_shim_integrate(buffp[*bnum],&int1,&int2);
@@ -7292,4 +7326,73 @@ int script_handler(char *input,char *output, int source,int *bnum){
 
 	
 
+}
+
+
+
+void shim_integrate( GtkWidget *action, dbuff *buff )
+
+{
+  char output[UTIL_LEN];
+  float int1,int2;
+
+
+  CHECK_ACTIVE(buff);
+
+  //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
+
+
+  do_shim_integrate(buff,&int1,&int2);
+
+  snprintf(output,UTIL_LEN,"Shim integrals are: %f, %f",int1,int2);
+  popup_msg(output,TRUE);
+
+  return ;
+}
+
+
+gint  do_shim_integrate(dbuff *buff,float *int1,float *int2){
+
+  int i, j,i1,i2,j1,j2,npts2;
+  float freq1,freq2;
+
+  *int1=0.;
+  *int2=0.;
+
+  float max=0,thresh = 0;
+  
+  npts2 = buff->npts2;
+  if (buff->is_hyper)
+    if (npts2 %2 == 1) npts2 -= 1;
+  // find region to integrate...
+
+  i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);
+  i2=(int) (buff->disp.xx2 * (buff->param_set.npts-1) +.5);
+
+  j1=(int) (buff->disp.yy1 * (buff->npts2-1) +.5);
+  j2=(int) (buff->disp.yy2 * (buff->npts2-1) +.5);
+
+  fprintf(stderr, "limits are: %i to %i and %i to %i\n",i1,i2,j1,j2);
+
+  for(i=i1;i<=i2;i++)
+    for(j=j1;j<=j2;j++)
+      if (buff->data[2*i+2*j*buff->param_set.npts] > max)
+	max = buff->data[2*i+2*j*buff->param_set.npts];
+    
+  thresh = max*.01;
+  thresh = 0.0;
+  for( i=i1;i<=i2;i++) {
+
+    freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
+		 - (double) buff->param_set.sw/2.) *2 * M_PI;
+    for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
+      if (fabs(buff->data[2*i+j*2*buff->param_set.npts]) > thresh){
+	freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
+	*int1 += freq2*freq1*buff->data[2*i + j* 2*buff->param_set.npts];
+	*int2 += buff->data[2*i + j* 2*buff->param_set.npts];
+      }
+    }
+  }
+  fprintf(stderr,"shim integrals: %f %f\n",*int1,*int2);
+  return 1;
 }

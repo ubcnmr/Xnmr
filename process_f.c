@@ -783,6 +783,7 @@ GtkWidget* create_process_frame()
   GSList *group;
   int i;
   int nu;
+  GtkWidget *hbox;
 
   active_process_data = NULL;
 
@@ -1011,6 +1012,29 @@ GtkWidget* create_process_frame()
   /*
    *  Phase radio buttons
    */
+
+  hbox = gtk_hbox_new(FALSE,1);
+  
+  button = gtk_radio_button_new_with_label( NULL, "local" );
+  gtk_box_pack_start(GTK_BOX(hbox),button,FALSE,FALSE,1);
+  g_signal_connect(G_OBJECT(button),"toggled",G_CALLBACK(process_local_global_toggle),
+		     (void *) 0);
+  gtk_widget_show (button);
+  r_local_button = button;
+
+  group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (button) );
+  button = gtk_radio_button_new_with_label( group, "global" );
+  gtk_box_pack_start(GTK_BOX(hbox),button,FALSE,FALSE,1);
+
+  gtk_table_attach_defaults(GTK_TABLE(table),hbox,2,3,nu,nu+1);
+  gtk_widget_show (button);
+  gtk_widget_show(hbox);
+  r_global_button=button;
+
+
+//  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu+1,nu+2);
+
+/*
   button = gtk_radio_button_new_with_label( NULL, "local" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu,nu+1);
   g_signal_connect(G_OBJECT(button),"toggled",G_CALLBACK(process_local_global_toggle),
@@ -1025,7 +1049,7 @@ GtkWidget* create_process_frame()
   r_global_button=button;
   gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu+1,nu+2);
   gtk_widget_show (button);
-
+*/
 
 
   gtk_widget_show (table);
@@ -1499,22 +1523,6 @@ GtkWidget* create_process_frame_2d()
   process_button[nu].func = do_offset_cal_2D;
   gtk_widget_show(button);
 
-  /* 
-   * SHIM_INT - integrate for 2D shimming
-   */
-
-  nu=SHIM_INT;
-  process_button[nu].button = gtk_check_button_new();
-  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
-  g_signal_connect(G_OBJECT( process_button[nu].button ), "toggled", G_CALLBACK( process_button_toggle ),  (void*) nu);
-  gtk_widget_show( process_button[nu].button );
-  button = gtk_button_new_with_label( "Shim Integrate" );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(shim_integrate_and_display), NULL);
-  process_button[nu].func = shim_integrate;
-  gtk_widget_show(button);
-
- 
 
 
 
@@ -2234,84 +2242,4 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
 }
 
 
-gint shim_integrate_and_display( GtkWidget *widget, double *unused )
-{
-  dbuff *buff;
-  gint result;
 
-  result = shim_integrate( widget, unused );
-
-
-  if( widget == NULL ) 
-    buff = buffp[ upload_buff ];
-  else 
-    buff = buffp[ current ];
-
-  draw_canvas( buff );
-  return result;
-}
-
-
-gint shim_integrate( GtkWidget *widget, double *unused )
-
-{
-  dbuff *buff;
-  char output[UTIL_LEN];
-  float int1,int2;
-
-  if( widget == NULL ) 
-    buff = buffp[ upload_buff ];
-  else 
-    buff = buffp[ current ];
-  if (buff == NULL){
-    popup_msg("shim_integrate panic! buff is null!",TRUE);
-    return 0;
-    
-  }
-  //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
-
-
-  do_shim_integrate(buff,&int1,&int2);
-
-  snprintf(output,UTIL_LEN,"Shim integrals are: %f, %f",int1,int2);
-  popup_msg(output,TRUE);
-
-  return 0;
-}
-
-
-gint  do_shim_integrate(dbuff *buff,float *int1,float *int2){
-
-  int i, j,i1,i2,j1,j2,npts2;
-  float freq1,freq2;
-
-  *int1=0.;
-  *int2=0.;
-  
-  npts2 = buff->npts2;
-  if (buff->is_hyper)
-    if (npts2 %2 == 1) npts2 -= 1;
-  // find region to integrate...
-
-  i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);
-  i2=(int) (buff->disp.xx2 * (buff->param_set.npts-1) +.5);
-
-  j1=(int) (buff->disp.yy1 * (buff->npts2-1) +.5);
-  j2=(int) (buff->disp.yy2 * (buff->npts2-1) +.5);
-
-  fprintf(stderr, "limits are: %i to %i and %i to %i\n",i1,i2,j1,j2);
-
-  for( i=i1;i<=i2;i++) {
-
-    freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
-		 - (double) buff->param_set.sw/2.) *2 * M_PI;
-    for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
-      freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
-      *int1 += freq2*freq1*buff->data[2*i + j* 2*buff->param_set.npts];
-      *int2 += buff->data[2*i + j* 2*buff->param_set.npts];
-           
-    }
-  }
-  fprintf(stderr,"shim integrals: %f %f\n",*int1,*int2);
-  return 1;
-}
