@@ -689,6 +689,11 @@ dbuff *create_buff(int num){
 		       G_CALLBACK(hyper_check_routine),buff);
     
     
+    // symmetric button
+    buff->win.symm_check = gtk_check_button_new_with_label("Is Symm");
+    gtk_box_pack_start(GTK_BOX(vbox1),buff->win.symm_check,FALSE,FALSE,0);
+    
+
     hbox=gtk_hbox_new(FALSE,1);
     gtk_box_pack_start(GTK_BOX(vbox1),hbox,FALSE,FALSE,0);
 
@@ -2097,6 +2102,7 @@ void integrate(GtkAction *action, dbuff *buff)
 
   if(buff->disp.dispstyle != SLICE_ROW ){
     popup_msg("Can only integrate on a row, sorry",TRUE);
+    return;
   }
 
 
@@ -7236,6 +7242,16 @@ int script_handler(char *input,char *output, int source,int *bnum){
       strcpy(output,"FAILED");
       return 0;
     }
+    if (strncmp("SYMM ON",input,7) == 0){
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buffp[current]->win.symm_check),TRUE);
+      strcpy(output,"MADE SYMM");
+      return 1;      
+    }
+    if (strncmp("SYMM OFF",input,8) == 0){
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buffp[current]->win.symm_check),FALSE);
+      strcpy(output,"MADE NOT SYMM");
+      return 1;      
+    }
 
 
     if (strncmp("ADD_SUB SB1",input,11) == 0){
@@ -7396,3 +7412,8 @@ gint  do_shim_integrate(dbuff *buff,float *int1,float *int2){
   fprintf(stderr,"shim integrals: %f %f\n",*int1,*int2);
   return 1;
 }
+
+
+
+
+

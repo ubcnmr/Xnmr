@@ -94,6 +94,7 @@ typedef struct {
     GtkWidget *autocheck,*hypercheck;
     GtkWidget *row_col_lab,*slice_2d_lab;
     GtkWidget *p1_label,*p2_label,*ct_label,*ct_box;
+    GtkWidget *symm_check;
     int sizex,sizey; /* number of pixels for drawing, total is +2 */
     int buffid;
     int press_pend;
@@ -152,11 +153,12 @@ typedef struct {
 #define P2D 11
 #define BC2D1 11
 #define EM2D 12
-#define ZF2D 13
-#define UNWIND 14
-#define FT2D 15
-#define MAG2D 16
-#define BC2D2 17
+#define GM2D 13
+#define ZF2D 14
+#define UNWIND 15
+#define FT2D 16
+#define MAG2D 17
+#define BC2D2 18
 
 #endif
 

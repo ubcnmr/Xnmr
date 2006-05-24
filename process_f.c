@@ -17,9 +17,11 @@
 #include "nr.h"
 #include "xnmr.h"
 
+
 #include <gtk/gtk.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 
 process_button_t process_button[ MAX_PROCESS_FUNCTIONS ];
 process_data_t* active_process_data;
@@ -281,6 +283,18 @@ gint do_ft(GtkWidget *widget, double *unused)
   //    scale=sqrt((float) buff->param_set.npts);
   if (buff->flags & FT_FLAG){
     //    fprintf(stderr,"FT_FLAG is true\n");
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check))){
+    // if its symmetric, swap the first and second halves
+      for(i=0;i<buff->npts2;i++)
+	for(j=0;j<buff->param_set.npts;j++){
+	  spare = buff->data[j+i*2*buff->param_set.npts];
+	  buff->data[j+i*2*buff->param_set.npts]=
+	    buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts];
+	  buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts]=spare;
+	}
+
+    }
+
     scale = buff->param_set.npts/2.0;
   }
   else{
@@ -428,10 +442,10 @@ gint do_exp_mult_and_display( GtkWidget *widget, double *val )
 
 gint do_exp_mult( GtkWidget* widget, double* val )
 {
-  int i,j;
+  int i,j,i2;
   float factor;
   dbuff* buff;
-
+  char is_symm;
   factor = (float) *val;
 
   // fprintf(stderr, "doing exp_mult by %f\n", factor );
@@ -446,12 +460,19 @@ gint do_exp_mult( GtkWidget* widget, double* val )
     return 0;
   }
 
+  is_symm = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check));
+
   // this is repeated in the fitting routine!
 
   for( j=0; j<buff->npts2; j++ )
     for( i=0; i<buff->param_set.npts; i++ ){
-      buff->data[2*i+j*2*buff->param_set.npts] *= exp( -1.0 * factor * i * buff->param_set.dwell/1000000 * M_PI ); 
-      buff->data[2*i+1+j*2*buff->param_set.npts] *= exp( -1.0 * factor * i * buff->param_set.dwell/1000000 * M_PI ); 
+      if (is_symm){
+	i2 = abs(i-buff->param_set.npts/2);
+      }
+      else i2 = i;
+      
+      buff->data[2*i+j*2*buff->param_set.npts] *= exp( -1.0 * factor * i2 * buff->param_set.dwell/1000000 * M_PI ); 
+      buff->data[2*i+1+j*2*buff->param_set.npts] *= exp( -1.0 * factor * i2 * buff->param_set.dwell/1000000 * M_PI ); 
     }
   return 0;
 }
@@ -476,10 +497,11 @@ gint do_gaussian_mult_and_display( GtkWidget *widget, double *val )
 gint do_gaussian_mult( GtkWidget* widget, double * val)
 
 {
-  int i,j;
+  int i,j,i2;
   float factor;
   float temp;
   dbuff* buff;
+  char is_symm;
 
   factor = *val;
 
@@ -494,10 +516,16 @@ gint do_gaussian_mult( GtkWidget* widget, double * val)
     return 0;
   }
   // this is repeated in the fitting routine!
-
+  is_symm = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check))
+;
   for( j=0; j<buff->npts2; j++ )
     for( i=0; i<buff->param_set.npts; i++ ) {
-      temp = i*buff->param_set.dwell/1000000 * M_PI * factor / 1.6651;
+      if (is_symm){
+	i2 = abs(i-buff->param_set.npts/2);
+      }
+      else i2 = i;
+
+      temp = i2*buff->param_set.dwell/1000000 * M_PI * factor / 1.6651;
       buff->data[2*i+j*2*buff->param_set.npts] *= exp( -1 * temp * temp );
       buff->data[2*i+1+j*2*buff->param_set.npts] *= exp( -1 * temp * temp );
     }
@@ -1433,6 +1461,28 @@ GtkWidget* create_process_frame_2d()
   process_button[nu].func = do_exp_mult_2d;
   gtk_widget_show(button);
 
+  /*
+   * Gauss multiply
+   */
+  nu=GM2D;
+  process_button[nu].adj= gtk_adjustment_new( 2, -1E6, 1E6, 1, 2, 0 );
+  g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
+  button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
+  gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu-P2D,nu-P2D+1);
+  gtk_widget_show( button );
+
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle), 
+      (void*) nu);
+  gtk_widget_show(process_button[nu].button);
+  button = gtk_button_new_with_label( "Gauss Mult 2D" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_gaussian_mult_2d_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  process_button[nu].func = do_gaussian_mult_2d;
+  gtk_widget_show(button);
+
 
 
 
@@ -1778,6 +1828,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   float scale;
   float *new_data;
   double spared;
+  char is_symm;
 
   if( widget == NULL ) {
     buff = buffp[ upload_buff ];
@@ -1792,6 +1843,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     return 0;
   }
 
+  is_symm = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check));
   /*********
 
   if(buff->win.press_pend>0) {
@@ -1821,7 +1873,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   else
     scale = 2.0;
 
-  if (buff->is_hyper == FALSE){
+  if (buff->is_hyper == FALSE){ 
     //    popup_msg("hypercomplex flag not set, doing real FT?",TRUE);
     fprintf(stderr,"hypercomplex flag not set, doing real FT\n");
     new_data = g_malloc(buff->npts2 * sizeof(float) );
@@ -1836,12 +1888,19 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       }
       // do the ft
 
-      // correct the first point if we're going forward...
-      if (buff->flags & FT_FLAG2){
+
+      // correct the first point if we're going forward... and not symmetric
+      if (buff->flags & FT_FLAG2 & !is_symm)
 	new_data[0] /= 2.;
-	if (buff->is_hyper)
-	  new_data[1] /=2.;
-      }
+      
+
+      if (is_symm)
+	for(j=0;j<buff->npts2/2;j++){
+	  spare=new_data[j]/scale;
+	  new_data[j]=new_data[j+buff->npts2/2]/scale;
+	  new_data[j+buff->npts2/2]=spare;
+	}
+
       four1(new_data-1,buff->npts2/2,1);
 
       // descramble
@@ -1862,7 +1921,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       
 
   }
-  else{
+  else{// is hypercomplex
     new_data = g_malloc(buff->npts2 * sizeof(float));
     //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
@@ -1873,7 +1932,16 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 	new_data[j*2+1] = buff->data[(2*j+1)*buff->param_set.npts*2+i];
       }
       // do the ft
-      new_data[0] /= 2.;
+      if (buff->flags & FT_FLAG2 & !is_symm)
+	new_data[0] /= 2.;
+
+      if (is_symm)
+	for(j=0;j<buff->npts2/2;j++){
+	  spare=new_data[j]/scale;
+	  new_data[j]=new_data[j+buff->npts2/2]/scale;
+	  new_data[j+buff->npts2/2]=spare;
+	}
+
       four1(new_data-1,buff->npts2/2,1);
       
       // descramble
@@ -1991,10 +2059,11 @@ gint do_exp_mult_2d_and_display( GtkWidget *widget, double* val )
 
 gint do_exp_mult_2d( GtkWidget* widget, double * val )
 {
-  int i,j;
+  int i,j,i2;
   float factor;
   double dwell2,sw2;
   dbuff* buff;
+  char is_symm;
 
   factor = (float) *val;
 
@@ -2010,6 +2079,7 @@ gint do_exp_mult_2d( GtkWidget* widget, double * val )
     return 0;
   }
 
+  is_symm = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check));
   //eegads, what do I use as sw in second dimension? look for a parameter called dwell2
 
   i = pfetch_float(&buff->param_set,"dwell2",&dwell2,0);
@@ -2024,10 +2094,14 @@ gint do_exp_mult_2d( GtkWidget* widget, double * val )
     return 0;
   }
 
-  
+
 
   for( j=0; j<buff->npts2; j++ ){
-    factor = exp ( - *val * floor(j/(1+buff->is_hyper)) * dwell2 *M_PI);
+    i2 = floor(j/(1+buff->is_hyper));
+    if (is_symm)
+      i2 -= buff->npts2/(2*(1+buff->is_hyper));
+    
+    factor = exp ( - *val * i2 * dwell2 *M_PI);
 
     for( i=0; i<buff->param_set.npts; i++ ){
       buff->data[2*i+j*2*buff->param_set.npts] *= factor  ; 
@@ -2036,6 +2110,79 @@ gint do_exp_mult_2d( GtkWidget* widget, double * val )
   }
   return 0;
 }
+
+
+
+
+gint do_gaussian_mult_2d_and_display( GtkWidget *widget, double* val )
+{
+  dbuff *buff;
+  gint result;
+
+  result = do_gaussian_mult_2d( widget, val );
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  draw_canvas( buff );
+  return result;
+}
+
+gint do_gaussian_mult_2d( GtkWidget* widget, double * val )
+{
+  int i,j,i2;
+  float factor;
+  double dwell2,sw2;
+  dbuff* buff;
+  char is_symm;
+  factor = (float) *val;
+
+  // fprintf(stderr, "doing exp_mult by %f\n", factor );
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_exp_mult_2d panic! buff is null!",TRUE);
+    return 0;
+  }
+  is_symm = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check));
+
+  //eegads, what do I use as sw in second dimension? look for a parameter called dwell2
+
+  i = pfetch_float(&buff->param_set,"dwell2",&dwell2,0);
+  if (i == 1)
+    sw2 =1.0/dwell2;
+  else
+    pfetch_float(&buff->param_set,"sw2",&sw2,0);
+  if (i==1)
+    dwell2=1./sw2;
+  else {
+    fprintf(stderr,"can't find dwell2 or sw2, bailing out of em2d\n");
+    return 0;
+  }
+
+
+  for( j=0; j<buff->npts2; j++ ){
+    i2 = floor(j/(1+buff->is_hyper));
+    if (is_symm)
+      i2 -= buff->npts2/(2*(1+buff->is_hyper));
+    //    fprintf(stderr,"gauss 2d %i %i\n",j,i2);
+
+    factor = dwell2 *M_PI * *val/1.6651 * i2;
+
+    for( i=0; i<buff->param_set.npts; i++ ){
+      buff->data[2*i+j*2*buff->param_set.npts] *= exp(-1*factor*factor) ; 
+      buff->data[2*i+1+j*2*buff->param_set.npts] *= exp(-1*factor*factor) ; 
+    }
+  }
+  return 0;
+}
+
 
 gint do_offset_cal_2D_and_display( GtkWidget *widget, double *unused )
 {

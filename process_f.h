@@ -85,6 +85,9 @@ gint process_data( GtkWidget *widget, gpointer data );
 gint do_exp_mult_2d( GtkWidget* widget, double *val);
 gint do_exp_mult_2d_and_display( GtkWidget* widget, double *val);
 
+gint do_gaussian_mult_2d( GtkWidget* widget, double *val);
+gint do_gaussian_mult_2d_and_display( GtkWidget* widget, double *val);
+
 gint do_zero_fill_2d(GtkWidget * widget,double *val);
 gint do_zero_fill_2d_and_display(GtkWidget * widget,double *val);
 
