@@ -527,7 +527,7 @@ gint do_gaussian_mult( GtkWidget* widget, double * val)
 
       temp = i2*buff->param_set.dwell/1000000 * M_PI * factor / 1.6651;
       buff->data[2*i+j*2*buff->param_set.npts] *= exp( -1 * temp * temp );
-      buff->data[2*i+1+j*2*buff->param_set.npts] *= exp( -1 * temp * temp );
+      buff->data[2*i+1+j*2*buff->param_set.npts] *= exp( -1 * temp * temp);
     }
 
   return 0;
@@ -538,6 +538,7 @@ gint do_zero_fill(GtkWidget * widget,double *val)
   int new_npts,old_npts,acq_points;
   float factor,temp;
   dbuff *buff;
+  double ls;
 
   factor = *val;
 
@@ -585,6 +586,18 @@ gint do_zero_fill(GtkWidget * widget,double *val)
       buff->data[2*i+2*j*new_npts] = 0.;
       buff->data[2*i+1+2*j*new_npts] = 0.;
       } */  
+
+
+  // if we're symm, we want to add before and after the data set, not all at the end.
+
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check))){
+    ls = -(buff->param_set.npts-old_npts)/2;
+    do_left_shift((GtkWidget *)buff,(double *) &ls);
+  }
+      
+
+
+
   cursor_normal(buff);
   			    
   // fprintf(stderr,"do_zero_fill: got factor: %f, rounding to: %i\n",factor,new_npts);
@@ -1632,6 +1645,7 @@ gint do_zero_fill_2d(GtkWidget * widget,double *val)
   int new_npts2,old_npts2,acq_points2;
   float factor,temp;
   dbuff *buff;
+  int i,j,shift;
 
   factor = (float ) *val;
 
@@ -1669,8 +1683,22 @@ gint do_zero_fill_2d(GtkWidget * widget,double *val)
 
   // the update will have screwed this up, fix it:
   buff->param_set.num_acqs_2d=acq_points2; 
-  cursor_normal(buff);
 
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check))){
+    // move the data back to the center
+    shift = (new_npts2-old_npts2)/2;
+    for(i=0;i<buff->param_set.npts*2;i++)
+      for(j=old_npts2-1;j>=0;j--){
+	buff->data[i+(shift+j)*buff->param_set.npts*2]=buff->data[i+j*buff->param_set.npts*2];
+	buff->data[i+j*buff->param_set.npts*2] = 0.;
+      }
+
+  }
+
+
+
+      
+  cursor_normal(buff);
 
 
 
