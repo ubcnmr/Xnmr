@@ -305,6 +305,11 @@ gint do_ft(GtkWidget *widget, double *unused)
 
   for(i=0;i<buff->npts2;i++){
     /* do ft for each 1d spectrum */
+    if (buff->flags & FT_FLAG &&  
+	gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check)) == FALSE){
+      buff->data[i*2*buff->param_set.npts] /= 2;
+      buff->data[i*2*buff->param_set.npts+1] /= 2;
+    }
     four1(&buff->data[i*2*buff->param_set.npts]-1,buff->param_set.npts,-1);
     for(j=0;j<buff->param_set.npts;j++){
       spare=buff->data[j+i*2*buff->param_set.npts]/scale;
@@ -703,6 +708,64 @@ gint do_left_shift_and_display(GtkWidget * widget,double *val)
   }
 
 
+gint do_shim_filter(GtkWidget * widget,double *val)
+{
+  int i,j,shift,imax;
+  dbuff* buff;
+  float sw;
+
+  // this is a frequency in Hz
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_shim_filter panic! buff is null!",TRUE);
+    return 0;
+  }
+
+  shift = (int) *val;
+  sw = buff->param_set.sw;
+  imax = sw/shift/4.;
+  
+  fprintf(stderr,"imax wants to be: %i\n",imax);
+  if (imax > buff->param_set.npts) imax = buff->param_set.npts;
+  for( j=0; j<buff->npts2; j++ )
+    for( i=0; i<imax; i++ ) {
+      buff->data[2*i+j*2*buff->param_set.npts] *= sin (2*M_PI*i*shift/sw);
+      buff->data[2*i+1+j*2*buff->param_set.npts] *= sin(2*M_PI*i*shift/sw);
+    }
+
+
+    
+
+  return 0;
+
+
+  }
+
+gint do_shim_filter_and_display(GtkWidget * widget,double *val)
+{
+  dbuff *buff;
+  gint result;
+
+  result = do_shim_filter( widget, val );
+
+  if( widget == NULL ) {
+    fprintf(stderr,"widget is nyull\n");
+    buff = buffp[ upload_buff ];
+  }
+  else 
+    buff = buffp[ current ];
+
+  draw_canvas( buff );
+  return result;
+
+  }
+
+////
+
 
 gint do_phase_wrapper( GtkWidget* widget, double *unused )
 
@@ -905,6 +968,29 @@ GtkWidget* create_process_frame()
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_left_shift_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
   process_button[nu].func = do_left_shift;
+  gtk_widget_show(button);
+
+
+  /*
+   * shim-filter
+   */
+  nu=SF;
+  process_button[nu].adj= gtk_adjustment_new( 0, 0, 10000000, 1, 2, 0 );
+  g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
+  button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
+  gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu,nu+1);
+  gtk_widget_show( button );
+
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu,nu+1);
+  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle), 
+      (void*) nu);
+  gtk_widget_show(process_button[nu].button);
+  button = gtk_button_new_with_label( "Shim Filter" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_shim_filter_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  process_button[nu].func = do_shim_filter;
   gtk_widget_show(button);
 
 

@@ -49,6 +49,7 @@ void update_sw_dwell();
 
 void update_npts(int npts);
 void update_npts2(int npts2);
+void update_acqs(int acqs);
 /*
  * These methods update the shared memory structure from the active parameter set
  */

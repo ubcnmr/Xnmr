@@ -322,6 +322,12 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), npts); 
 
   } 
+void update_acqs(int acqs){
+  /* not a callback */
+
+  gtk_adjustment_set_value(GTK_ADJUSTMENT( acqs_adj),acqs);
+
+}
 
 
   void update_2d_buttons()      //This methods updates the buttons when acq moves to a new dimension 

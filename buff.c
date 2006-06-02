@@ -3959,7 +3959,8 @@ void file_export(GtkAction *action,dbuff *buff)
     
     npts2 = buff->npts2;
     if (buff->is_hyper)
-      if (npts2 %2 == 1) npts2 -=1;
+      npts2 /= 2;
+      //      if (npts2 %2 == 1) npts2 -=1;
     
     i1=(int) (buff->disp.yy1 * (npts2-1)+.5);
     i2=(int) (buff->disp.yy2 * (npts2-1)+.5);
@@ -4031,7 +4032,9 @@ void file_export(GtkAction *action,dbuff *buff)
 
     npts2 = buff->npts2;
     if (buff->is_hyper)
-      if (npts2 %2 == 1) npts2 -=1;
+      npts2 /=2;
+
+    //      if (npts2 %2 == 1) npts2 -=1;
 
     i1=(int) (buff->disp.xx1 * (npts-1) +.5);
     i2=(int) (buff->disp.xx2 * (npts-1) +.5);
@@ -4173,7 +4176,8 @@ void file_export_binary(GtkAction *action,dbuff *buff)
   // routine exports what is viewable on screen now.
   npts2 = buff->npts2;
   if (buff->is_hyper)
-    if (npts2 %2 == 1) npts2 -=1;
+    npts2 /= 2;
+    //    if (npts2 %2 == 1) npts2 -=1;
 
     i1=(int) (buff->disp.xx1 * (npts-1) +.5);
     i2=(int) (buff->disp.xx2 * (npts-1) +.5);
@@ -5488,6 +5492,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
 }
 void add_sub_buttons(GtkWidget *widget,gpointer data){
   int my_current;
+  char overlap;
 
   if (widget == add_sub.close){ // close button
     gtk_widget_hide(add_sub.dialog);
@@ -5605,10 +5610,26 @@ if the number of records on the input records doesn't match for "each each", err
 
   // inputs can't overlap with output
   // unless we have append on output
+
+  /* this is too strict. want to be able to have targe as different
+     record in same buffer 
   if ((dbnum == sbnum1 || dbnum == sbnum2) && k !=1 ){
     popup_msg("Inputs and output overlap",TRUE);
     return;
   }
+  */
+
+  overlap = 0;
+  if (dbnum == sbnum1)
+    if ( i <2 || i == k  ) overlap = 1;
+  if (dbnum == sbnum2)
+    if (j< 2 || j == k) overlap = 1;
+  if (overlap){
+    popup_msg("Inputs and output overlap",TRUE);
+    return;
+  }
+
+
 
   // make sure dest buffer isn't busy acquiring. - done above
   /*  if (dbnum == upload_buff && acq_in_progress != ACQ_STOPPED){
@@ -6580,7 +6601,7 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
 
 void queue_expt(GtkAction *action, dbuff *buff){
   char path[PATH_LENGTH];
-  int valid,bnum;
+  int valid,bnum,i;
   //  fprintf(stderr,"in queue_expt\n");
   CHECK_ACTIVE(buff);
 
@@ -6591,8 +6612,18 @@ void queue_expt(GtkAction *action, dbuff *buff){
      - make sure our filename is good.
      - check that channels are the same as current acq
      - add our experiment to the queue
+     - make sure there's no scripting
 
   */
+
+  for (i=0;i<MAX_BUFFERS;i++){
+    if (buffp[i] != NULL){
+      if( buffp[i]->script_open == 1){
+	popup_msg("Script running, can't queue",TRUE);
+	return;
+      }
+    }
+  }
 
   
   if (acq_in_progress != ACQ_RUNNING){
@@ -6756,6 +6787,7 @@ int interactive_thread_open = 0;
 
 void readscript(GtkAction *action,dbuff *buff){
   pthread_t script_thread;
+  int i;
 
   if (buff->script_open != 0){
     popup_msg("This buffer has a script handler running already!",TRUE);
@@ -6765,6 +6797,15 @@ void readscript(GtkAction *action,dbuff *buff){
     popup_msg("There is an interactive script thread open already!",TRUE);
     return;
   }
+
+  for (i=0;i<MAX_BUFFERS;i++){
+    if (buffp[i] != NULL)
+      if (am_i_queued(i)){
+	popup_msg("Queueing active, can't run scripts",TRUE);
+	return;
+      }
+  }
+
   interactive_thread_open = 1;
   buff->script_open = 1;
   pthread_create(&script_thread,NULL,&readscript_thread_routine,buff);
@@ -6825,15 +6866,16 @@ void script_notify_acq_complete(){
   char mess[13]="ACQ_COMPLETE";
 
   if (script_widgets.acquire_notify == 1){
+    script_widgets.acquire_notify = 0;
     fprintf(stderr,"ACQ COMPLETE\n");
     
   }
   if (script_widgets.acquire_notify == 2){
+    script_widgets.acquire_notify = 0;
     sendto(fds,mess,13,0,(struct sockaddr *)&from,SUN_LEN(&from));
   }
 
 
-  script_widgets.acquire_notify = 0;
   return;
 }
 
@@ -6841,6 +6883,7 @@ void script_notify_acq_complete(){
 void socket_script(GtkAction *action, dbuff *buff){
   // open a socket for remote control
   pthread_t socket_thread;
+  int i;
 
   struct stat buf;
   
@@ -6857,6 +6900,14 @@ void socket_script(GtkAction *action, dbuff *buff){
     popup_msg("Can't open socket in no_acq mode",TRUE);
     return;
     } */
+
+  for (i=0;i<MAX_BUFFERS;i++){
+    if (buffp[i] != NULL)
+      if (am_i_queued(i)){
+	popup_msg("Queueing active, can't run scripts",TRUE);
+	return;
+      }
+  }
 
   my_addr.sun_family = AF_UNIX;
   strncpy(my_addr.sun_path,"/tmp/Xnmr_remote",17);
@@ -6882,10 +6933,10 @@ void socket_script(GtkAction *action, dbuff *buff){
   }
   chmod (my_addr.sun_path,0666);
   
-  
-  pthread_create(&socket_thread,NULL,&readsocket_thread_routine,buff);
   socket_thread_open = 1;
   buff->script_open = 1;
+  
+  pthread_create(&socket_thread,NULL,&readsocket_thread_routine,buff);
 
   fprintf(stderr,"done creating socket thread, returning\n");
   return;
@@ -7084,6 +7135,29 @@ int script_handler(char *input,char *output, int source,int *bnum){
       strcpy(output,"APPENDED");
       return 1;
     }
+    if (strncmp("SET NPTS2 ",input,10) == 0){
+      int ns,i;
+      i=sscanf(input+10,"%i",&ns);
+      if (i != 1){
+	strcpy(output,"FAILED");
+	return 0;
+      }
+      update_npts2(ns);
+      strcpy(output,"OK");
+      return 1;
+    }
+    if (strncmp("SET NSCANS ",input,11) == 0){
+      int ns,i;
+      i=sscanf(input+11,"%i",&ns);
+      if (i != 1){
+	strcpy(output,"FAILED");
+	return 0;
+      }
+      update_acqs(ns);
+      strcpy(output,"OK");
+      return 1;
+    }
+
     if (strncmp("PARAM ",input,6) == 0){
       // set a parameter value.  Extract the param name:
       char pname[PARAM_NAME_LEN];
@@ -7218,10 +7292,10 @@ int script_handler(char *input,char *output, int source,int *bnum){
       return 1;
     }
     if (strncmp("SHIM_INT",input,8) == 0){
-      float int1,int2;
-      do_shim_integrate(buffp[*bnum],&int1,&int2);
+      double int1,int2,int3;
+      do_shim_integrate(buffp[*bnum],&int1,&int2,&int3);
       
-      sprintf(output,"INTEGRALS: %f %f",int1,int2);
+      sprintf(output,"INTEGRALS: %f %f %f",int1,int2,int3);
       return 1;
     }
     if (strncmp("HYPER ON",input,8) == 0){
@@ -7260,7 +7334,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
       sscanf(input+11,"%i",&inum);
       for (j=0;j<num_buffs;j++){
 	if (add_sub.index[j] == inum){
-	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff1),inum);
+	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff1),j);
 	  add_sub_changed(add_sub.s_buff1,NULL);
 	  strcpy(output,"SOURCE BUFF 1 CHANGED");
 	  return 1;
@@ -7276,7 +7350,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
       sscanf(input+11,"%i",&inum);
       for (j=0;j<num_buffs;j++){
 	if (add_sub.index[j] == inum){
-	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff2),inum);
+	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff2),j);
 	  add_sub_changed(add_sub.s_buff1,NULL);
 	  strcpy(output,"SOURCE BUFF 2 CHANGED");
 	  return 1;
@@ -7292,7 +7366,8 @@ int script_handler(char *input,char *output, int source,int *bnum){
       sscanf(input+10,"%i",&inum);
       for (j=0;j<num_buffs;j++){
 	if (add_sub.index[j] == inum){
-	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_buff),inum+1);
+	  fprintf(stderr,"setting db box to %i\n",j+1);
+	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_buff),j+1);
 	  add_sub_changed(add_sub.dest_buff,NULL);
 	  strcpy(output,"DESTINATION CHANGED");
 	  return 1;
@@ -7329,28 +7404,121 @@ int script_handler(char *input,char *output, int source,int *bnum){
       strcpy(output,"RECORDS SET TO EACH");
       return 1;
     }
+    if (strncmp("ADD_SUB REC1 ",input,13) == 0){
+      int recnum;
+      sscanf(input+13,"%i",&recnum);
+      if (recnum >=0 && recnum < buffp[*bnum]->npts2){
+	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record1),recnum+2);
+	add_sub_changed(add_sub.s_record1,NULL);
+	strcpy(output,"RECORD SET");      
+	return 1;
+      }
+      else
+	{
+	  strcpy(output,"ILLEGAL RECORD");
+	  return 0;
+	}
+    }
+    if (strncmp("ADD_SUB REC2 ",input,13) == 0){
+      int recnum;
+      sscanf(input+13,"%i",&recnum);
+      if (recnum >=0 && recnum < buffp[*bnum]->npts2){
+	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record2),recnum+2);
+	add_sub_changed(add_sub.s_record2,NULL);
+	strcpy(output,"RECORD SET");      
+	return 1;
+      }
+      else
+	{
+	  strcpy(output,"ILLEGAL RECORD");
+	  return 0;
+	}
+    }
+    if (strncmp("ADD_SUB RECD APPEND",input,19) == 0){
+      gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),1);
+      add_sub_changed(add_sub.dest_record,NULL);
+      strcpy(output,"RECORD SET");
+      return 1;
+    }
+    if (strncmp("ADD_SUB RECD ",input,13) == 0){
+      int recnum;
+      sscanf(input+13,"%i",&recnum);
+      if (recnum >=0 && recnum < buffp[*bnum]->npts2){
+	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),recnum+2);
+	add_sub_changed(add_sub.dest_record,NULL);
+	strcpy(output,"RECORD SET");      
+	return 1;
+      }
+      else
+	{
+	  strcpy(output,"ILLEGAL RECORD");
+	  return 0;
+	}
+    }
     if ( strncmp("ADD_SUB APPLY",input,13) == 0){
       add_sub_buttons(add_sub.apply,NULL);
       strcpy(output,"APPLIED");
       return 1;
     }
 
+    if (strncmp("SET REC ",input,8) == 0){
+      int recnum;
+      sscanf(input+8,"%i",&recnum);
+      if (recnum >=0 && recnum < buffp[*bnum]->npts2){
+	buffp[*bnum]->disp.record = recnum;
+	draw_canvas(buffp[*bnum]);
+	strcpy(output,"RECORD SET");
+	return 1;
+      }
+      else{
+	strcpy(output,"ILLEGAL RECORD");
+	return 0;
+      }
+	
+
+    }
+    if (strncmp("SCALE ",input,6) == 0){
+      float scale;
+      int pt;
+      sscanf(input+6,"%i %f",&pt,&scale);
+      if (pt >= 0 && pt < buffp[*bnum]->param_set.npts ){
+	scale_data(buffp[*bnum],pt,scale);
+	strcpy(output,"DATA SCALED");
+	return 1;
+      }
+      strcpy(output,"INVALID POINT");
+      return 0;
+    }
+	
     // next command here...
 
     strcpy(output,"NOT UNDERSTOOD");
     return 1;
 
-	
+
 
 }
 
+void scale_data(dbuff *buff,int pt,float scale){
+  int i,j;
+  float sval;
+  
+  for (j=0;j<buff->npts2;j++){
+    sval = scale/buff->data[2*pt+j*2*buff->param_set.npts];
+    for (i=0;i<buff->param_set.npts;i++){
+      buff->data[2*i+j*2*buff->param_set.npts] *= sval;
+      buff->data[2*i+j*2*buff->param_set.npts+1] *= sval;
+    }
+  }
 
+
+}
 
 void shim_integrate( GtkWidget *action, dbuff *buff )
 
 {
-  char output[UTIL_LEN];
-  float int1,int2;
+  char output[PATH_LENGTH];
+  double int1,int2,int3;
 
 
   CHECK_ACTIVE(buff);
@@ -7358,59 +7526,128 @@ void shim_integrate( GtkWidget *action, dbuff *buff )
   //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
 
 
-  do_shim_integrate(buff,&int1,&int2);
+  do_shim_integrate(buff,&int1,&int2,&int3);
 
-  snprintf(output,UTIL_LEN,"Shim integrals are: %f, %f",int1,int2);
+  snprintf(output,PATH_LENGTH,"Shim integrals are: %f, %f, %f",int1,int2,int3);
   popup_msg(output,TRUE);
 
   return ;
 }
 
 
-gint  do_shim_integrate(dbuff *buff,float *int1,float *int2){
+gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
 
-  int i, j,i1,i2,j1,j2,npts2;
-  float freq1,freq2;
+  int i, i1,i2,npts2,imax;
+  // int j,j1,j2;
+  float freq1;
+  //  float freq2,thresh = 0;
+  float max=0;
+
+  // int 1 is the integral,
+  // int2 is weighted by f
+  // int 3 is weighted by f^2
 
   *int1=0.;
   *int2=0.;
-
-  float max=0,thresh = 0;
+  *int3=0.;
   
   npts2 = buff->npts2;
   if (buff->is_hyper)
-    if (npts2 %2 == 1) npts2 -= 1;
+    npts2 /= 2;
+
   // find region to integrate...
 
   i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);
   i2=(int) (buff->disp.xx2 * (buff->param_set.npts-1) +.5);
 
-  j1=(int) (buff->disp.yy1 * (buff->npts2-1) +.5);
-  j2=(int) (buff->disp.yy2 * (buff->npts2-1) +.5);
+  /*
+  j1=(int) (buff->disp.yy1 * (npts2-1) +.5);
+  j2=(int) (buff->disp.yy2 * (npts2-1) +.5);
+  
+  if (buff->is_hyper){
+    j1 *= 2;
+    j2 *= 2;
+  }
+    
 
   fprintf(stderr, "limits are: %i to %i and %i to %i\n",i1,i2,j1,j2);
 
-  for(i=i1;i<=i2;i++)
-    for(j=j1;j<=j2;j++)
-      if (buff->data[2*i+2*j*buff->param_set.npts] > max)
-	max = buff->data[2*i+2*j*buff->param_set.npts];
-    
-  thresh = max*.01;
-  thresh = 0.0;
-  for( i=i1;i<=i2;i++) {
+  if (npts2 != 1){
 
-    freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
-		 - (double) buff->param_set.sw/2.) *2 * M_PI;
-    for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
-      if (fabs(buff->data[2*i+j*2*buff->param_set.npts]) > thresh){
-	freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
-	*int1 += freq2*freq1*buff->data[2*i + j* 2*buff->param_set.npts];
-	*int2 += buff->data[2*i + j* 2*buff->param_set.npts];
+    for(i=i1;i<=i2;i++)
+      for(j=j1;j<=j2;j++)
+	if (buff->data[2*i+2*j*buff->param_set.npts] > max)
+	  max = buff->data[2*i+2*j*buff->param_set.npts];
+    
+    thresh = max*.01;
+    thresh = 0.0;
+    for( i=i1;i<=i2;i++) {
+      
+      freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
+		  - (double) buff->param_set.sw/2.) *2 * M_PI;
+      for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
+	if (fabs(buff->data[2*i+j*2*buff->param_set.npts]) > thresh){
+	  freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
+	  *int1 += freq2*freq1*buff->data[2*i + j* 2*buff->param_set.npts];
+	  *int2 += buff->data[2*i + j* 2*buff->param_set.npts];
+	}
       }
     }
+    fprintf(stderr,"shim integrals: %f %f\n",*int1,*int2);
+    return 1;
   }
-  fprintf(stderr,"shim integrals: %f %f\n",*int1,*int2);
-  return 1;
+  else */
+  { // single record
+    // find maximum:
+    max = 0;
+    imax = 0;
+    for (i=0;i<buff->param_set.npts;i++)
+      if (buff->data[2*i] > max){
+	max = buff->data[2*i];
+	imax = i;
+      }
+    
+
+    /*  much better off keeping same limits every time.
+
+    // now start at max, got out each way till the signal goes negative
+
+    for (i=imax;i<buff->param_set.npts;i++)
+      if (buff->data[2*i] < 0) {
+	i2 = i-1;
+	i=buff->param_set.npts+1;
+      }
+    if (i == buff->param_set.npts){
+      imax = buff->param_set.npts-1;
+      fprintf(stderr,"no negative found on high side\n");
+    }
+    for(i=imax;i>=0;i--)
+      if (buff->data[2*i] < 0){
+	i1=i+1;
+	i=-2;
+      }
+    if (i == -2){
+      i1 = 0;
+      fprintf(stderr,"no negative found on low side\n");
+    }
+    fprintf(stderr,"limits: %i %i\n",i1,i2);
+    */
+
+    for(i=i1;i<=i2;i++){
+      freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
+		  - (double) buff->param_set.sw/2.);
+      *int1 += buff->data[2*i+buff->param_set.npts*2*buff->disp.record];
+      *int2 += buff->data[2*i+buff->param_set.npts*2*buff->disp.record]*freq1;
+      *int3 += buff->data[2*i+buff->param_set.npts*2*buff->disp.record]*freq1*freq1;
+      // this was just so we can see how terrible our weighted region looks.
+      //      buff->data[2*i+buff->param_set.npts*2*buff->disp.record] 
+      // *= freq1*freq1;
+    }
+    *int2 /= *int1;
+    *int3 /= *int1;
+    fprintf(stderr,"Shim integrals: %f %f %f\n",*int1,*int2,*int3);
+    return 1;
+  }
 }
 
 

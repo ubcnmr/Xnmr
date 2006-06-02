@@ -260,7 +260,8 @@ void script_notify_acq_complete();
 void socket_script(GtkAction *action,dbuff *buff);
 
 void shim_integrate(GtkWidget *action, dbuff *buff);
-gint do_shim_integrate(dbuff *buff,float *int1,float *int2);
+gint do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3);
+void scale_data(dbuff *buff,int pt,float scale);
 
 #endif
 

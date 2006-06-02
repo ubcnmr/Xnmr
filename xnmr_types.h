@@ -140,25 +140,26 @@ typedef struct {
 #define CR 0
 #define BC1 1
 #define LS 2
-#define EM 3
-#define GM 4
-#define ZF 5
-#define ZI 6
-#define FT 7
-#define BFT 8
-#define BC2 9
-#define PH 10
+#define SF 3
+#define EM 4
+#define GM 5
+#define ZF 6
+#define ZI 7
+#define FT 8
+#define BFT 9
+#define BC2 10
+#define PH 11
 
 // this is the number of the first 2D processing function:
-#define P2D 11
-#define BC2D1 11
-#define EM2D 12
-#define GM2D 13
-#define ZF2D 14
-#define UNWIND 15
-#define FT2D 16
-#define MAG2D 17
-#define BC2D2 18
+#define P2D 12
+#define BC2D1 12
+#define EM2D 13
+#define GM2D 14
+#define ZF2D 15
+#define UNWIND 16
+#define FT2D 17
+#define MAG2D 18
+#define BC2D2 19
 
 #endif
 
