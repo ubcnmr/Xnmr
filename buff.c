@@ -7043,6 +7043,41 @@ int script_handler(char *input,char *output, int source,int *bnum){
   }
   else
     CHECK_ACTIVE(buffp[*bnum]);
+/*
+  Here are the commands that can be used in scripting:
+    if (strncmp("PROCESS",input,7)==0){
+    if (strncmp("ACQUIRE",input,7) == 0){
+    if (strncmp("LOAD ",input,5) == 0){
+    if (strncmp("SAVE ",input,5) == 0){
+    if (strncmp("APPEND",input,6) == 0){
+    if (strncmp("SET NPTS2 ",input,10) == 0){
+    if (strncmp("SET NSCANS ",input,11) == 0){
+    if (strncmp("PARAM ",input,6) == 0){
+    if (strncmp("BUFFER ",input,7) == 0){
+    if (strncmp("NEW",input,3) == 0){
+    if (strncmp("CLOSE ",input,6) == 0){
+    if(strncmp("GET BUFFER",input,10)==0){
+    if (strncmp("SHIM_INT",input,8) == 0){
+    if (strncmp("HYPER ON",input,8) == 0){
+    if (strncmp("HYPER OFF",input,9) == 0){
+    if (strncmp("SYMM ON",input,7) == 0){
+    if (strncmp("SYMM OFF",input,8) == 0){
+    if (strncmp("ADD_SUB SB1",input,11) == 0){
+    if (strncmp("ADD_SUB SB2",input,11) == 0){
+    if (strncmp("ADD_SUB DB",input,10) == 0){
+    if (strncmp("ADD_SUB SM1",input,11) == 0){
+    if (strncmp("ADD_SUB SM2",input,11) == 0){
+    if (strncmp("ADD_SUB REC EACH",input,16) == 0){
+    if (strncmp("ADD_SUB REC1 ",input,13) == 0){
+    if (strncmp("ADD_SUB REC2 ",input,13) == 0){
+    if (strncmp("ADD_SUB RECD APPEND",input,19) == 0){
+    if (strncmp("ADD_SUB RECD ",input,13) == 0){
+    if ( strncmp("ADD_SUB APPLY",input,13) == 0){
+    if (strncmp("SET REC ",input,8) == 0){
+    if (strncmp("SCALE ",input,6) == 0){
+
+    AUTOPHASE
+*/
 
   /* priorities: 
 
@@ -7520,6 +7555,13 @@ int script_handler(char *input,char *output, int source,int *bnum){
       strcpy(output,"INVALID POINT");
       return 0;
     }
+    if (strncmp("AUTOPHASE ",input,9) == 0){
+
+      first_point_auto_phase();
+      strcpy(output,"OK");
+      return 1;
+
+    }
 	
     // next command here...
 
@@ -7630,6 +7672,8 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
   else */
   { // single record
     // find maximum:
+    float sum=0.,sum2=0.,thresh;
+    int count=0;
     max = 0;
     imax = 0;
     for (i=0;i<buff->param_set.npts;i++)
@@ -7639,30 +7683,40 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
       }
     
 
-    /*  much better off keeping same limits every time.
+    /*  much better off keeping same limits every time. */
 
-    // now start at max, got out each way till the signal goes negative
+    // now start at max, go out each way till the signal goes negative
+
+    // find noise using x= 0.1 -> 0.15 
+    for (i=0.1*buff->param_set.npts;i<0.15*buff->param_set.npts;i++){
+      count += 1;
+      sum += buff->data[2*i];
+      sum2 += buff->data[2*i]*buff->data[2*i];
+    }
+    thresh = 5* sqrt(sum2/count-sum*sum/count/count);
+    thresh = max/100.;
+    fprintf(stderr,"thresh is: %f\n",thresh);
 
     for (i=imax;i<buff->param_set.npts;i++)
-      if (buff->data[2*i] < 0) {
+      if (buff->data[2*i] < thresh) {
 	i2 = i-1;
 	i=buff->param_set.npts+1;
       }
     if (i == buff->param_set.npts){
-      imax = buff->param_set.npts-1;
+      i2 = buff->param_set.npts-1;
       fprintf(stderr,"no negative found on high side\n");
     }
     for(i=imax;i>=0;i--)
-      if (buff->data[2*i] < 0){
+      if (buff->data[2*i] < thresh){
 	i1=i+1;
 	i=-2;
       }
-    if (i == -2){
+    if (i != -3){
       i1 = 0;
       fprintf(stderr,"no negative found on low side\n");
     }
     fprintf(stderr,"limits: %i %i\n",i1,i2);
-    */
+    //  */
 
     for(i=i1;i<=i2;i++){
       freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
@@ -7676,7 +7730,7 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
     }
     *int2 /= *int1;
     *int3 /= *int1;
-    fprintf(stderr,"Shim integrals: %f %f %f\n",*int1,*int2,*int3);
+    fprintf(stderr,"Shim integrals: %f %f %f, width: %f\n",*int1,*int2,*int3,sqrt(*int3-*int2 * *int2));
     return 1;
   }
 }
@@ -7685,3 +7739,37 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
 
 
 
+void first_point_auto_phase(){
+  /* this routine is called from scripting - it looks up what the left 
+     shift will be, then corrects the phase so the first point has no
+     imaginary component. */
+  int ls=0,i,j,npts;
+  float ph_correct,mag,phase;
+
+  if (buffp[current]->process_data[LS].status == SCALABLE_PROCESS_ON){
+    ls = buffp[current]->process_data[LS].val;
+  }
+  fprintf(stderr,"left shift will be: %i\n",ls);
+  npts = buffp[current]->param_set.npts;
+
+
+  // if we're going to baseline correct, do it now.
+  if (buffp[current]->process_data[BC1].status == PROCESS_ON){
+    do_offset_cal(buffp[current]->win.window,NULL);
+  }
+
+  for (j=0;j<buffp[current]->npts2;j++){
+    ph_correct = atan2(buffp[current]->data[j*2*npts+2*ls+1],buffp[current]->data[j*2*npts+2*ls]);
+    for(i=0;i<npts;i++){
+      mag = sqrt(buffp[current]->data[2*j*npts+2*i]*buffp[current]->data[2*j*npts+2*i]+
+		 buffp[current]->data[2*j*npts+2*i+1]*buffp[current]->data[2*j*npts+2*i+1]);
+      phase = atan2(buffp[current]->data[j*2*npts+2*i+1],buffp[current]->data[j*2*npts+2*i]);
+      buffp[current]->data[j*2*npts+2*i] = mag * cos(phase-ph_correct);
+      buffp[current]->data[j*2*npts+2*i+1] = mag * sin(phase-ph_correct);
+
+    }
+  }
+
+
+
+}

@@ -262,6 +262,7 @@ void socket_script(GtkAction *action,dbuff *buff);
 void shim_integrate(GtkWidget *action, dbuff *buff);
 gint do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3);
 void scale_data(dbuff *buff,int pt,float scale);
+void first_point_auto_phase();
 
 #endif
 
