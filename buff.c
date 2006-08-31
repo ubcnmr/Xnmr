@@ -449,15 +449,46 @@ dbuff *create_buff(int num){
 
       }
     */
-
+    {
+      float fr;
+      fr = 6.75/buff->param_set.npts;
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
 	buff->data[2*i+2*buff->param_set.npts*j]
-	  =cos(0.02*i*20)*exp(-i/800.)/(j+1);
+	  =cos(fr*i*2*M_PI)*exp(-i/180.0)/(j+1);
 	buff->data[2*i+1+2*buff->param_set.npts*j]
-	  =sin(0.02*i*20)*exp(-i/800.)/(j+1);
+	  =sin(fr*i*2*M_PI)*exp(-i/180.)/(j+1);
 
       }
+    }
+
+    for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
+      if (i < 5*count){
+	float t;
+	buff->data[2*i] *= sin(2*M_PI*i/20./count);
+	buff->data[2*i+1] *= sin(2*M_PI*i/20./count);
+	t= i/5./count/sqrt(2.);
+	//buff->data[2*i] *= 4*(t*t-t*t*t*t);
+	//buff->data[2*i+1] *= 4*(t*t-t*t*t*t);
+      }
+      else{
+	buff->data[2*i] *= 1.;
+	buff->data[2*i+1] *= 1.;
+      }
+      
+    }
+    
+
+    /* set a single point to non zero:
+
+        for(j=0;j<buff->npts2;j++)
+      for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
+	buff->data[2*i+2*buff->param_set.npts*j] = 0.;
+	buff->data[2*i+2*buff->param_set.npts*j+1] = 0.;
+      }
+        buff->data[2*buff->param_set.npts/19] = 1.0;
+    */
+
 
     /*    for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->param_set.npts;i++){ 
@@ -2613,7 +2644,7 @@ gint Sbutton_routine(GtkWidget *widget,dbuff *buff)
   CHECK_ACTIVE(buff);
   buff->disp.yscale /=4;
   unauto(buff); 
-  buff->disp.yoffset *=2; 
+  buff->disp.yoffset *=4; 
   draw_canvas(buff);
     /*  }*/
 

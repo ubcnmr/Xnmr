@@ -5,13 +5,7 @@
 //
 
 //#define NOHARDWARE
-//#define NO_PORT_INTERRUPT
-//#define NO_RT_SCHED
-
-
-
-// for rtai interrupts, uncomment both.
-// for old-style interrupts, comment both
+// #define NO_RT_SCHED
 
 #define OLD_PORT_INTERRUPT 
 //#define RTAI_INTERRUPT
