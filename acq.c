@@ -524,7 +524,7 @@ int start_pprog()
     if (fs != NULL){
       fclose(fs);
       //      fprintf(stderr,"launching pprog using: %s\n",s);
-      execl( s, NULL );
+      execl( s, NULL, NULL );
     }
 
     // shouldn't return from here

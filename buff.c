@@ -1094,7 +1094,6 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
 		    ,float *data,int npts, GdkColor *col,int ri){
   int x,y,i1,i2,x2,y2,exint,eyint,i;
   /* first point */
-  int npts2;
 
   // ri is real or imag = 0 or 1
 
@@ -1115,7 +1114,7 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     eyint= extrayoff*buff->disp.yscale/2.;
   }
   else if (buff->disp.dispstyle == SLICE_COL){ // only if we're phasing on a column
-    if (npts %2 == 1) npts2 -= 1;// in case npts is odd...
+    if (npts %2 == 1) npts -= 1;// in case npts is odd...
 
     i1=(int) (buff->disp.yy1 * (npts-1)+.5);
     i2=(int) (buff->disp.yy2 * (npts-1)+.5);
@@ -6978,7 +6977,7 @@ void socket_script(GtkAction *action, dbuff *buff){
 
 void *readsocket_thread_routine(void *buff){
   char iline[PATH_LENGTH],oline[PATH_LENGTH];
-  int fromlen,rlen;
+  unsigned int fromlen,rlen;
   int bnum,rval;
 
   // this signal stuff shouldn't be necessary - signals blocked in xnmr.c before threads

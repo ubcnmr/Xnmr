@@ -261,7 +261,7 @@ void start_acq()
       setpgid(0,0);
 
       
-      execl( "/usr/local/bin/acq", NULL );
+      execl( "/usr/local/bin/acq", NULL,NULL );
       // reaching here meant that launching acq failed
       // we can't pop up a dialog because we're a new program...
       {
