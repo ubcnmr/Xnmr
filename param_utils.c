@@ -292,7 +292,7 @@ void clear_param_set_2d( parameter_set_t* param_set )
 {
 int i;
 
- for (i=0;i<MAX_PARAMETERS;i++){
+ for (i=0;i<param_set->num_parameters;i++){
    if (param_set->parameter[i].type == 'I'){
      if (param_set->parameter[i].i_val_2d != NULL)
        g_free(param_set->parameter[i].i_val_2d);
