@@ -439,67 +439,26 @@ dbuff *create_buff(int num){
     count++;
 
     // put some data into the buffer.
-    /*
-    for(j=0;j<buff->npts2;j++)
-      for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
-	buff->data[2*i+2*buff->param_set.npts*j]
-	  =cos(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-.025;
-	buff->data[2*i+1+2*buff->param_set.npts*j]
-	  =sin(0.02*i*20)*exp(-i/100.)/(j+1) + random()*0.05/RAND_MAX-.025;
-
-      }
-    */
     {
       float fr;
+      float ii=1.0;
       fr = 6.75/buff->param_set.npts;
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
 	buff->data[2*i+2*buff->param_set.npts*j]
-	  =cos(fr*i*2*M_PI)*exp(-i/180.0)/(j+1);
+	  =cos(-10*fr*(i+ii)*2*M_PI)*exp(-i/180.0)/(j+1);
 	buff->data[2*i+1+2*buff->param_set.npts*j]
-	  =sin(fr*i*2*M_PI)*exp(-i/180.)/(j+1);
+	  =sin(-10*fr*(i+ii)*2*M_PI)*exp(-i/180.)/(j+1);
 
-      }
-    }
-
-    for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
-      if (i < 5*count){
-	float t;
-	buff->data[2*i] *= sin(2*M_PI*i/20./count);
-	buff->data[2*i+1] *= sin(2*M_PI*i/20./count);
-	t= i/5./count/sqrt(2.);
-	//buff->data[2*i] *= 4*(t*t-t*t*t*t);
-	//buff->data[2*i+1] *= 4*(t*t-t*t*t*t);
-      }
-      else{
-	buff->data[2*i] *= 1.;
-	buff->data[2*i+1] *= 1.;
-      }
-      
-    }
-    
-
-    /* set a single point to non zero:
-
-        for(j=0;j<buff->npts2;j++)
-      for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
-	buff->data[2*i+2*buff->param_set.npts*j] = 0.;
-	buff->data[2*i+2*buff->param_set.npts*j+1] = 0.;
-      }
-        buff->data[2*buff->param_set.npts/19] = 1.0;
-    */
-
-
-    /*    for(j=0;j<buff->npts2;j++)
-      for(i=0;i<buff->param_set.npts;i++){ 
+	// add a second peak
 	buff->data[2*i+2*buff->param_set.npts*j]
-	  =fabs(cos(0.061*i)*exp(-i/200.)+ cos(0.17*i))*cos(0.23*i);
+	  +=cos(17.5*fr*(i+ii)*2*M_PI)*exp(-i/180.0)/(j+1);
 	buff->data[2*i+1+2*buff->param_set.npts*j]
-	  =fabs(cos(0.061*i)*exp(-i/200.) + cos(0.17*i))*sin(0.23*i);
+	  +=sin(17.5*fr*(i+ii)*2*M_PI)*exp(-i/180.)/(j+1);
 
-	  } */
+      }
+    }
 
-  
     // temporarily stick in simulated "noisy" data
     /*          {
       int i,j;
@@ -1102,7 +1061,6 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     i1=(int) (buff->disp.xx1 * (npts-1) +.5);
     i2=(int) (buff->disp.xx2 * (npts-1) +.5);
 
-
     if (i1==i2) {
       if (i2 >0 ) 
 	i1=i2-1;
@@ -1114,7 +1072,7 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     eyint= extrayoff*buff->disp.yscale/2.;
   }
   else if (buff->disp.dispstyle == SLICE_COL){ // only if we're phasing on a column
-    if (npts %2 == 1) npts -= 1;// in case npts is odd...
+    //    if (npts %2 == 1) npts -= 1;// in case npts is odd - but no, its already r/i
 
     i1=(int) (buff->disp.yy1 * (npts-1)+.5);
     i2=(int) (buff->disp.yy2 * (npts-1)+.5);

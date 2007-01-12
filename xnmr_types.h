@@ -153,13 +153,15 @@ typedef struct {
 // this is the number of the first 2D processing function:
 #define P2D 12
 #define BC2D1 12
-#define EM2D 13
-#define GM2D 14
-#define ZF2D 15
-#define UNWIND 16
-#define FT2D 17
-#define MAG2D 18
-#define BC2D2 19
+#define LS2D 13
+#define EM2D 14
+#define GM2D 15
+#define ZF2D 16
+#define UNWIND 17
+#define FT2D 18
+#define MAG2D 19
+#define BC2D2 20
+#define PH2D 21
 
 #endif
 

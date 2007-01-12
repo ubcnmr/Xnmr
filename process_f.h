@@ -74,11 +74,17 @@ gint do_zero_fill_and_display(GtkWidget * widget,double *val);
 gint do_left_shift(GtkWidget * widget,double *val);
 gint do_left_shift_and_display(GtkWidget * widget,double *val);
 
+gint do_left_shift_2d(GtkWidget * widget,double *val);
+gint do_left_shift_2d_and_display(GtkWidget * widget,double *val);
+
 gint do_shim_filter(GtkWidget * widget,double *val);
 gint do_shim_filter_and_display(GtkWidget * widget,double *val);
 
 gint do_phase_and_display_wrapper( GtkWidget* widget, double *data );
 gint do_phase_wrapper( GtkWidget* widget, double *data );
+
+gint do_phase_2d_and_display_wrapper( GtkWidget* widget, double *data );
+gint do_phase_2d_wrapper( GtkWidget* widget, double *data );
 
 gint process_data( GtkWidget *widget, gpointer data ); 
   //Performs multiple processing operations

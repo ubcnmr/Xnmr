@@ -707,6 +707,85 @@ gint do_left_shift_and_display(GtkWidget * widget,double *val)
 
   }
 
+gint do_left_shift_2d(GtkWidget * widget,double *val)
+{
+  int i,j,shift;
+  dbuff* buff;
+
+  shift = (int) *val;
+  
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_left_shift panic! buff is null!",TRUE);
+    return 0;
+  }
+
+  // fprintf(stderr,"left_shift: shift is: %i\n",shift);
+  if (shift ==0) return 0;
+  if (shift*(1+buff->is_hyper) >= buff->npts2 ||
+      shift*(1+buff->is_hyper) <= -1*buff->npts2 ){
+    popup_msg("Left shift 2D too big!",TRUE);
+    return 0;
+  }
+  if (shift > 0){ // left shifting - add zeros in at end.
+    for(i=0;i<2*buff->param_set.npts;i++){
+      for(j=shift*(1+buff->is_hyper);j<buff->npts2;j += (1+buff->is_hyper)){
+	//	printf("dest is %i\n",j-shift*(1+buff->is_hyper));
+	buff->data[i+(j-shift*(1+buff->is_hyper))*2*buff->param_set.npts] 
+	  = buff->data[i+j*2*buff->param_set.npts];
+	if (buff->is_hyper)
+	  buff->data[i+(j+1-shift*(1+buff->is_hyper))*2*buff->param_set.npts] 
+	    = buff->data[i+(j+1)*2*buff->param_set.npts];
+      }
+      // add in the zeros at the end
+      for(j= buff->npts2-shift*(1+buff->is_hyper) ; j<buff->npts2;j++)
+	buff->data[i+j*2*buff->param_set.npts] = 0.;
+    }
+  }
+    else{ //right shifting.  resize buffer to keep all the data
+      buff_resize(buff,buff->param_set.npts,buff->npts2-shift*(1+buff->is_hyper));
+      for (i=0;i<2*buff->param_set.npts;i++){
+	for (j=buff->npts2-1;j>=-shift*(1+buff->is_hyper);j--)
+	  buff->data[i+j*2*buff->param_set.npts] 
+	    = buff->data[i+(j+shift*(1+buff->is_hyper))*2*buff->param_set.npts];
+	
+	// add zeros in at beginning
+	for(j=0;j<-shift*(1+buff->is_hyper);j++)
+	  buff->data[i+j*2*buff->param_set.npts]=0.;
+			    
+
+      }
+    }
+	
+  return 0;
+
+
+  }
+
+gint do_left_shift_2d_and_display(GtkWidget * widget,double *val)
+{
+  dbuff *buff;
+  gint result;
+
+  //  fprintf(stderr,"in do_left_shift_and_display with val = %lf\n",*val);
+  result = do_left_shift_2d( widget, val );
+
+  if( widget == NULL ) {
+    fprintf(stderr,"widget is nyull\n");
+    buff = buffp[ upload_buff ];
+  }
+  else 
+    buff = buffp[ current ];
+
+  draw_canvas( buff );
+  return result;
+
+  }
+
 
 gint do_shim_filter(GtkWidget * widget,double *val)
 {
@@ -821,6 +900,80 @@ gint do_phase_and_display_wrapper( GtkWidget* widget, double *unused )
   return result;
 }
 
+
+///////
+gint do_phase_2d_wrapper( GtkWidget* widget, double *unused )
+
+{
+  dbuff* buff;
+  int i,j;
+  float *pdat;
+  float dp0,dp1;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_phase_wrapper panic! buff is null!",TRUE);
+    return 0;
+  }
+
+  if(buff->is_hyper == 0){
+    popup_msg("Can't phase 2d on non-hyper complex data",TRUE);
+    return 0;
+  }
+
+  if(buff->npts2 %2 ==1){
+    popup_msg("Can't phase 2d on odd number of npts2",TRUE);
+    return 0;
+  }
+
+  pdat=g_malloc(buff->npts2*sizeof(float));
+  // borrow 1-d global/local flag
+  if ( ((int)buff->process_data[PH].val & GLOBAL_PHASE_FLAG)==0) {
+    dp0=buff->phase20-buff->phase20_app;
+    dp1=buff->phase21-buff->phase21_app;
+    buff->phase20_app = buff->phase20;
+    buff->phase21_app = buff->phase21;
+  }
+  else{
+    dp0=phase20-buff->phase20_app;
+    dp1=phase21-buff->phase21_app;
+    buff->phase20_app = phase20;
+    buff->phase21_app = phase21;
+  }
+
+  for( i=0; i<2*buff->param_set.npts; i++ ){
+    for(j=0;j<buff->npts2;j++)
+      pdat[j]=buff->data[i+j*2*buff->param_set.npts];
+    do_phase(pdat,pdat,dp0,dp1,buff->npts2/2);
+    for(j=0;j<buff->npts2;j++)
+      buff->data[i+2*j*buff->param_set.npts] = pdat[j];
+  }
+
+  g_free(pdat);
+  return 0;
+
+}
+
+gint do_phase_2d_and_display_wrapper( GtkWidget* widget, double *unused )
+
+{
+  dbuff *buff;
+  gint result;
+
+  result = do_phase_2d_wrapper( widget,unused );
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  draw_canvas( buff );
+  return result;
+}
+
+////////
 gint process_button_toggle(GtkWidget *widget, int button )
 
 {
@@ -972,7 +1125,7 @@ GtkWidget* create_process_frame()
 
 
   /*
-   * shim-filter
+   * shim-filter - should be removed...
    */
   nu=SF;
   process_button[nu].adj= gtk_adjustment_new( 0, 0, 10000000, 1, 2, 0 );
@@ -1538,6 +1691,29 @@ GtkWidget* create_process_frame_2d()
   process_button[nu].func = do_offset_cal_2D;
   gtk_widget_show(button);
 
+
+  /*
+   * Left shift 2d
+   */
+  nu=LS2D;
+  process_button[nu].adj= gtk_adjustment_new( 0, -10000, 10000, 1, 2, 0 );
+  g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
+  button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
+  gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu-P2D,nu-P2D+1);
+  gtk_widget_show( button );
+
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle), 
+      (void*) nu);
+  gtk_widget_show(process_button[nu].button);
+  button = gtk_button_new_with_label( "Left shift 2D" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_left_shift_2d_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  process_button[nu].func = do_left_shift_2d;
+  gtk_widget_show(button);
+
   /*
    * Exp multiply
    */
@@ -1670,6 +1846,19 @@ GtkWidget* create_process_frame_2d()
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_offset_cal_2D_and_display), NULL);
   process_button[nu].func = do_offset_cal_2D;
+  gtk_widget_show(button);
+  /*
+   *  Phase processing 2D
+   */
+  nu=PH2D;
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT( process_button[nu].button ), "toggled", G_CALLBACK( process_button_toggle ),  (void*) nu);
+  gtk_widget_show( process_button[nu].button );
+  button = gtk_button_new_with_label( "Phase 2D" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK( do_phase_2d_and_display_wrapper ), NULL);
+  process_button[nu].func = do_phase_2d_wrapper;
   gtk_widget_show(button);
 
 

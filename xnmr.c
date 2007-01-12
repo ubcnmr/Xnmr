@@ -1188,8 +1188,8 @@ void open_phase(GtkAction *action, dbuff *buff)
     phase_data.data=g_malloc(buff->param_set.npts*8);
     phase_data.data2=g_malloc(buff->param_set.npts*8);
     phase_npts = buff->param_set.npts;
-
     //copy the data to be phased to a safe place:
+
     
     for(i=0;i<phase_npts*2;i++) 
       phase_data.data[i]=
@@ -1201,6 +1201,8 @@ void open_phase(GtkAction *action, dbuff *buff)
     phase_data.data=g_malloc(buff->npts2*4);
     phase_data.data2=g_malloc(buff->npts2*4);
     phase_npts = buff->npts2/2;
+    printf("phase_npts is: %i\n",phase_npts);
+    //copy the data to be phased to a safe place:
 
     for(i=0;i<phase_npts;i++){
       phase_data.data[2*i]=buff->data[buff->param_set.npts*2*2*i+
