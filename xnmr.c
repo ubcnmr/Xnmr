@@ -1158,7 +1158,7 @@ white set up below  */
 void open_phase(GtkAction *action, dbuff *buff)
 {
   int buffnum,i;
-  float old_low,old_up;
+  float old_low,old_up,future_p1;
   char temps[UTIL_LEN];
 
   CHECK_ACTIVE(buff);
@@ -1218,26 +1218,6 @@ void open_phase(GtkAction *action, dbuff *buff)
   phase_data.buffnum=buffnum;
   phase_data.pivot=0.0;
 
-  if (((int)buff->process_data[PH].val & GLOBAL_PHASE_FLAG)!=0 ){
-    if (buff->disp.dispstyle == SLICE_ROW){  //row
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),phase0);
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),phase1);
-    }
-    else{   //col
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),phase20);
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),phase21);
-    }
-  }
-  else { /* not global */
-    if(buff->disp.dispstyle == SLICE_ROW){  //row
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),buff->phase0);
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),buff->phase1);
-    }
-    else{   //col
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),buff->phase20);
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),buff->phase21);
-    }
-  }
 
   /* save old phase values from buffer */
   if(buff->disp.dispstyle ==SLICE_ROW ){
@@ -1249,18 +1229,48 @@ void open_phase(GtkAction *action, dbuff *buff)
     phase_data.ophase1=buff->phase21_app;
   }
 
-  phase_data.last_phase1=GTK_ADJUSTMENT(phase1_ad)->value;
+
+
+  if (((int)buff->process_data[PH].val & GLOBAL_PHASE_FLAG)!=0 ){
+    if (buff->disp.dispstyle == SLICE_ROW){  //row
+      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),phase0);
+      future_p1=phase1;
+    }
+    else{   //col
+      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),phase20);
+      future_p1=phase21;
+    }
+  }
+  else { /* not global */
+    if(buff->disp.dispstyle == SLICE_ROW){  //row
+      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),buff->phase0);
+      future_p1=buff->phase1;
+    }
+    else{   //col
+      gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),buff->phase20);
+      future_p1=buff->phase21;
+    }
+  }
 
   /* check what the phase 1 value is */
 
   old_low=GTK_ADJUSTMENT(phase1_ad)->lower;
   old_up=GTK_ADJUSTMENT(phase1_ad)->upper;
-
+  
   GTK_ADJUSTMENT(phase1_ad)->lower = 
-      floor((GTK_ADJUSTMENT(phase1_ad)->value+180.0)/360.0)*360.-180. ;
+    floor((future_p1+180.0)/360.0)*360.-180. ;
   GTK_ADJUSTMENT(phase1_ad)->upper =GTK_ADJUSTMENT(phase1_ad)->lower+
     (old_up-old_low);
+  
+  // postpone setting phase1 till the upper and lower limits make sense.
   gtk_adjustment_changed(GTK_ADJUSTMENT(phase1_ad));
+  gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),future_p1);
+
+
+
+
+  phase_data.last_phase1=GTK_ADJUSTMENT(phase1_ad)->value;
+
 
   gtk_window_set_transient_for(GTK_WINDOW(phase_dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(phase_dialog),GTK_WIN_POS_CENTER_ON_PARENT);
@@ -1476,10 +1486,10 @@ gint do_phase(float *source,float *dest,float phase0,float phase1,int npts)
     s2 = source[i*2+1];
 
     if (npts >1 ){
-      dest[2*i]=s1*cos(phase0+phase1*i/(npts-1))
-	+s2*sin(phase0+phase1*i/(npts-1));
-      dest[2*i+1]=-s1*sin(phase0+phase1*i/(npts-1))
-	+s2*cos(phase0+phase1*i/(npts-1));
+      dest[2*i]=s1*cos(phase0+phase1*i/npts)
+	+s2*sin(phase0+phase1*i/npts);
+      dest[2*i+1]=-s1*sin(phase0+phase1*i/npts)
+	+s2*cos(phase0+phase1*i/npts);
     }
     else{ // ignore lp1  might need this with a 2d data set with only 1 complex point.
       dest[2*i]=s1*cos(phase0)

@@ -441,7 +441,7 @@ dbuff *create_buff(int num){
     // put some data into the buffer.
     {
       float fr;
-      float ii=1.0;
+      float ii=0.5;
       fr = 6.75/buff->param_set.npts;
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 

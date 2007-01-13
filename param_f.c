@@ -1,4 +1,3 @@
-#define PAD 0 // padding for table
 #define GTK_DISABLE_DEPRECATED
  /* param_f.c
  *
@@ -322,6 +321,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), npts); 
 
   } 
+
 void update_acqs(int acqs){
   /* not a callback */
 
@@ -1337,9 +1337,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 	  strncat( s, "(",1 ); 
 	  strncat( s, &param_set->parameter[i].unit_c,1 ); 
 	  strncat( s, ")",1 ); 
-	  
-	  
-	  
+	 	  
 	  param_button[i].adj = gtk_adjustment_new( param_set->parameter[i].f_val, param_set->parameter[i].f_min, param_set->parameter[i].f_max, 
 						    param_set->parameter[i].f_step, param_set->parameter[i].f_page, 1 ); 
 	  param_button[i].button = gtk_spin_button_new( GTK_ADJUSTMENT( param_button[i].adj ), 0.5, param_set->parameter[i].f_digits ); 

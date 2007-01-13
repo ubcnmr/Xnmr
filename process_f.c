@@ -307,8 +307,10 @@ gint do_ft(GtkWidget *widget, double *unused)
     /* do ft for each 1d spectrum */
     if (buff->flags & FT_FLAG &&  
 	gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check)) == FALSE){
-      buff->data[i*2*buff->param_set.npts] /= 2;
-      buff->data[i*2*buff->param_set.npts+1] /= 2;
+      // don't do the /2 thing.  Not doing it only ever messes with the baseline.  Doing it can mess things
+      // up worse.
+      //      buff->data[i*2*buff->param_set.npts] /= 2;
+      // buff->data[i*2*buff->param_set.npts+1] /= 2;
     }
     four1(&buff->data[i*2*buff->param_set.npts]-1,buff->param_set.npts,-1);
     for(j=0;j<buff->param_set.npts;j++){
@@ -2170,7 +2172,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 
     //  fprintf(stderr,"in 2dft just did zero fill\n");
   cursor_busy(buff);
-  //  scale=sqrt((float) buff->npts2/2);
+
   if (buff->flags & FT_FLAG2)
     scale = buff->npts2/4.0;
   else
@@ -2193,9 +2195,9 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 
 
       // correct the first point if we're going forward... and not symmetric
-      if (buff->flags & FT_FLAG2 & !is_symm)
-	new_data[0] /= 2.;
-      
+      //      if (buff->flags & FT_FLAG2 & !is_symm)
+      //	new_data[0] /= 2.;
+      // naw dont.  Not doing this only ever introduces a baseline offset.
 
       if (is_symm)
 	for(j=0;j<buff->npts2/2;j++){

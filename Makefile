@@ -6,7 +6,8 @@
 
 
 #CC = icc
-CFLAGS = -g   -fPIC -march=pentium-m  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
+
+CFLAGS = -g  -O2 -march=pentium3  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 #O3 causes serious problems with rtai!
 
 # for icc:
