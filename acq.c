@@ -8,11 +8,10 @@
 //#define NOHARDWARE
 // #define NO_RT_SCHED
 
-//#define OLD_PORT_INTERRUPT 
+#define OLD_PORT_INTERRUPT 
 //#define RTAI_INTERRUPT
 
 // we should read the first two of these out of /proc/pci
-
 
 //#define PULSE_PORT 0xb000
 //#define DSP_PORT 0xb400
