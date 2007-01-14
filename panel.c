@@ -629,5 +629,5 @@ void check_buff_size(){
   /* also set the new size in the box
      don't need to make sure that current set 
      is acq set because it must be */
-  update_npts(buffp[current]->param_set.npts);
+  update_npts(buffp[current]->npts);
 }

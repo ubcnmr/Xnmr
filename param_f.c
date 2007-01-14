@@ -408,20 +408,24 @@ void update_acqs(int acqs){
 
 
 
-void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
+int show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 {
 
   // this is used just to to show the parameter frame  if we loaded a new pulse program in update_paths.
   // need this in case we destroy a widget that has the focus.
 
+  if (  current_param_set != &buffp[current]->param_set)
+    printf("show_parameter_frame_mutex_wrap - npts may be wrong in here!!!\n");
+
   gdk_threads_enter();
   //  fprintf(stderr,"showing parameter frame in mutex wrap\n");
-  show_parameter_frame(current_param_set);
+  show_parameter_frame(current_param_set,buffp[current]->npts);
   
   gdk_threads_leave();
+  return FALSE;
 }
 
-  gint update_paths( GtkWidget* widget, gpointer data ) 
+gint update_paths( GtkWidget* widget, gpointer data ) 
   { 
 
     char s[ PATH_LENGTH ],s2[PATH_LENGTH]; 
@@ -557,6 +561,12 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       if (load_param_file( s, current_param_set ) != -1 ){ // this if is new CM Aug 24, 2004
 	//	fprintf(stderr,"back from load without -1\n");
 
+
+	/*
+	if (current_param_set != &buffp[current]->param_set)
+	  printf("about to call show_parameter_frame_mutex_wrap - npts may be wrong!!!\n");
+	  current_param_set->tnpts = buffp[current]->npts; */
+
 	g_idle_add ((GtkFunction) show_parameter_frame_mutex_wrap, current_param_set) ; 
 
 
@@ -604,31 +614,21 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
 	norecur = 1;
 	//	fprintf(stderr,"update acqn: num_acqs\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_adj),current_param_set->num_acqs);
-	//	norecur = 0;
-      }
-      else if (adj ==  GTK_ADJUSTMENT(npts_adj)){
-	norecur = 1;
-	//	fprintf(stderr,"update acqn: npts\n");
-	gtk_adjustment_set_value(GTK_ADJUSTMENT(npts_adj),current_param_set->npts);
-	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(acqs_2d_adj)){
 	norecur = 1;
 	//	fprintf(stderr,"update aqcn: acqs_2d\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(acqs_2d_adj),current_param_set->num_acqs_2d);
-	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(dwell_adj)){
 	norecur = 1;
 	//	fprintf(stderr,"update aqcn: dwell\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(dwell_adj),current_param_set->dwell);
-	//	norecur = 0;
       }
       else if (adj == GTK_ADJUSTMENT(sw_adj)){
 	norecur = 1;
 	//	fprintf(stderr,"update aqcn: sw_adj\n");
 	gtk_adjustment_set_value(GTK_ADJUSTMENT(sw_adj),current_param_set->sw);
-	//	norecur = 0;
       }
       else{
 	fprintf(stderr,"in update_acqn with unknown widget...\n");
@@ -666,7 +666,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
       } 
     } 
     else if (adj== GTK_ADJUSTMENT( npts_adj)){ 
-      if (adj->value != current_param_set->npts){ 
+      if (adj->value != buffp[current]->npts){ 
         buff_resize(buffp[current],adj->value,buffp[current]->npts2); 
 	if (allowed_to_change(current) == TRUE){
 	  //	  fprintf(stderr,"resetting acq_npts in buff %i",current);
@@ -1233,7 +1233,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
   } 
 
 
-  void show_parameter_frame( parameter_set_t *param_set ) 
+  void show_parameter_frame( parameter_set_t *param_set, int npts) 
   { 
     int i,tab_height; 
     char s[PATH_LENGTH],*lpath; 
@@ -1293,7 +1293,7 @@ void show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
     gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), param_set->num_acqs_2d); 
     gtk_adjustment_set_value( GTK_ADJUSTMENT( sw_adj ),  param_set->sw); 
     gtk_adjustment_set_value( GTK_ADJUSTMENT( dwell_adj ), param_set->dwell); 
-    gtk_adjustment_set_value( GTK_ADJUSTMENT( npts_adj ), param_set->npts); 
+    gtk_adjustment_set_value( GTK_ADJUSTMENT( npts_adj ), npts); 
 
     /* 
      *  Now we have to create some buttons 

@@ -32,7 +32,7 @@ GtkWidget* create_parameter_frame( );
   //create the parameter frame and returns a pointer to the outer frame widget.
   //Only one parameter frame should be created because of the use of global variables.
 
-void show_parameter_frame( parameter_set_t *param_set ); 
+void show_parameter_frame( parameter_set_t *param_set ,int npts); 
   //Displays the argument parameter set on screen and makes it active
 
 /*

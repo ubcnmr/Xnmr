@@ -830,7 +830,7 @@ int main(int argc,char *argv[])
 
 
 
-  //  fprintf(stderr,"did first buffer create, npts = %i\n",buffp[0]->param_set.npts);
+  //  fprintf(stderr,"did first buffer create, npts = %i\n",buffp[0]->npts);
   if (buffp[0] == NULL){
     fprintf(stderr,"first buffer creation failed\n");
     exit(0);
@@ -1185,15 +1185,15 @@ void open_phase(GtkAction *action, dbuff *buff)
 		      G_CALLBACK( pivot_set_event), buff);
 
   if(buff->disp.dispstyle==SLICE_ROW){
-    phase_data.data=g_malloc(buff->param_set.npts*8);
-    phase_data.data2=g_malloc(buff->param_set.npts*8);
-    phase_npts = buff->param_set.npts;
+    phase_data.data=g_malloc(buff->npts*8);
+    phase_data.data2=g_malloc(buff->npts*8);
+    phase_npts = buff->npts;
     //copy the data to be phased to a safe place:
 
     
     for(i=0;i<phase_npts*2;i++) 
       phase_data.data[i]=
-	buff->data[i+buff->disp.record*buff->param_set.npts*2];
+	buff->data[i+buff->disp.record*buff->npts*2];
     
 
   }
@@ -1205,9 +1205,9 @@ void open_phase(GtkAction *action, dbuff *buff)
     //copy the data to be phased to a safe place:
 
     for(i=0;i<phase_npts;i++){
-      phase_data.data[2*i]=buff->data[buff->param_set.npts*2*2*i+
+      phase_data.data[2*i]=buff->data[buff->npts*2*2*i+
 				       2*buff->disp.record2];
-      phase_data.data[2*i+1]=buff->data[buff->param_set.npts*2*(2*i+1)
+      phase_data.data[2*i+1]=buff->data[buff->npts*2*(2*i+1)
 					 +2*buff->disp.record2];
     }
 
@@ -1292,7 +1292,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
   if (buffp[phase_data.buffnum] != NULL){
 
     buff=buffp[phase_data.buffnum];
-    npts1=buff->param_set.npts;  
+    npts1=buff->npts;  
 
     lp0=GTK_ADJUSTMENT(phase0_ad)->value;
     lp1=GTK_ADJUSTMENT(phase1_ad)->value;
@@ -1335,21 +1335,21 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
       /* actually do the phase on this data */
 
       if(buff->disp.dispstyle == SLICE_ROW){
-	if (phase_npts == buff->param_set.npts){
+	if (phase_npts == buff->npts){
 	  // fprintf(stderr,"in ok button, dealing with slice\n");
 	  if(widget==phase_data.apply_all){
 	    
 	    for(j=0;j<buff->npts2;j++){
-	      for(i=0;i<buff->param_set.npts*2;i++) 
+	      for(i=0;i<buff->npts*2;i++) 
 		phase_data.data[i]=
-		  buff->data[i+j*buff->param_set.npts*2];
+		  buff->data[i+j*buff->npts*2];
 	      do_phase(phase_data.data,&buff->data[npts1*2*j],
-		       dp0,dp1,buff->param_set.npts);
+		       dp0,dp1,buff->npts);
 	    }
 	  }
 	  else{  // not apply all 
 	    do_phase(phase_data.data,&buff->data[npts1*2*buff->disp.record],
-		     dp0,dp1,buff->param_set.npts);
+		     dp0,dp1,buff->npts);
 	  }
 	}// end if npts the same
 	else popup_msg("npts changed, didn't apply phase",TRUE);
@@ -1357,16 +1357,16 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
       else{ /* SLICE_COL */
 	if (phase_npts == buff->npts2/2){
 	  if(widget==phase_data.apply_all){
-	    for(j=0;j<buff->param_set.npts*2;j++){// does real and imag of 1d's
+	    for(j=0;j<buff->npts*2;j++){// does real and imag of 1d's
 	      for(i=0;i<buff->npts2/2;i++){
-		phase_data.data[2*i]=buff->data[j+buff->param_set.npts*2*2*i];
+		phase_data.data[2*i]=buff->data[j+buff->npts*2*2*i];
 		phase_data.data[2*i+1]=buff->data[j+
-						  buff->param_set.npts*2*(2*i+1)];
+						  buff->npts*2*(2*i+1)];
 	      }
 	      do_phase(phase_data.data,phase_data.data2,dp0,dp1,buff->npts2/2);
 	      for(i=0;i<buff->npts2/2;i++){
-		buff->data[j+buff->param_set.npts*2*2*i]=phase_data.data2[2*i];
-		buff->data[j+buff->param_set.npts*2*(2*i+1)]
+		buff->data[j+buff->npts*2*2*i]=phase_data.data2[2*i];
+		buff->data[j+buff->npts*2*(2*i+1)]
 		  =phase_data.data2[2*i+1];
 	      }
 	    }
@@ -1374,14 +1374,14 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
 	  else{ // not apply all 
 	    for (j=2*buff->disp.record2;j<2*buff->disp.record2+2;j++){
 	      for(i=0;i<buff->npts2/2;i++){
-		phase_data.data[2*i]=buff->data[j+buff->param_set.npts*2*2*i];
+		phase_data.data[2*i]=buff->data[j+buff->npts*2*2*i];
 		phase_data.data[2*i+1]=buff->data[j+
-						  buff->param_set.npts*2*(2*i+1)];
+						  buff->npts*2*(2*i+1)];
 	      }
 	      do_phase(phase_data.data,phase_data.data2,dp0,dp1,buff->npts2/2);
 	      for(i=0;i<buff->npts2/2;i++){
-		buff->data[j+buff->param_set.npts*2*2*i]=phase_data.data2[2*i];
-		buff->data[j+buff->param_set.npts*2*(2*i+1)]
+		buff->data[j+buff->npts*2*2*i]=phase_data.data2[2*i];
+		buff->data[j+buff->npts*2*(2*i+1)]
 		  =phase_data.data2[2*i+1];
 	      }
 	    }
@@ -1534,16 +1534,16 @@ gint phase_changed(GtkObject *widget,gpointer *data)
       dp1=lp1-phase_data.ophase1;
       /* copy the data over */
       if(buff->disp.dispstyle==SLICE_ROW){
-	/*	do_phase(&buff->data[2*buff->disp.record*buff->param_set.npts],
-		phase_data.data,dp0,dp1,buff->param_set.npts); */
+	/*	do_phase(&buff->data[2*buff->disp.record*buff->npts],
+		phase_data.data,dp0,dp1,buff->npts); */
 	do_phase(phase_data.data,
 		 phase_data.data2,dp0,dp1,phase_npts);
       }
       else{ /* is column */
 	//	for(i=0;i<buff->npts2/2;i++){
-	  /*	  phase_data.data2[2*i]=buff->data[buff->param_set.npts*2*2*i+
+	  /*	  phase_data.data2[2*i]=buff->data[buff->npts*2*2*i+
 					  2*buff->disp.record2];
-	  phase_data.data2[2*i+1]=buff->data[buff->param_set.npts*2*(2*i+1)
+	  phase_data.data2[2*i+1]=buff->data[buff->npts*2*(2*i+1)
 	  +2*buff->disp.record2]; */
 	  do_phase(phase_data.data,phase_data.data2,dp0,dp1,phase_npts);
 	  //	}
@@ -1762,10 +1762,8 @@ gint popup_msg_mutex_wrap(char *msg){
   gdk_threads_enter();
   i = popup_msg(msg,TRUE);
   gdk_threads_leave();
-  return i;
+  return FALSE;
 }
-
-
 
 
 

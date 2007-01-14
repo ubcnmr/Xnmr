@@ -45,7 +45,7 @@ struct timeval last_time, current_time;
 
 
 
-void do_destroy_all_mutex_wrap(){
+gint do_destroy_all_mutex_wrap(){
   //  fprintf(stderr,"in do_destroy_all_mutex_wrap\n");
   gdk_threads_enter();
   //  fprintf(stderr,"about to call do_destroy_all()\n");
@@ -53,7 +53,7 @@ void do_destroy_all_mutex_wrap(){
   //  fprintf(stderr,"about to call gdk_threads_leave()\n");
   gdk_threads_leave();
   //  fprintf(stderr,"about to leave do_destroy_all_mutex_wrap()\n");
-  return;
+  return FALSE;
 }
 
 
@@ -427,11 +427,12 @@ void set_acqn_labels()
 
 }
 
-void set_acqn_labels_mutex_wrap(){
+gint set_acqn_labels_mutex_wrap(){
   gdk_threads_enter();
   //  fprintf(stderr,"in set_acqn_labels_mutex_wrap\n");
   set_acqn_labels();
   gdk_threads_leave();
+  return FALSE;
 }
 
 
@@ -442,7 +443,7 @@ gint upload_and_draw_canvas_with_process_mutex_wrap( dbuff *buff ){
   gdk_threads_enter();
   retval=upload_and_draw_canvas_with_process(buff);
   gdk_threads_leave();
-  return retval;
+  return FALSE;
 }
 
 gint upload_and_draw_canvas_with_process( dbuff *buff )
@@ -822,12 +823,12 @@ int upload_data( dbuff* buff )    //uploads the shm data to the active buffer, r
 
 
   // check to make sure the user didn't resize the buffer !
-  if (data_shm->npts != buff->param_set.npts  || buff->npts2 != 1){
+  if (data_shm->npts != buff->npts  || buff->npts2 != 1){
     buff_resize(buff,data_shm->npts,1);
     if (current_param_set == acq_param_set)
       update_npts(data_shm->npts);
   }
-  for( i=0; i<buff->param_set.npts*2; i++ ){
+  for( i=0; i<buff->npts*2; i++ ){
     buff->data[i] = (float)  data_shm->data_image[i];
     // fprintf(stderr,"%li %f %f\n",data_shm->data_image[i],buff->data[i], (float )data_shm->data_image[i]);
   }

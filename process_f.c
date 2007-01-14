@@ -80,28 +80,28 @@ gint do_offset_cal( GtkWidget *widget, double *unused )
 
     //first determine the offset for the real channel
 
-    for( i= (buff->param_set.npts*9/10)*2+j*2*buff->param_set.npts; i < (j+1)*2*buff->param_set.npts; i+=2 ) {
+    for( i= (buff->npts*9/10)*2+j*2*buff->npts; i < (j+1)*2*buff->npts; i+=2 ) {
       offset += buff->data[i];
       count ++;
     }
 
     offset = offset / count;
     
-    for( i=j*2*buff->param_set.npts; i < (j+1)*2*buff->param_set.npts; i+= 2 )
+    for( i=j*2*buff->npts; i < (j+1)*2*buff->npts; i+= 2 )
       buff->data[i] -= offset;
     
     //Now do the imaginary channel
     count = 0;
     offset = 0.0;
 
-    for( i= (buff->param_set.npts*9/10)*2+1+j*2*buff->param_set.npts; i < (j+1)*2*buff->param_set.npts; i+=2 ) {
+    for( i= (buff->npts*9/10)*2+1+j*2*buff->npts; i < (j+1)*2*buff->npts; i+=2 ) {
       offset += buff->data[i];
       count ++;
     }
 
     offset = offset / count;
 
-    for( i=1+j*2*buff->param_set.npts; i < (j+1)*2*buff->param_set.npts; i+= 2 )
+    for( i=1+j*2*buff->npts; i < (j+1)*2*buff->npts; i+= 2 )
       buff->data[i] -= offset;
   }
   return 0;
@@ -154,17 +154,17 @@ gint do_offset_cal_a( GtkWidget *widget, double *unused )
   cursor_busy(buff);
   do_zero_fill(widget,&spared);
 
-  scale = buff->param_set.npts;
+  scale = buff->npts;
   for ( j = 0;j<buff-> npts2; j++){
-    four1(&buff->data[j*2*buff->param_set.npts]-1,buff->param_set.npts,-1);
-    buff->data[2*j*buff->param_set.npts]= (buff->data[2*j*buff->param_set.npts+2] + buff->data[2*(j+1)*buff->param_set.npts-2])/2.0;
-    buff->data[2*j*buff->param_set.npts+1]= (buff->data[2*j*buff->param_set.npts+3] + buff->data[2*(j+1)*buff->param_set.npts-1])/2.0;
+    four1(&buff->data[j*2*buff->npts]-1,buff->npts,-1);
+    buff->data[2*j*buff->npts]= (buff->data[2*j*buff->npts+2] + buff->data[2*(j+1)*buff->npts-2])/2.0;
+    buff->data[2*j*buff->npts+1]= (buff->data[2*j*buff->npts+3] + buff->data[2*(j+1)*buff->npts-1])/2.0;
 
     
-    four1(&buff->data[j*2*buff->param_set.npts]-1,buff->param_set.npts,1);
-    for (i=0;i<buff->param_set.npts;i++){
-      buff->data[2*j*buff->param_set.npts+2*i] /= scale;
-      buff->data[2*j*buff->param_set.npts+2*i+1] /= scale;
+    four1(&buff->data[j*2*buff->npts]-1,buff->npts,1);
+    for (i=0;i<buff->npts;i++){
+      buff->data[2*j*buff->npts+2*i] /= scale;
+      buff->data[2*j*buff->npts+2*i+1] /= scale;
     }
     
 	   
@@ -214,8 +214,8 @@ gint do_zero_imag(GtkWidget *widget, double *unused)
 
 
   for(i=0;i<buff->npts2;i++){
-    for(j=0;j<buff->param_set.npts;j++)
-      buff->data[2*j+1+i*buff->param_set.npts*2] = 0.;
+    for(j=0;j<buff->npts;j++)
+      buff->data[2*j+1+i*buff->npts*2] = 0.;
   }
 
 
@@ -280,22 +280,22 @@ gint do_ft(GtkWidget *widget, double *unused)
   spared=1.0;
   do_zero_fill(widget,&spared);
   cursor_busy(buff);
-  //    scale=sqrt((float) buff->param_set.npts);
+  //    scale=sqrt((float) buff->npts);
   if (buff->flags & FT_FLAG){
     //    fprintf(stderr,"FT_FLAG is true\n");
     if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check))){
     // if its symmetric, swap the first and second halves
       for(i=0;i<buff->npts2;i++)
-	for(j=0;j<buff->param_set.npts;j++){
-	  spare = buff->data[j+i*2*buff->param_set.npts];
-	  buff->data[j+i*2*buff->param_set.npts]=
-	    buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts];
-	  buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts]=spare;
+	for(j=0;j<buff->npts;j++){
+	  spare = buff->data[j+i*2*buff->npts];
+	  buff->data[j+i*2*buff->npts]=
+	    buff->data[j+i*2*buff->npts+buff->npts];
+	  buff->data[j+i*2*buff->npts+buff->npts]=spare;
 	}
 
     }
 
-    scale = buff->param_set.npts/2.0;
+    scale = buff->npts/2.0;
   }
   else{
     //    fprintf(stderr,"FT_FLAG is false\n");
@@ -309,15 +309,15 @@ gint do_ft(GtkWidget *widget, double *unused)
 	gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check)) == FALSE){
       // don't do the /2 thing.  Not doing it only ever messes with the baseline.  Doing it can mess things
       // up worse.
-      //      buff->data[i*2*buff->param_set.npts] /= 2;
-      // buff->data[i*2*buff->param_set.npts+1] /= 2;
+      //      buff->data[i*2*buff->npts] /= 2;
+      // buff->data[i*2*buff->npts+1] /= 2;
     }
-    four1(&buff->data[i*2*buff->param_set.npts]-1,buff->param_set.npts,-1);
-    for(j=0;j<buff->param_set.npts;j++){
-      spare=buff->data[j+i*2*buff->param_set.npts]/scale;
-      buff->data[j+i*2*buff->param_set.npts]=
-	buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts]/scale;
-      buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts]=spare;
+    four1(&buff->data[i*2*buff->npts]-1,buff->npts,-1);
+    for(j=0;j<buff->npts;j++){
+      spare=buff->data[j+i*2*buff->npts]/scale;
+      buff->data[j+i*2*buff->npts]=
+	buff->data[j+i*2*buff->npts+buff->npts]/scale;
+      buff->data[j+i*2*buff->npts+buff->npts]=spare;
     }
   }
 
@@ -385,37 +385,37 @@ gint do_bft(GtkWidget *widget, double *unused)
   spared=1.0;
   do_zero_fill(widget,&spared);
   cursor_busy(buff);
-  //    scale=sqrt((float) buff->param_set.npts);
+  //    scale=sqrt((float) buff->npts);
   if (buff->flags & FT_FLAG){
     //    fprintf(stderr,"FT_FLAG is true\n");
-    scale = buff->param_set.npts/2.0;
+    scale = buff->npts/2.0;
   }
   else{
     //    fprintf(stderr,"FT_FLAG is false\n");
     scale = 2.0;
   }
-  data = g_malloc(4* buff->param_set.npts*2*2);
+  data = g_malloc(4* buff->npts*2*2);
 
   for(i=0;i<buff->npts2;i++){
     /* do ft for each 1d spectrum */
     // copy data out 
-    memset(data,0,4*buff->param_set.npts*4);
+    memset(data,0,4*buff->npts*4);
 
-    for (j=0;j<buff->param_set.npts;j++){
-      data[j*4]=buff->data[i*2*buff->param_set.npts + j*2];
-      data[j*4+3] = -1.0*buff->data[i*2*buff->param_set.npts +j*2+1];
+    for (j=0;j<buff->npts;j++){
+      data[j*4]=buff->data[i*2*buff->npts + j*2];
+      data[j*4+3] = -1.0*buff->data[i*2*buff->npts +j*2+1];
     }
-    four1(data-1,buff->param_set.npts*2,-1);
-    //    four1(&buff->data[i*2*buff->param_set.npts]-1,buff->param_set.npts,-1);
-    for(j=0;j<buff->param_set.npts;j++){
-      buff->data[i*2*buff->param_set.npts+j*2]=data[2*j+buff->param_set.npts]/scale;
-      buff->data[i*2*buff->param_set.npts+j*2+1]=data[2*j+buff->param_set.npts+1]/scale;
+    four1(data-1,buff->npts*2,-1);
+    //    four1(&buff->data[i*2*buff->npts]-1,buff->npts,-1);
+    for(j=0;j<buff->npts;j++){
+      buff->data[i*2*buff->npts+j*2]=data[2*j+buff->npts]/scale;
+      buff->data[i*2*buff->npts+j*2+1]=data[2*j+buff->npts+1]/scale;
     }
-    /*    for(j=0;j<buff->param_set.npts;j++){
-      spare=buff->data[j+i*2*buff->param_set.npts]/scale;
-      buff->data[j+i*2*buff->param_set.npts]=
-	buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts]/scale;
-      buff->data[j+i*2*buff->param_set.npts+buff->param_set.npts]=spare;
+    /*    for(j=0;j<buff->npts;j++){
+      spare=buff->data[j+i*2*buff->npts]/scale;
+      buff->data[j+i*2*buff->npts]=
+	buff->data[j+i*2*buff->npts+buff->npts]/scale;
+      buff->data[j+i*2*buff->npts+buff->npts]=spare;
       }*/
   }
 
@@ -472,14 +472,14 @@ gint do_exp_mult( GtkWidget* widget, double* val )
   // this is repeated in the fitting routine!
 
   for( j=0; j<buff->npts2; j++ )
-    for( i=0; i<buff->param_set.npts; i++ ){
+    for( i=0; i<buff->npts; i++ ){
       if (is_symm){
-	i2 = abs(i-buff->param_set.npts/2);
+	i2 = abs(i-buff->npts/2);
       }
       else i2 = i;
       
-      buff->data[2*i+j*2*buff->param_set.npts] *= exp( -1.0 * factor * i2 * buff->param_set.dwell/1000000 * M_PI ); 
-      buff->data[2*i+1+j*2*buff->param_set.npts] *= exp( -1.0 * factor * i2 * buff->param_set.dwell/1000000 * M_PI ); 
+      buff->data[2*i+j*2*buff->npts] *= exp( -1.0 * factor * i2 * buff->param_set.dwell/1000000 * M_PI ); 
+      buff->data[2*i+1+j*2*buff->npts] *= exp( -1.0 * factor * i2 * buff->param_set.dwell/1000000 * M_PI ); 
     }
   return 0;
 }
@@ -526,15 +526,15 @@ gint do_gaussian_mult( GtkWidget* widget, double * val)
   is_symm = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check))
 ;
   for( j=0; j<buff->npts2; j++ )
-    for( i=0; i<buff->param_set.npts; i++ ) {
+    for( i=0; i<buff->npts; i++ ) {
       if (is_symm){
-	i2 = abs(i-buff->param_set.npts/2);
+	i2 = abs(i-buff->npts/2);
       }
       else i2 = i;
 
       temp = i2*buff->param_set.dwell/1000000 * M_PI * factor / 1.6651;
-      buff->data[2*i+j*2*buff->param_set.npts] *= exp( -1 * temp * temp );
-      buff->data[2*i+1+j*2*buff->param_set.npts] *= exp( -1 * temp * temp);
+      buff->data[2*i+j*2*buff->npts] *= exp( -1 * temp * temp );
+      buff->data[2*i+1+j*2*buff->npts] *= exp( -1 * temp * temp);
     }
 
   return 0;
@@ -561,10 +561,10 @@ gint do_zero_fill(GtkWidget * widget,double *val)
   /* zero fill will always round up to the next power of 2
      so you can zero fill with factor of 1 to get next size up */
 
-  temp=buff->param_set.npts*factor;
+  temp=buff->npts*factor;
   new_npts = pow(2,ceil(log(temp-0.001)/log(2.0)));
 
-  old_npts=buff->param_set.npts;
+  old_npts=buff->npts;
   acq_points=buff->acq_npts;
   
   if (new_npts ==old_npts) return 0;  
@@ -583,7 +583,7 @@ gint do_zero_fill(GtkWidget * widget,double *val)
 
   // zero out the new stuff, but don't trust the new_npts
 
-  new_npts = buff->param_set.npts;
+  new_npts = buff->npts;
 
   // reset this since the update_npts call may have messed it up.
   buff->acq_npts=acq_points;
@@ -598,7 +598,7 @@ gint do_zero_fill(GtkWidget * widget,double *val)
   // if we're symm, we want to add before and after the data set, not all at the end.
 
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check))){
-    ls = -(buff->param_set.npts-old_npts)/2;
+    ls = -(buff->npts-old_npts)/2;
     do_left_shift((GtkWidget *)buff,(double *) &ls);
   }
       
@@ -623,10 +623,10 @@ gint do_zero_fill_and_display(GtkWidget * widget,double *val)
   else 
     buff = buffp[ current ];
 
-  old_npts=buff->param_set.npts;
+  old_npts=buff->npts;
   result = do_zero_fill( widget, val );
 
-  if (old_npts != buff->param_set.npts)
+  if (old_npts != buff->npts)
     draw_canvas( buff );
 
   return result;
@@ -654,29 +654,29 @@ gint do_left_shift(GtkWidget * widget,double *val)
   if (shift ==0) return 0;
   if (shift > 0){
     for( j=0; j<buff->npts2; j++ ){
-      for( i=shift; i<buff->param_set.npts; i++ ) {
-	buff->data[2*(i-shift)+j*2*buff->param_set.npts]=
-	  buff->data[2*i+j*2*buff->param_set.npts];
-	buff->data[2*(i-shift)+1+j*2*buff->param_set.npts]=
-	  buff->data[2*i+1+j*2*buff->param_set.npts];
+      for( i=shift; i<buff->npts; i++ ) {
+	buff->data[2*(i-shift)+j*2*buff->npts]=
+	  buff->data[2*i+j*2*buff->npts];
+	buff->data[2*(i-shift)+1+j*2*buff->npts]=
+	  buff->data[2*i+1+j*2*buff->npts];
       }
-      for(i=buff->param_set.npts-shift-1;i<buff->param_set.npts;i++){
-	buff->data[2*i+j*2*buff->param_set.npts]=0.;
-	buff->data[2*i+1+j*2*buff->param_set.npts]=0.;
+      for(i=buff->npts-shift-1;i<buff->npts;i++){
+	buff->data[2*i+j*2*buff->npts]=0.;
+	buff->data[2*i+1+j*2*buff->npts]=0.;
       }
     }
   }
   else
     for( j=0; j<buff->npts2; j++ ){
-      for( i=buff->param_set.npts+shift-1;i>=0; i-- ) {
-	buff->data[2*(i-shift)+j*2*buff->param_set.npts]=
-	  buff->data[2*i+j*2*buff->param_set.npts];
-	buff->data[2*(i-shift)+1+j*2*buff->param_set.npts]=
-	  buff->data[2*i+1+j*2*buff->param_set.npts];
+      for( i=buff->npts+shift-1;i>=0; i-- ) {
+	buff->data[2*(i-shift)+j*2*buff->npts]=
+	  buff->data[2*i+j*2*buff->npts];
+	buff->data[2*(i-shift)+1+j*2*buff->npts]=
+	  buff->data[2*i+1+j*2*buff->npts];
       }
       for(i=0;i<-shift;i++){
-	buff->data[2*i+j*2*buff->param_set.npts]=0.;
-	buff->data[2*i+1+j*2*buff->param_set.npts]=0.;
+	buff->data[2*i+j*2*buff->npts]=0.;
+	buff->data[2*i+1+j*2*buff->npts]=0.;
       }
     }
 
@@ -734,30 +734,30 @@ gint do_left_shift_2d(GtkWidget * widget,double *val)
     return 0;
   }
   if (shift > 0){ // left shifting - add zeros in at end.
-    for(i=0;i<2*buff->param_set.npts;i++){
+    for(i=0;i<2*buff->npts;i++){
       for(j=shift*(1+buff->is_hyper);j<buff->npts2;j += (1+buff->is_hyper)){
 	//	printf("dest is %i\n",j-shift*(1+buff->is_hyper));
-	buff->data[i+(j-shift*(1+buff->is_hyper))*2*buff->param_set.npts] 
-	  = buff->data[i+j*2*buff->param_set.npts];
+	buff->data[i+(j-shift*(1+buff->is_hyper))*2*buff->npts] 
+	  = buff->data[i+j*2*buff->npts];
 	if (buff->is_hyper)
-	  buff->data[i+(j+1-shift*(1+buff->is_hyper))*2*buff->param_set.npts] 
-	    = buff->data[i+(j+1)*2*buff->param_set.npts];
+	  buff->data[i+(j+1-shift*(1+buff->is_hyper))*2*buff->npts] 
+	    = buff->data[i+(j+1)*2*buff->npts];
       }
       // add in the zeros at the end
       for(j= buff->npts2-shift*(1+buff->is_hyper) ; j<buff->npts2;j++)
-	buff->data[i+j*2*buff->param_set.npts] = 0.;
+	buff->data[i+j*2*buff->npts] = 0.;
     }
   }
     else{ //right shifting.  resize buffer to keep all the data
-      buff_resize(buff,buff->param_set.npts,buff->npts2-shift*(1+buff->is_hyper));
-      for (i=0;i<2*buff->param_set.npts;i++){
+      buff_resize(buff,buff->npts,buff->npts2-shift*(1+buff->is_hyper));
+      for (i=0;i<2*buff->npts;i++){
 	for (j=buff->npts2-1;j>=-shift*(1+buff->is_hyper);j--)
-	  buff->data[i+j*2*buff->param_set.npts] 
-	    = buff->data[i+(j+shift*(1+buff->is_hyper))*2*buff->param_set.npts];
+	  buff->data[i+j*2*buff->npts] 
+	    = buff->data[i+(j+shift*(1+buff->is_hyper))*2*buff->npts];
 	
 	// add zeros in at beginning
 	for(j=0;j<-shift*(1+buff->is_hyper);j++)
-	  buff->data[i+j*2*buff->param_set.npts]=0.;
+	  buff->data[i+j*2*buff->npts]=0.;
 			    
 
       }
@@ -811,11 +811,11 @@ gint do_shim_filter(GtkWidget * widget,double *val)
   imax = sw/shift/4.;
   
   fprintf(stderr,"imax wants to be: %i\n",imax);
-  if (imax > buff->param_set.npts) imax = buff->param_set.npts;
+  if (imax > buff->npts) imax = buff->npts;
   for( j=0; j<buff->npts2; j++ )
     for( i=0; i<imax; i++ ) {
-      buff->data[2*i+j*2*buff->param_set.npts] *= sin (2*M_PI*i*shift/sw);
-      buff->data[2*i+1+j*2*buff->param_set.npts] *= sin(2*M_PI*i*shift/sw);
+      buff->data[2*i+j*2*buff->npts] *= sin (2*M_PI*i*shift/sw);
+      buff->data[2*i+1+j*2*buff->npts] *= sin(2*M_PI*i*shift/sw);
     }
 
 
@@ -867,17 +867,17 @@ gint do_phase_wrapper( GtkWidget* widget, double *unused )
     // fprintf(stderr, "Setting phase from %f, %f, to %f, %f, (local)\n", buff->phase0_app, buff->phase1_app, buff->phase0, buff->phase1 );
 
     for( i=0; i<buff->npts2; i++ )
-      do_phase( &buff->data[i*2*buff->param_set.npts], &buff->data[ i*2*buff->param_set.npts ], 
+      do_phase( &buff->data[i*2*buff->npts], &buff->data[ i*2*buff->npts ], 
 		buff->phase0 - buff->phase0_app, buff->phase1 - buff->phase1_app, 
-		buff->param_set.npts );
+		buff->npts );
     buff->phase0_app = buff->phase0;
     buff->phase1_app = buff->phase1;
   }
   else {
     // fprintf(stderr, "Setting phase from %f, %f, to %f, %f, (global)\n", buff->phase0_app, buff->phase1_app, phase0, phase1 );
     for( i=0; i<buff->npts2; i++ )
-      do_phase( &buff->data[i*2*buff->param_set.npts], &buff->data[ i*2*buff->param_set.npts ], 
-		phase0 - buff->phase0_app, phase1 - buff->phase1_app, buff->param_set.npts );
+      do_phase( &buff->data[i*2*buff->npts], &buff->data[ i*2*buff->npts ], 
+		phase0 - buff->phase0_app, phase1 - buff->phase1_app, buff->npts );
     buff->phase0_app = phase0;
     buff->phase1_app = phase1;
   }
@@ -946,12 +946,12 @@ gint do_phase_2d_wrapper( GtkWidget* widget, double *unused )
     buff->phase21_app = phase21;
   }
 
-  for( i=0; i<2*buff->param_set.npts; i++ ){
+  for( i=0; i<2*buff->npts; i++ ){
     for(j=0;j<buff->npts2;j++)
-      pdat[j]=buff->data[i+j*2*buff->param_set.npts];
+      pdat[j]=buff->data[i+j*2*buff->npts];
     do_phase(pdat,pdat,dp0,dp1,buff->npts2/2);
     for(j=0;j<buff->npts2;j++)
-      buff->data[i+2*j*buff->param_set.npts] = pdat[j];
+      buff->data[i+2*j*buff->npts] = pdat[j];
   }
 
   g_free(pdat);
@@ -1561,9 +1561,9 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
     return -1;
   }
 
-  num_seq = (int) buff->param_set.npts/len[ num_bits-1 ] - 1;
+  num_seq = (int) buff->npts/len[ num_bits-1 ] - 1;
   
-  if (buff->param_set.npts < len[ num_bits-1 ]){
+  if (buff->npts < len[ num_bits-1 ]){
     popup_msg("do_cross_correlate: too few points for mlbs\n",TRUE);
     return 0;
   }
@@ -1576,15 +1576,15 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
   
   fprintf(stderr,"cross_correlate: num_seq is %i\n",num_seq);
       
-  xsize = buff->param_set.npts;
+  xsize = buff->npts;
   if (xsize < len[ num_bits - 1]*2){
     xsize = len[ num_bits - 1]*2;   
     num_seq = 1;
   }
     
   new_data = g_malloc(sizeof(float) * xsize);
-  //reals are stored in: buff->data[2*i+j*2*buff->param_set.npts]
-  //imag in:             buff->data[2*i+1+j*2*buff->param_set.npts]
+  //reals are stored in: buff->data[2*i+j*2*buff->npts]
+  //imag in:             buff->data[2*i+1+j*2*buff->npts]
 
   // array for storing bit coefficients
   mreg = g_malloc(sizeof(char) * xsize);
@@ -1601,34 +1601,34 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
 
     // do the reals:
     for(i=0;i< xsize ;i++) 
-      new_data[i] = buff->data[2*(i%buff->param_set.npts)+j*2*buff->param_set.npts];
+      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts];
 
 
     // do the cross-correlation:
     for (i = 0 ; i < len[num_bits-1] ; i++){ 
-      buff->data[2*i+j*2*buff->param_set.npts]=0.;
+      buff->data[2*i+j*2*buff->npts]=0.;
       for( k = 0 ; k < num_seq*len[num_bits-1] ; k++ ){
-	buff->data[2*i+j*2*buff->param_set.npts] += mreg[k]*new_data[k+i];
+	buff->data[2*i+j*2*buff->npts] += mreg[k]*new_data[k+i];
       }
     }
-    for (i=len[num_bits-1];i<buff->param_set.npts;i++)
-      buff->data[2*i+j*2*buff->param_set.npts]= 0.;
+    for (i=len[num_bits-1];i<buff->npts;i++)
+      buff->data[2*i+j*2*buff->npts]= 0.;
 
 
 
     // now the imag:
-    for(i=0;i<buff->param_set.npts;i++) 
-      new_data[i] = buff->data[2*(i%buff->param_set.npts)+j*2*buff->param_set.npts+1];
+    for(i=0;i<buff->npts;i++) 
+      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts+1];
 
     // do the cross-correlation:
     for (i=0;i< len[num_bits-1];i++){ 
-      buff->data[2*i+j*2*buff->param_set.npts+1]=0.;
+      buff->data[2*i+j*2*buff->npts+1]=0.;
       for(k=0;k<num_seq* len[num_bits-1];k++){
-	buff->data[2*i+j*2*buff->param_set.npts+1] += mreg[k]*new_data[k+i];
+	buff->data[2*i+j*2*buff->npts+1] += mreg[k]*new_data[k+i];
       }
     }
-    for (i=len[num_bits-1];i<buff->param_set.npts;i++)
-      buff->data[2*i+j*2*buff->param_set.npts+1]=0.;
+    for (i=len[num_bits-1];i<buff->npts;i++)
+      buff->data[2*i+j*2*buff->npts+1]=0.;
  
 
   }
@@ -1949,7 +1949,7 @@ gint do_zero_fill_2d(GtkWidget * widget,double *val)
 
   cursor_busy(buff);
   //let's try  something else
-  buff_resize(buff,buff->param_set.npts,new_npts2);
+  buff_resize(buff,buff->npts,new_npts2);
   if (widget !=NULL || upload_buff == current) update_npts2(new_npts2); 
 
 
@@ -1964,10 +1964,10 @@ gint do_zero_fill_2d(GtkWidget * widget,double *val)
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check))){
     // move the data back to the center
     shift = (new_npts2-old_npts2)/2;
-    for(i=0;i<buff->param_set.npts*2;i++)
+    for(i=0;i<buff->npts*2;i++)
       for(j=old_npts2-1;j>=0;j--){
-	buff->data[i+(shift+j)*buff->param_set.npts*2]=buff->data[i+j*buff->param_set.npts*2];
-	buff->data[i+j*buff->param_set.npts*2] = 0.;
+	buff->data[i+(shift+j)*buff->npts*2]=buff->data[i+j*buff->npts*2];
+	buff->data[i+j*buff->npts*2] = 0.;
       }
 
   }
@@ -2065,7 +2065,7 @@ gint unwind_2d(GtkWidget *widget, double *unused)
   }
   fprintf(stderr,"got tau: %lf\n",tau);
   
-  npts = buff->param_set.npts;
+  npts = buff->npts;
   npts2 = buff->npts2;
   
   for (i=0;i<npts;i++){
@@ -2186,9 +2186,9 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
 
     // copy out
-    for(i=0;i<buff->param_set.npts*2  ;i++){
+    for(i=0;i<buff->npts*2  ;i++){
       for(j=0;j<buff->npts2/2;j++){
-	new_data[j*2] = buff->data[j*buff->param_set.npts*2+i];
+	new_data[j*2] = buff->data[j*buff->npts*2+i];
 	new_data[j*2+1] = 0.;
       }
       // do the ft
@@ -2217,8 +2217,8 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 
       //copy back
       for(j=0;j<buff->npts2/2;j++){
-	buff->data[2*j*buff->param_set.npts*2+i] = new_data[2*j];
-	buff->data[(2*j+1)*buff->param_set.npts*2+i] = new_data[2*j+1];
+	buff->data[2*j*buff->npts*2+i] = new_data[2*j];
+	buff->data[(2*j+1)*buff->npts*2+i] = new_data[2*j+1];
       }
       // turn on the is_hyper_flag!
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),TRUE);
@@ -2231,10 +2231,10 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
     // copy out
-    for(i=0;i<buff->param_set.npts*2  ;i++){
+    for(i=0;i<buff->npts*2  ;i++){
       for(j=0;j<buff->npts2/2;j++){
-	new_data[j*2] = buff->data[2*j*buff->param_set.npts*2+i];
-	new_data[j*2+1] = buff->data[(2*j+1)*buff->param_set.npts*2+i];
+	new_data[j*2] = buff->data[2*j*buff->npts*2+i];
+	new_data[j*2+1] = buff->data[(2*j+1)*buff->npts*2+i];
       }
       // do the ft
       if (buff->flags & FT_FLAG2 & !is_symm)
@@ -2258,8 +2258,8 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       
       // copy back 
       for(j=0;j<buff->npts2/2;j++){
-	buff->data[2*j*buff->param_set.npts*2+i] = new_data[j*2];
-	buff->data[(2*j+1)*buff->param_set.npts*2+i] = new_data[j*2+1];
+	buff->data[2*j*buff->npts*2+i] = new_data[j*2];
+	buff->data[(2*j+1)*buff->npts*2+i] = new_data[j*2+1];
       }
     }
   }
@@ -2328,13 +2328,13 @@ gint do_mag_2d(GtkWidget *widget, double *unused)
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),FALSE);
 
   for (j=0;j<buff->npts2/2;j++){
-    for(i=0;i<buff->param_set.npts*2;i++)
-      buff->data[j*buff->param_set.npts*2+i] = 
-	sqrt(buff->data[2*j*buff->param_set.npts*2+i]*buff->data[2*j*buff->param_set.npts*2+i]
-	     +buff->data[(2*j+1)*buff->param_set.npts*2+i]*buff->data[(2*j+1)*buff->param_set.npts*2+i]);
+    for(i=0;i<buff->npts*2;i++)
+      buff->data[j*buff->npts*2+i] = 
+	sqrt(buff->data[2*j*buff->npts*2+i]*buff->data[2*j*buff->npts*2+i]
+	     +buff->data[(2*j+1)*buff->npts*2+i]*buff->data[(2*j+1)*buff->npts*2+i]);
   }				     
     // free the extra memory:
-    buff_resize(buff,buff->param_set.npts,buff->npts2/2);
+    buff_resize(buff,buff->npts,buff->npts2/2);
   
 
 
@@ -2408,9 +2408,9 @@ gint do_exp_mult_2d( GtkWidget* widget, double * val )
     
     factor = exp ( - *val * i2 * dwell2 *M_PI);
 
-    for( i=0; i<buff->param_set.npts; i++ ){
-      buff->data[2*i+j*2*buff->param_set.npts] *= factor  ; 
-      buff->data[2*i+1+j*2*buff->param_set.npts] *= factor ; 
+    for( i=0; i<buff->npts; i++ ){
+      buff->data[2*i+j*2*buff->npts] *= factor  ; 
+      buff->data[2*i+1+j*2*buff->npts] *= factor ; 
     }
   }
   return 0;
@@ -2480,9 +2480,9 @@ gint do_gaussian_mult_2d( GtkWidget* widget, double * val )
 
     factor = dwell2 *M_PI * *val/1.6651 * i2;
 
-    for( i=0; i<buff->param_set.npts; i++ ){
-      buff->data[2*i+j*2*buff->param_set.npts] *= exp(-1*factor*factor) ; 
-      buff->data[2*i+1+j*2*buff->param_set.npts] *= exp(-1*factor*factor) ; 
+    for( i=0; i<buff->npts; i++ ){
+      buff->data[2*i+j*2*buff->npts] *= exp(-1*factor*factor) ; 
+      buff->data[2*i+1+j*2*buff->npts] *= exp(-1*factor*factor) ; 
     }
   }
   return 0;
@@ -2524,22 +2524,22 @@ gint do_offset_cal_2D( GtkWidget *widget, double *unused )
     return 0;
     
   }
-  //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
+  //  fprintf(stderr,"%d %d\n\n", buff->npts, buff->npts2);
 
   if (buff->is_hyper == 1){
-    for( j=0;j<2*buff->param_set.npts;j++) {
+    for( j=0;j<2*buff->npts;j++) {
       
       count = 0;
       offset = 0.0;
       
       //first determine the offset for the real channel (in indirect dimension)
       for(i=buff->npts2/2*0.9 ; i<buff->npts2/2;i++){
-	offset += buff->data[4*i*buff->param_set.npts+j];
+	offset += buff->data[4*i*buff->npts+j];
 	count ++;
       }
       offset=offset/count;
       for(i=0;i<buff->npts2/2;i++)
-	buff->data[4*i*buff->param_set.npts+j] -= offset;
+	buff->data[4*i*buff->npts+j] -= offset;
 
 
       // now do imag
@@ -2548,28 +2548,28 @@ gint do_offset_cal_2D( GtkWidget *widget, double *unused )
       
       //first determine the offset for the real channel (in indirect dimension)
       for(i=buff->npts2/2*0.9 ; i<buff->npts2/2;i++){
-	offset += buff->data[(2*i+1)*2*buff->param_set.npts+j];
+	offset += buff->data[(2*i+1)*2*buff->npts+j];
 	count ++;
       }
       offset=offset/count;
       for(i=0;i<buff->npts2/2;i++)
-	buff->data[(2*i+1)*2*buff->param_set.npts+j] -= offset;
+	buff->data[(2*i+1)*2*buff->npts+j] -= offset;
     }
   }
 
 
   else{ // isn't hypercomplex
     fprintf(stderr,"doing real baseline correct\n");
-    for( j=0;j<2*buff->param_set.npts;j++) {
+    for( j=0;j<2*buff->npts;j++) {
       count = 0;
       offset = 0.0;
       for (i=buff->npts2*0.9 ; i<buff->npts2; i++){
-	offset += buff->data[2*i*buff->param_set.npts+j];
+	offset += buff->data[2*i*buff->npts+j];
 	count++;
       }
       offset = offset/count;
       for(i=0;i<buff->npts2;i++){
-	buff->data[2*i*buff->param_set.npts+j] -= offset;
+	buff->data[2*i*buff->npts+j] -= offset;
       }
     }
   }
@@ -2617,7 +2617,7 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
     return 0;
     
   }
-  //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
+  //  fprintf(stderr,"%d %d\n\n", buff->npts, buff->npts2);
   fprintf(stderr,"npts2: %i\n",buff->npts2);
 
 
@@ -2644,9 +2644,9 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
   if (buff->is_hyper == FALSE){
 
     // copy out
-    for(i=0;i<buff->param_set.npts*2  ;i++){
+    for(i=0;i<buff->npts*2  ;i++){
       for(j=0;j<buff->npts2;j++){
-	new_data[j*2] = buff->data[j*buff->param_set.npts*2+i];
+	new_data[j*2] = buff->data[j*buff->npts*2+i];
 	new_data[j*2+1] = 0.;
       }
     
@@ -2657,16 +2657,16 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
       new_data[1] = (new_data[3]+new_data[2*buff->npts2-1])/2.0;
       four1(new_data-1,buff->npts2,-1);
       for(j=0;j<buff->npts2;j++){
-	 buff->data[j*buff->param_set.npts*2+i] = new_data[j*2]/scale;
+	 buff->data[j*buff->npts*2+i] = new_data[j*2]/scale;
       }	   
     }
   }
   else{
     // copy out
-    for(i=0;i<buff->param_set.npts*2  ;i++){
+    for(i=0;i<buff->npts*2  ;i++){
       for(j=0;j<buff->npts2/2;j++){
-	new_data[j*2] = buff->data[2*j*buff->param_set.npts*2+i];
-	new_data[j*2+1] = buff->data[(2*j+1)*buff->param_set.npts*2+i];
+	new_data[j*2] = buff->data[2*j*buff->npts*2+i];
+	new_data[j*2+1] = buff->data[(2*j+1)*buff->npts*2+i];
       }
       // do the ft
       four1(new_data-1,buff->npts2/2,1);
@@ -2677,8 +2677,8 @@ gint do_offset_cal_2D_a( GtkWidget *widget, double *unused )
       
       // copy back 
       for(j=0;j<buff->npts2/2;j++){
-	buff->data[2*j*buff->param_set.npts*2+i] = new_data[j*2]/scale;
-	buff->data[(2*j+1)*buff->param_set.npts*2+i] = new_data[j*2+1]/scale;
+	buff->data[2*j*buff->npts*2+i] = new_data[j*2]/scale;
+	buff->data[(2*j+1)*buff->npts*2+i] = new_data[j*2+1]/scale;
       }
 
 

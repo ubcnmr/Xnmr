@@ -259,7 +259,7 @@ dbuff *create_buff(int num){
     buff->scales_dialog = NULL;
     buff->overrun1 = 85*(1+256+65536+16777216);
     buff->overrun2 = 85*(1+256+65536+16777216);
-    buff->param_set.npts=0;  //set later
+    buff->npts=0;  //set later
     buff->npts2=1;                  // always
     buff->data=NULL;                // set later
     buff->process_data[PH].val=GLOBAL_PHASE_FLAG;
@@ -295,7 +295,7 @@ dbuff *create_buff(int num){
     buff->param_set.sw = 1.0/buff->param_set.dwell*1e6;
     buff->buffnum = num;
     buff_resize( buff, 2048, 1 );
-    buff->acq_npts=buff->param_set.npts;
+    buff->acq_npts=buff->npts;
     buff->ct = 0;
     buff->script_open = 0;
     path_strcpy ( buff->path_for_reload,"");
@@ -392,13 +392,13 @@ dbuff *create_buff(int num){
 
 	//	load_param_file( my_string, &buff->param_set );  // does this need to be there - caused crashes?
 
-	save_npts = buff->param_set.npts;
+	save_npts = buff->npts;
 	buff->acq_npts=buffp[current]->acq_npts;
 
 
 	memcpy(&buff->param_set,&buffp[current]->param_set,sizeof(parameter_set_t));
 
-	buff->param_set.npts = save_npts;
+	buff->npts = save_npts;
 
 
 
@@ -429,7 +429,7 @@ dbuff *create_buff(int num){
     no_update_open = 1;
     
     //    fprintf(stderr,"create_buff, about to show_parameter_frame\n");
-    show_parameter_frame( &buff->param_set );
+    show_parameter_frame( &buff->param_set,buff->npts );
     //    fprintf(stderr,"create_buff, done show_parameter_frame\n");
 
     no_update_open = old_update_open;
@@ -442,18 +442,18 @@ dbuff *create_buff(int num){
     {
       float fr;
       float ii=0.5;
-      fr = 6.75/buff->param_set.npts;
+      fr = 6.75/buff->npts;
     for(j=0;j<buff->npts2;j++)
-      for(i=0;i<buff->param_set.npts;i++){ // should initialize to 0 
-	buff->data[2*i+2*buff->param_set.npts*j]
+      for(i=0;i<buff->npts;i++){ // should initialize to 0 
+	buff->data[2*i+2*buff->npts*j]
 	  =cos(-10*fr*(i+ii)*2*M_PI)*exp(-i/180.0)/(j+1);
-	buff->data[2*i+1+2*buff->param_set.npts*j]
+	buff->data[2*i+1+2*buff->npts*j]
 	  =sin(-10*fr*(i+ii)*2*M_PI)*exp(-i/180.)/(j+1);
 
 	// add a second peak
-	buff->data[2*i+2*buff->param_set.npts*j]
+	buff->data[2*i+2*buff->npts*j]
 	  +=cos(17.5*fr*(i+ii)*2*M_PI)*exp(-i/180.0)/(j+1);
-	buff->data[2*i+1+2*buff->param_set.npts*j]
+	buff->data[2*i+1+2*buff->npts*j]
 	  +=sin(17.5*fr*(i+ii)*2*M_PI)*exp(-i/180.)/(j+1);
 
       }
@@ -465,25 +465,25 @@ dbuff *create_buff(int num){
       char *mreg;
       float *c,*s,*e;
 
-      mreg=g_malloc(sizeof (char) * buff->param_set.npts);
-      c=g_malloc(sizeof (float) * buff->param_set.npts);
-      s=g_malloc(sizeof (float) * buff->param_set.npts);
-      e=g_malloc(sizeof (float) * buff->param_set.npts);
+      mreg=g_malloc(sizeof (char) * buff->npts);
+      c=g_malloc(sizeof (float) * buff->npts);
+      s=g_malloc(sizeof (float) * buff->npts);
+      e=g_malloc(sizeof (float) * buff->npts);
       
       
       mreg[0] = psrb(10,1);
-      for(i=1;i<buff->param_set.npts;i++){
+      for(i=1;i<buff->npts;i++){
 	mreg[i] = psrb(10,0);
 	//	fprintf(stderr,"%i "  ,mreg[i]);
       }
 
-      for (i=0;i<buff->param_set.npts;i++){
+      for (i=0;i<buff->npts;i++){
 	c[i] = cos(0.04*i);
 	s[i] = sin(0.04*i);
 	e[i]= exp(-i/75.);
       }
 
-      for(i=0;i<buff->param_set.npts;i++){ // we need data twice through.
+      for(i=0;i<buff->npts;i++){ // we need data twice through.
 	buff->data[2*i] = 0.;
 	buff->data[2*i+1]=0.;
 	for (j=0;j<=i;j++){ // calculate the data based on all previous pulses
@@ -902,8 +902,8 @@ void draw_canvas(dbuff *buff)
    if (GTK_TOGGLE_BUTTON(buff->win.autocheck)->active)
      do_auto(buff);
    //   else
-   draw_oned(buff,0.,0.,&buff->data[buff->disp.record*2*buff->param_set.npts],
-	       buff->param_set.npts);
+   draw_oned(buff,0.,0.,&buff->data[buff->disp.record*2*buff->npts],
+	       buff->npts);
 
 
  }
@@ -936,7 +936,7 @@ void draw_raster(dbuff *buff)
   float max,min,da;
   
 
-  npts1=buff->param_set.npts;
+  npts1=buff->npts;
   npts2=buff->npts2;
 
   if (buff->is_hyper) npts2 = buff->npts2/2;
@@ -1160,8 +1160,8 @@ void draw_oned(dbuff *buff,float extraxoff,float extrayoff,float *data
     
   }
   if(buff->disp.mag){
-    temp_data = g_malloc(8*buff->param_set.npts);
-    for (i=0;i<buff->param_set.npts;i++)
+    temp_data = g_malloc(8*buff->npts);
+    for (i=0;i<buff->npts;i++)
       temp_data[i*2] = sqrt(data[2*i]*data[2*i]+data[2*i+1]*data[2*i+1]);
     draw_row_trace(buff,extraxoff,extrayoff,temp_data,npts,&colours[BLUE],0);
     g_free(temp_data);
@@ -1221,7 +1221,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
   eyint= extrayoff*buff->disp.yscale/2.;
 
   /* draw real */
-  recadd=2*buff->param_set.npts;
+  recadd=2*buff->npts;
 
   if(buff->disp.real){
     /* first point */
@@ -1513,7 +1513,7 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
     old_update_open = no_update_open;
     no_update_open = 1;
-    show_parameter_frame( &buffp[ current ]->param_set );
+    show_parameter_frame( &buffp[ current ]->param_set ,buffp[current]->npts);
     no_update_open = old_update_open;
 
     show_process_frame( buffp[ current ]->process_data );
@@ -1949,40 +1949,40 @@ char string[UTIL_LEN];
  float max;
 
  // check to make sure the points are valid.
-if (pt1 > buff->param_set.npts || pt2 > buff->param_set.npts || peak > buff->param_set.npts) return; 
+if (pt1 > buff->npts || pt2 > buff->npts || peak > buff->npts) return; 
 if (pt1 <0 || pt2 < 0 || peak < 0) return; 
 
  for (i = MIN(pt1,pt2); i <= MAX(pt1,pt2);i++){
    count +=1;
-   avg += buff->data[buff->param_set.npts*2*buff->disp.record+2*i];
-   avg2 += buff->data[buff->param_set.npts*2*buff->disp.record+2*i]*
-     buff->data[buff->param_set.npts*2*buff->disp.record+i*2];
+   avg += buff->data[buff->npts*2*buff->disp.record+2*i];
+   avg2 += buff->data[buff->npts*2*buff->disp.record+2*i]*
+     buff->data[buff->npts*2*buff->disp.record+i*2];
  }
  avg = avg/count;
  avg2 = avg2/count;
 
  // get the selected point.
- s =  buff->data[buff->param_set.npts*2*buff->disp.record+2*peak];
+ s =  buff->data[buff->npts*2*buff->disp.record+2*peak];
  max = s;
  maxi = peak;
 
  // now look to see if there are bigger points nearby.
- if (peak < buff->param_set.npts - 1){
-   for (i=peak+1;i<buff->param_set.npts;i++){
-     s = buff->data[buff->param_set.npts*2*buff->disp.record+2*i];
+ if (peak < buff->npts - 1){
+   for (i=peak+1;i<buff->npts;i++){
+     s = buff->data[buff->npts*2*buff->disp.record+2*i];
      if (s > max){
        maxi = i;
        max = s;
      }  
      else 
-       i = buff->param_set.npts+1;
+       i = buff->npts+1;
    }
    
  }
 		   
  if (peak > 0){
    for (i = peak-1;i>=0;i--){
-     s = buff->data[buff->param_set.npts*2*buff->disp.record+2*i];
+     s = buff->data[buff->npts*2*buff->disp.record+2*i];
      if (s > max){
        maxi = i;
        max = s;
@@ -1995,7 +1995,7 @@ if (pt1 <0 || pt2 < 0 || peak < 0) return;
  s = max;
  n = sqrt(avg2 - avg*avg);
 
- //      fprintf(stderr,"npts: %i, record: %i\n",buff->param_set.npts,buff->disp.record);
+ //      fprintf(stderr,"npts: %i, record: %i\n",buff->npts,buff->disp.record);
  //      fprintf(stderr,"avg: %f, avg2: %f, count: %i\n",avg,avg2,count);
  
  s2n = s/n;
@@ -2144,7 +2144,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  arr_num_for_int=0;
  //set up integration export file
 
- if (pt1 > buff->param_set.npts || pt2 > buff->param_set.npts) return; 
+ if (pt1 > buff->npts || pt2 > buff->npts) return; 
  if (pt1 < 0 || pt2 < 0) return; 
  
  if (strcmp(buff->path_for_reload,"") == 0){
@@ -2185,9 +2185,9 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  
  
  if (buff->flags & FT_FLAG){         //frequency domain
-   f1 = -( (float) pt1 * buff->param_set.sw/buff->param_set.npts
+   f1 = -( (float) pt1 * buff->param_set.sw/buff->npts
 	   - (float) buff->param_set.sw/2.);
-   f2 = -( (float) pt2 * buff->param_set.sw/buff->param_set.npts
+   f2 = -( (float) pt2 * buff->param_set.sw/buff->npts
 	   - (float) buff->param_set.sw/2.);
  } 
  else{                              //time domain
@@ -2202,7 +2202,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
    integral=0;
    for (i = MIN(pt1,pt2); i <= MAX(pt1,pt2);i++){
      count +=1;
-     integral += buff->data[buff->param_set.npts*2*j+2*i];
+     integral += buff->data[buff->npts*2*j+2*i];
    }
    
    
@@ -2214,7 +2214,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
    // fprintf(stderr,"style: %i record: %i record2: %i\n", buff->disp.dispstyle, buff->disp.record, buff->disp.record2);
    
    //   integral *=  fabs(f1-f2) /  count;
-   //   integral *= 2./sqrt(buff->param_set.npts);
+   //   integral *= 2./sqrt(buff->npts);
    
    fprintf(stderr,"%f\n",integral);  //print to screen
    
@@ -2378,8 +2378,8 @@ gint expand_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   if (buff->is_hyper) 
     npts2 = buff->npts2/2;
 
-  i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);
-  i2=(int) (buff->disp.xx2 * (buff->param_set.npts-1) +.5);
+  i1=(int) (buff->disp.xx1 * (buff->npts-1) +.5);
+  i2=(int) (buff->disp.xx2 * (buff->npts-1) +.5);
 
   j1=(int) (buff->disp.yy1 * (npts2-1) +.5);
   j2=(int) (buff->disp.yy2 * (npts2-1) +.5);
@@ -2640,10 +2640,10 @@ gint do_auto(dbuff *buff)
   max = 0;
   min = 0;
 
-    recadd=buff->param_set.npts*2*buff->disp.record;
+    recadd=buff->npts*2*buff->disp.record;
 
-  i1= (int) (buff->disp.xx1*(buff->param_set.npts-1)+.5);
-  i2= (int) (buff->disp.xx2*(buff->param_set.npts-1)+.5);
+  i1= (int) (buff->disp.xx1*(buff->npts-1)+.5);
+  i2= (int) (buff->disp.xx2*(buff->npts-1)+.5);
 
   flag=0;
   if(buff->disp.base){ 
@@ -2725,7 +2725,7 @@ gint do_auto2(dbuff *buff)
     //    if (buff->is_hyper && i1 %2 ==1) i1-=1;
     //    if (buff->is_hyper && i2 %2 ==1) i2-=1;
     
-    recadd=2*buff->param_set.npts;
+    recadd=2*buff->npts;
 
   flag=0;
 
@@ -2887,7 +2887,7 @@ void make_active(dbuff *buff){
 
     //    fprintf(stderr,"setting from_make_active\n");
     from_make_active = 1;
-    show_parameter_frame( &buff->param_set );
+    show_parameter_frame( &buff->param_set,buff->npts );
     show_process_frame( buff->process_data );
     show_active_border(); 
     gdk_window_raise(buff->win.window->window);
@@ -2942,7 +2942,7 @@ gint press_in_win_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff)
     // first line in dialog: value of real
 
     snprintf(title,UTIL_LEN,"real: %f",buff->data[2*buff->disp.record2
-	      +buff->disp.record*buff->param_set.npts*2]);
+	      +buff->disp.record*buff->npts*2]);
 
     gtk_label_set_text(GTK_LABEL(fplab1),title);
 
@@ -2953,14 +2953,14 @@ gint press_in_win_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff)
 
     if (buff->disp.dispstyle == SLICE_ROW || buff->disp.dispstyle == RASTER){
       snprintf(title,UTIL_LEN,"Magnitude: %f",sqrt(pow(buff->data[2*buff->disp.record2
-						       +buff->disp.record*buff->param_set.npts*2],2)+
-					 pow(buff->data[2*buff->disp.record2+buff->disp.record*buff->param_set.npts*2+1],2)));
+						       +buff->disp.record*buff->npts*2],2)+
+					 pow(buff->data[2*buff->disp.record2+buff->disp.record*buff->npts*2+1],2)));
     }
 
     if (buff->disp.dispstyle == SLICE_COL && buff->is_hyper){
       snprintf(title,UTIL_LEN,"Magnitude: %f",sqrt(pow(buff->data[2*buff->disp.record2
-						       +buff->disp.record*buff->param_set.npts*2],2)+
-					 pow(buff->data[2*buff->disp.record2+(buff->disp.record+1)*buff->param_set.npts*2],2)));
+						       +buff->disp.record*buff->npts*2],2)+
+					 pow(buff->data[2*buff->disp.record2+(buff->disp.record+1)*buff->npts*2],2)));
     }
 
     if (buff->disp.dispstyle == SLICE_COL && buff->is_hyper == 0)
@@ -3007,7 +3007,7 @@ gint press_in_win_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff)
 
 
       // fifth line the frequency or time in direct dimension
-    new_freq = - ( (double) buff->disp.record2 * buff->param_set.sw/buff->param_set.npts
+    new_freq = - ( (double) buff->disp.record2 * buff->param_set.sw/buff->npts
 		 - (double) buff->param_set.sw/2.);
     if (buff->flags & FT_FLAG)
       snprintf(title,UTIL_LEN,"%8.1f Hz delta: %8.1f Hz",
@@ -3166,7 +3166,7 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
     /*
     if ( buff->npts2 %2 ==1){
       buff->npts2 -=1; // throw away last record 
-      buff->data=g_realloc(buff->data,2*4*buff->param_set.npts*buff->npts2);
+      buff->data=g_realloc(buff->data,2*4*buff->npts*buff->npts2);
       //fprintf(stderr,"points are odd, killing last\n");
       } */
 
@@ -3212,7 +3212,7 @@ gint plus_button(GtkWidget *widget,dbuff *buff){
       if (buff->buffnum == current) update_2d_buttons_from_buff( buff );
     }
   if(buff->disp.dispstyle ==SLICE_COL)
-    if (buff->disp.record2 < buff->param_set.npts-1)
+    if (buff->disp.record2 < buff->npts-1)
       buff->disp.record2 += 1;
   draw_canvas(buff); 
 
@@ -3304,7 +3304,7 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
 {
   int i,j;
   float *data_old;
-  if( (buff->param_set.npts != npts1) ||  ( buff->npts2 != npts2 ) ) {
+  if( (buff->npts != npts1) ||  ( buff->npts2 != npts2 ) ) {
     //       fprintf(stderr,"doing buff resize to %i x %i\n",npts1,npts2);
 
     // only change the record we're viewing if we have to.
@@ -3329,11 +3329,11 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
     /* now copy data from old buffer to new one as best we can */
 
     for (i=0 ; i< MIN(npts2,buff->npts2) ; i++){
-      for (j=0 ; j<MIN(npts1,buff->param_set.npts) ; j++){
-	buff->data[2*j+i*2*npts1]=data_old[2*j+i*2*buff->param_set.npts];
-	buff->data[2*j+1+i*2*npts1]=data_old[2*j+1+i*2*buff->param_set.npts];
+      for (j=0 ; j<MIN(npts1,buff->npts) ; j++){
+	buff->data[2*j+i*2*npts1]=data_old[2*j+i*2*buff->npts];
+	buff->data[2*j+1+i*2*npts1]=data_old[2*j+1+i*2*buff->npts];
       }
-      for(j=MIN(npts1,buff->param_set.npts);j<npts1;j++){
+      for(j=MIN(npts1,buff->npts);j<npts1;j++){
 	buff->data[2*j+i*2*npts1]=0;
 	buff->data[2*j+1+i*2*npts1]=0;
       }
@@ -3357,7 +3357,7 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
    
 
     g_free(data_old);
-    buff->param_set.npts = npts1;
+    buff->npts = npts1;
     buff->npts2 = npts2;
   }
 
@@ -3577,19 +3577,19 @@ gint do_load( dbuff* buff, char* path )
     return -1;
   }
   
-  i=fread( buff->data, sizeof( float ), buff->param_set.npts*buff->npts2*2, fstream );
+  i=fread( buff->data, sizeof( float ), buff->npts*buff->npts2*2, fstream );
   
   //  fprintf(stderr,"read %i points\n",i);
   fclose( fstream );
 
   // check to make sure we read in all the points.  If not, zero out what's left.
-  if (i < buff->param_set.npts*buff->npts2*2)
-    for (j=i;j< buff->param_set.npts*buff->npts2*2;j++)
+  if (i < buff->npts*buff->npts2*2)
+    for (j=i;j< buff->npts*buff->npts2*2;j++)
       buff->data[j]=0.;
 
 
   if (buff->buffnum ==current){
-    show_parameter_frame( &buff->param_set );
+    show_parameter_frame( &buff->param_set ,buff->npts);
     show_process_frame( buff->process_data);
     update_2d_buttons_from_buff( buff );
   }
@@ -3706,7 +3706,7 @@ gint do_save( dbuff* buff, char* path )
   //  fprintf(stderr,"in do_save, dwell is: %f\n",buff->param_set.dwell);
   fprintf( fstream, 
      "npts = %u\nacq_npts = %u\nna = %lu\nna2 = %u\nsw = %lu\ndwell = %f\nct = %lu\n", 
-	   buff->param_set.npts, buff->acq_npts,buff->param_set.num_acqs, 
+	   buff->npts, buff->acq_npts,buff->param_set.num_acqs, 
 	   buff->npts2 ,buff->param_set.sw,buff->param_set.dwell,buff->ct);
 
   fprintf( fstream,"ch1 = %c\nch2 = %c\n",get_ch1(buff),get_ch2(buff));
@@ -3740,7 +3740,7 @@ gint do_save( dbuff* buff, char* path )
   //fprintf(stderr, "creating data file: %s\n", fileN );
   fstream = fopen( fileN, "w" );
   
-  fwrite( buff->data, sizeof( float ), buff->param_set.npts*buff->npts2*2, fstream ); 
+  fwrite( buff->data, sizeof( float ), buff->npts*buff->npts2*2, fstream ); 
   
   fclose( fstream );
 
@@ -3750,7 +3750,7 @@ gint do_save( dbuff* buff, char* path )
   put_name_in_buff(buff,path);
 
   if (buff->buffnum ==current)
-    show_parameter_frame(&buff->param_set);
+    show_parameter_frame(&buff->param_set,buff->npts);
 
   path_strcpy(buff->path_for_reload,path);
   set_window_title(buff);
@@ -3767,7 +3767,7 @@ gint pix_to_x(dbuff * buff,int xval){
   int npts1,npts2,i1,i2,j1,j2,ret;
   float xppt,yppt;
   
-  npts1=buff->param_set.npts;
+  npts1=buff->npts;
   npts2=buff->npts2;
 
   if (buff->is_hyper)
@@ -3819,7 +3819,7 @@ gint pix_to_y(dbuff * buff,int yval){
   float yppt;
 
 
-  npts1=buff->param_set.npts;
+  npts1=buff->npts;
   npts2=buff->npts2;
   if (buff->is_hyper) npts2 = buff->npts2/2;
 
@@ -3902,7 +3902,7 @@ void file_export(GtkAction *action,dbuff *buff)
     dwell2=1/sw2;
 
 
-  npts = buff->param_set.npts;
+  npts = buff->npts;
 
   path_strcpy(fileN,buff->path_for_reload);
   path_strcat(fileN,"export.txt");
@@ -4149,7 +4149,7 @@ void file_export_binary(GtkAction *action,dbuff *buff)
     return;
   }
 
-  npts = buff->param_set.npts;
+  npts = buff->npts;
 
   path_strcpy(fileN,buff->path_for_reload);
   path_strcat(fileN,"export.bin");
@@ -4300,10 +4300,10 @@ int file_append(GtkAction *action, dbuff *buff)
   fscanf( fstream, 
      "npts = %u\nacq_npts = %u\nna = %lu\nna2 = %u\nsw = %lu\ndwell = %f\n", 
 	  &npts,&acq_npts,&acqns, &npts2 ,&sw,&dwell);
-  //    fprintf(stderr,"found npts: %i, current data has: %i\n",npts,buff->param_set.npts);
+  //    fprintf(stderr,"found npts: %i, current data has: %i\n",npts,buff->npts);
 
 
-  if ( npts != buff->param_set.npts){
+  if ( npts != buff->npts){
     popup_msg("Can't append to file of different npts",TRUE);
     fclose(fstream);
     return 0;
@@ -4565,7 +4565,7 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   if ((void *) buff != (void *) action ) { // means user pulled from menu.
     draw_canvas(buff);
     if (buff->buffnum == current)
-      show_parameter_frame ( &buff->param_set);
+      show_parameter_frame ( &buff->param_set,buff->npts);
   }
   
 }
@@ -4636,7 +4636,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   }
 
   // ok, now figure out our offset from res
-  diff = (point * buff->param_set.sw/buff->param_set.npts
+  diff = (point * buff->param_set.sw/buff->npts
 	- buff->param_set.sw/2.);
   //  if (sf_is_float == 0) diff = diff/1e6;  freq's are always in MHz - a slightly unfortunate historical choice...
   diff /= 1e6;
@@ -4689,7 +4689,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   // hmm, don't know how to set the adjustment, so instead, put this value into the parameter
 
   // then need to reshow parameter frame - this was the slow call - done better now above.
-    //  show_parameter_frame ( &buff->param_set); // this shouldn't be here.  should just fix up the one param as unarray does...
+    //  show_parameter_frame ( &buff->param_set,buff->npts); // this shouldn't be here.  should just fix up the one param as unarray does...
 
 }
 
@@ -4788,21 +4788,21 @@ void calc_rms(GtkAction *action,dbuff *buff)
    rmsi=0.;
 
   //  fprintf(stderr,"in calc_rms\n");
-  for (i=0;i<buff->param_set.npts;i++){
-   sum  += buff->data[buff->param_set.npts*2*j+2*i]  ;
-   sumi += buff->data[buff->param_set.npts*2*j+2*i+1];
+  for (i=0;i<buff->npts;i++){
+   sum  += buff->data[buff->npts*2*j+2*i]  ;
+   sumi += buff->data[buff->npts*2*j+2*i+1];
 
-   sum2 += buff->data[buff->param_set.npts*2*j+2*i]  *buff->data[buff->param_set.npts*2*j+2*i]  ;
-   sum2i+= buff->data[buff->param_set.npts*2*j+2*i+1]*buff->data[buff->param_set.npts*2*j+2*i+1];
+   sum2 += buff->data[buff->npts*2*j+2*i]  *buff->data[buff->npts*2*j+2*i]  ;
+   sum2i+= buff->data[buff->npts*2*j+2*i+1]*buff->data[buff->npts*2*j+2*i+1];
  }
 
 
  
- avg = sum /buff->param_set.npts;
- avgi = sumi /buff->param_set.npts;
+ avg = sum /buff->npts;
+ avgi = sumi /buff->npts;
 
- rms = sqrt(sum2/buff->param_set.npts - avg*avg);
- rmsi = sqrt(sum2i/buff->param_set.npts - avgi*avgi);
+ rms = sqrt(sum2/buff->npts - avg*avg);
+ rmsi = sqrt(sum2i/buff->npts - avgi*avgi);
  
  fprintf(stderr,"RMS: Real: %f  Imaginary: %f\n",rms, rmsi);
  if (j==buff->disp.record){
@@ -4982,14 +4982,14 @@ void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spl
 
 
   for (i = 0 ; i < num_spline_points ; i++ ){
-    xvals[i] = ((int) (spline_points[i]*(buff->param_set.npts-1)+0.5) ) ;
-    if (xvals[i] < 2 || xvals[i]>buff->param_set.npts-3){
-      yvals[i]=buff->data[ 2*xvals[i]+buff->disp.record*buff->param_set.npts*2];
+    xvals[i] = ((int) (spline_points[i]*(buff->npts-1)+0.5) ) ;
+    if (xvals[i] < 2 || xvals[i]>buff->npts-3){
+      yvals[i]=buff->data[ 2*xvals[i]+buff->disp.record*buff->npts*2];
     }
     else{
       yvals[i] = 0;
       for (j=xvals[i]-2;j<xvals[i]+3;j++)
-	yvals[i] += buff->data[2*j+buff->disp.record*buff->param_set.npts*2];
+	yvals[i] += buff->data[2*j+buff->disp.record*buff->npts*2];
       yvals[i] /= 5.;
     }
     //	fprintf(stderr,"%f %f\n",base.spline_points[i],yvals[i]);
@@ -4997,8 +4997,8 @@ void calc_spline_fit(dbuff *buff,float *spline_points, float *yvals, int num_spl
 
   spline(spline_points-1,yvals-1,num_spline_points,0.,0.,y2vals-1);
 
-  for(i=0;i<buff->param_set.npts;i++){
-    x = ((float) i)/(buff->param_set.npts-1);
+  for(i=0;i<buff->npts;i++){
+    x = ((float) i)/(buff->npts-1);
     splint(spline_points-1,yvals-1,y2vals-1,num_spline_points,x,&y);
     
     temp_data[2*i] = y;
@@ -5032,8 +5032,8 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
 
   if (base.num_spline_points == 0){ // then auto pick the beginning and the end
     base.num_spline_points = 2;
-    base.spline_points[0]=2./(buff->param_set.npts-1);
-    base.spline_points[1]=(buff->param_set.npts-3.)/(buff->param_set.npts-1.);
+    base.spline_points[0]=2./(buff->npts-1);
+    base.spline_points[1]=(buff->npts-3.)/(buff->npts-1.);
   }
       // first, want to draw in the old points.
       //      base.num_spline_points = 0;
@@ -5091,46 +5091,46 @@ void do_spline(GtkAction *action, dbuff *buff){
   
   // set up for undo.
   
-  if (buff->param_set.npts != base.undo_num_points){
+  if (buff->npts != base.undo_num_points){
     if (base.undo_buff != NULL) 
       g_free(base.undo_buff);
-    base.undo_buff = g_malloc(buff->param_set.npts*8);
-    base.undo_num_points = buff->param_set.npts;
+    base.undo_buff = g_malloc(buff->npts*8);
+    base.undo_num_points = buff->npts;
   }
   for(i=0;i<base.undo_num_points*2;i++)
     base.undo_buff[i] = buff->data[i];
   base.redo_buff = buff->buffnum;
   
 
-  temp_data = g_malloc(2*8*buff->param_set.npts);
+  temp_data = g_malloc(2*8*buff->npts);
   calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
   
   // now apply to data.
-  for (i=0;i<buff->param_set.npts;i++){
-    buff->data[2*i+buff->disp.record*buff->param_set.npts*2] -= temp_data[2*i];
+  for (i=0;i<buff->npts;i++){
+    buff->data[2*i+buff->disp.record*buff->npts*2] -= temp_data[2*i];
   }
 
   
   
   // to do the imaginary part, play some tricks to generate it...
   // first, make sure npts is a power of 2.
-  if  (log(buff->param_set.npts)/log(2.) == rint(log(buff->param_set.npts)/log(2.))){
-    for(i=0;i<buff->param_set.npts;i++){
+  if  (log(buff->npts)/log(2.) == rint(log(buff->npts)/log(2.))){
+    for(i=0;i<buff->npts;i++){
       // copy data to temp buffer that's twice as long.
-      temp_data[2*i]=buff->data[2*i+buff->disp.record*2*buff->param_set.npts];
+      temp_data[2*i]=buff->data[2*i+buff->disp.record*2*buff->npts];
       temp_data[2*i+1]=0.;
-      temp_data[2*i+buff->param_set.npts*2]=0.;
-      temp_data[2*i+1+buff->param_set.npts*2]=0.;
+      temp_data[2*i+buff->npts*2]=0.;
+      temp_data[2*i+1+buff->npts*2]=0.;
     }
-    four1(temp_data-1,buff->param_set.npts*2,1);
-    for(i=0;i<buff->param_set.npts*2;i++){
-      temp_data[i+buff->param_set.npts*2]=0; // set the second half to 0
+    four1(temp_data-1,buff->npts*2,1);
+    for(i=0;i<buff->npts*2;i++){
+      temp_data[i+buff->npts*2]=0; // set the second half to 0
     }
     // and do the reverse ft.
     temp_data[0] /=2; // to avoid shifting the basline.
-    four1(temp_data-1,buff->param_set.npts*2,-1);
-    for(i=0;i<buff->param_set.npts*2;i++){
-      buff->data[i+buff->disp.record*2*buff->param_set.npts]=temp_data[i]/buff->param_set.npts;
+    four1(temp_data-1,buff->npts*2,-1);
+    for(i=0;i<buff->npts*2;i++){
+      buff->data[i+buff->disp.record*2*buff->npts]=temp_data[i]/buff->npts;
     }
     
     
@@ -5155,10 +5155,10 @@ void show_spline_fit(GtkAction *action, dbuff *buff){
   }
   
   
-  temp_data = g_malloc(8*buff->param_set.npts);
+  temp_data = g_malloc(8*buff->npts);
   calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
   
-  draw_row_trace(buff, 0.,0.,temp_data,buff->param_set.npts, &colours[BLUE],0);
+  draw_row_trace(buff, 0.,0.,temp_data,buff->npts, &colours[BLUE],0);
   gtk_widget_queue_draw_area(buff->win.canvas,1,1,buff->win.sizex,buff->win.sizey);
   
   g_free(temp_data);
@@ -5175,7 +5175,7 @@ void undo_spline(GtkAction *action, dbuff *buff){
   CHECK_ACTIVE(buff);
 
   if ( base.redo_buff == buff->buffnum && base.undo_buff != NULL && 
-       base.undo_num_points == buff->param_set.npts){
+       base.undo_num_points == buff->npts){
     // we're good to go.
     for(i=0;i<base.undo_num_points*2;i++)
       buff->data[i] = base.undo_buff[i];
@@ -5552,11 +5552,11 @@ void add_sub_buttons(GtkWidget *widget,gpointer data){
     }
   }
 
-  if(buffp[sbnum1]->param_set.npts != buffp[sbnum2]->param_set.npts){
+  if(buffp[sbnum1]->npts != buffp[sbnum2]->npts){
     popup_msg("Inputs must have same number of points!",TRUE);
     return;
   }
-  npts = buffp[sbnum1]->param_set.npts;
+  npts = buffp[sbnum1]->npts;
 
 
   // grab the multiplers
@@ -5672,7 +5672,7 @@ if the number of records on the input records doesn't match for "each each", err
 
     if (i == 0 && j == 0){ // each + each:
       for (l=0;l<buffp[sbnum1]->npts2;l++)
-	for(k=0;k<buffp[sbnum1]->param_set.npts*2;k++)
+	for(k=0;k<buffp[sbnum1]->npts*2;k++)
 	  buffp[dbnum]->data[k + l* npts*2] = 
 	    f1 * buffp[sbnum1]->data[k + l* npts*2] +
 	    f2 * buffp[sbnum2]->data[k + l* npts*2];
@@ -5826,20 +5826,20 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
       i_max = xpt;
       record = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record));
       
-      max = buffp[sbnum]->data[xpt*2 + buffp[sbnum]->param_set.npts*2*record];
+      max = buffp[sbnum]->data[xpt*2 + buffp[sbnum]->npts*2*record];
       
-      if (xpt < buffp[sbnum]->param_set.npts-1)
-	for (i=xpt+1;i<buffp[sbnum]->param_set.npts;i++){
-	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->param_set.npts*2*record] > max){
-	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record];
+      if (xpt < buffp[sbnum]->npts-1)
+	for (i=xpt+1;i<buffp[sbnum]->npts;i++){
+	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->npts*2*record] > max){
+	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record];
 	    i_max = i;
 	  }
-	  else i = buffp[sbnum]->param_set.npts;
+	  else i = buffp[sbnum]->npts;
 	}
       if (xpt > 0)
 	for (i=xpt-1;i>=0;i--){
-	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->param_set.npts*2*record] > max){
-	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record];
+	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->npts*2*record] > max){
+	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record];
 	    i_max = i;
 	  }
 	  else i = -1;
@@ -5852,16 +5852,16 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
       // look to the right till we get below half max
       i_left=xpt;
       i_right=xpt;
-      if (xpt < buffp[sbnum]->param_set.npts-1)
-	for(i=xpt+1;i<buffp[sbnum]->param_set.npts;i++){
-	  if (buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record] < max/2.){
+      if (xpt < buffp[sbnum]->npts-1)
+	for(i=xpt+1;i<buffp[sbnum]->npts;i++){
+	  if (buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record] < max/2.){
 	    i_right = i;
-	    i = buffp[sbnum]->param_set.npts;
+	    i = buffp[sbnum]->npts;
 	  }
 	}
       if (xpt > 0)
 	for (i=xpt-1;i>=0;i--){
-	  if (buffp[sbnum]->data[2*i+buffp[sbnum]->param_set.npts*2*record] < max/2.){
+	  if (buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record] < max/2.){
 	    i_left = i;
 	    i = -1;
 	  }
@@ -5872,23 +5872,23 @@ void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
       x_left = xpt;
       x_right = xpt;
       if (i_left != xpt){
-	m = (buffp[sbnum]->data[2*(i_left+1)+buffp[sbnum]->param_set.npts*2*record]-
-	     buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]);
-	b= buffp[sbnum]->data[2*i_left+buffp[sbnum]->param_set.npts*2*record]-m*i_left;
+	m = (buffp[sbnum]->data[2*(i_left+1)+buffp[sbnum]->npts*2*record]-
+	     buffp[sbnum]->data[2*i_left+buffp[sbnum]->npts*2*record]);
+	b= buffp[sbnum]->data[2*i_left+buffp[sbnum]->npts*2*record]-m*i_left;
 	x_left = (max/2.-b)/m;
 	//      fprintf(stderr,"using %f for left edge\n",x_left);
 	width += (xpt-x_left)
-	  *buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
+	  *buffp[sbnum]->param_set.sw/buffp[sbnum]->npts;
       }
       
       if (i_right != xpt){
-	m = (buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-
-	     buffp[sbnum]->data[2*(i_right-1)+buffp[sbnum]->param_set.npts*2*record]);
-	b= buffp[sbnum]->data[2*i_right+buffp[sbnum]->param_set.npts*2*record]-m*i_right;
+	m = (buffp[sbnum]->data[2*i_right+buffp[sbnum]->npts*2*record]-
+	     buffp[sbnum]->data[2*(i_right-1)+buffp[sbnum]->npts*2*record]);
+	b= buffp[sbnum]->data[2*i_right+buffp[sbnum]->npts*2*record]-m*i_right;
 	x_right = (max/2.-b)/m;
 	//      fprintf(stderr,"using %f for right edge\n",x_right);
 	
-	width += (x_right-xpt)*buffp[sbnum]->param_set.sw/buffp[sbnum]->param_set.npts;
+	width += (x_right-xpt)*buffp[sbnum]->param_set.sw/buffp[sbnum]->npts;
 	
       }
       //    fprintf(stderr,"so width is: %f\n",width);
@@ -6134,18 +6134,18 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       // set up remaining details:
 
       i1=0;
-      i2= buffp[sbnum]->param_set.npts-1;
+      i2= buffp[sbnum]->npts-1;
 
       if (widget == fit_data.run_fit_range){
-	i1 = (int) ( buffp[sbnum]->disp.xx1*(buffp[sbnum]->param_set.npts-1)+0.5);
-	i2 = (int) ( buffp[sbnum]->disp.xx2*(buffp[sbnum]->param_set.npts-1)+0.5);
+	i1 = (int) ( buffp[sbnum]->disp.xx1*(buffp[sbnum]->npts-1)+0.5);
+	i2 = (int) ( buffp[sbnum]->disp.xx2*(buffp[sbnum]->npts-1)+0.5);
 
 	n = 2*(i2-i1+1);
-	       //	n = () * buffp[sbnum]->param_set.npts;
+	       //	n = () * buffp[sbnum]->npts;
 	//	fprintf(stderr,"got fit range, set npts from %i to %i total %i\n",i1,i2,n);
       }
       else
-	n = buffp[sbnum]->param_set.npts *2; // we're going to fit the imaginary part too!
+	n = buffp[sbnum]->npts *2; // we're going to fit the imaginary part too!
       p = pnum;
       
 
@@ -6159,7 +6159,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       lv = 105 + p*(n+2*p+17)+2*n;
       v = malloc(lv*sizeof(float));
       // use the original npts here because n might vary.
-      spect = malloc(buffp[sbnum]->param_set.npts*2*sizeof(float));
+      spect = malloc(buffp[sbnum]->npts*2*sizeof(float));
 
 
       iv[0] = 0; // uses defaults for iv and v
@@ -6300,8 +6300,8 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	    gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_record),1);
 	  }
 	  
-	  fprintf(stderr,"resizing to: %i %i\n",buffp[sbnum]->param_set.npts,1);
-	  buff_resize(buffp[dbnum],buffp[sbnum]->param_set.npts,1); // set the size of the buffer.
+	  fprintf(stderr,"resizing to: %i %i\n",buffp[sbnum]->npts,1);
+	  buff_resize(buffp[dbnum],buffp[sbnum]->npts,1); // set the size of the buffer.
 	  fprintf(stderr,"setting combo box to %i\n",add_sub.index[dbnum]+1);
 	  gtk_combo_box_set_active(GTK_COMBO_BOX(fit_data.d_buff),add_sub.index[dbnum]+1);
 	  
@@ -6311,10 +6311,10 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	}
 	else{ // we requested an existing buffer.  See if we need to resize
 	  if (buffp[dbnum]->npts2 < gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) ||
-	      buffp[dbnum]->param_set.npts != buffp[sbnum]->param_set.npts ||
+	      buffp[dbnum]->npts != buffp[sbnum]->npts ||
 	      gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) == 0){
-	    fprintf(stderr,"resizing buffer to : %i %i\n",buffp[sbnum]->param_set.npts,buffp[dbnum]->npts2+1);
-	    buff_resize(buffp[dbnum],buffp[sbnum]->param_set.npts,buffp[dbnum]->npts2+1);
+	    fprintf(stderr,"resizing buffer to : %i %i\n",buffp[sbnum]->npts,buffp[dbnum]->npts2+1);
+	    buff_resize(buffp[dbnum],buffp[sbnum]->npts,buffp[dbnum]->npts2+1);
 
 	    // set the combo box so subsequent attempts go to the same place, if we said append
 	    if (gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record)) == 0){
@@ -6324,9 +6324,9 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	  }
 	}
 	// ok, so we should be ready to go.
-	for (i=0;i<buffp[sbnum]->param_set.npts*2;i++){
+	for (i=0;i<buffp[sbnum]->npts*2;i++){
 	  buffp[dbnum]->data[i + (gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.d_record))-1)
-			     *buffp[dbnum]->param_set.npts*2] = spect[i];	  	  
+			     *buffp[dbnum]->npts*2] = spect[i];	  	  
 	}
 	draw_canvas(buffp[dbnum]);
       }
@@ -6348,7 +6348,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	  gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record)) == buffp[sbnum]->disp.record ){
 	//	fprintf(stderr,"drawing the calc'd trace\n");
 	draw_canvas(buffp[sbnum]);
-	draw_row_trace(buffp[sbnum],0,0,spect,buffp[sbnum]->param_set.npts,&colours[BLUE],0);
+	draw_row_trace(buffp[sbnum],0,0,spect,buffp[sbnum]->npts,&colours[BLUE],0);
 	//	draw_row_trace(buffp[sbnum],0,0,spect,n/2,&colours[GREEN],1);
 
 	gtk_widget_queue_draw_area(buffp[sbnum]->win.canvas,1,1,buffp[sbnum]->win.sizex,buffp[sbnum]->win.sizey);
@@ -6384,7 +6384,7 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
   i = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
   sbnum = add_sub.index[i];
 
-  npts=buffp[sbnum]->param_set.npts;
+  npts=buffp[sbnum]->npts;
 
   //initialize data array.
   for (i=0;i<npts*2;i++) ur[i] = 0.;
@@ -6849,7 +6849,7 @@ struct sockaddr_un my_addr;
 struct sockaddr_un from;
 int fds;
 
-void script_notify_acq_complete(){
+gint script_notify_acq_complete(){
 
   char mess[13]="ACQ_COMPLETE";
 
@@ -6864,7 +6864,7 @@ void script_notify_acq_complete(){
   }
 
 
-  return;
+  return FALSE;
 }
 
 
@@ -7219,7 +7219,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	    }
 	    gtk_adjustment_set_value( GTK_ADJUSTMENT(param_button[i].adj), (double) ival);
 	    //buffp[current]->param_set.parameter[i].i_val = ival;
-	    //	    show_parameter_frame( &buffp[current]->param_set );
+	    //	    show_parameter_frame( &buffp[current]->param_set ,buffp[current]->npts);
 	    //	    fprintf(stderr,"updated param %s to %i\n",pname,ival);
 	    strcpy(output,"PARAM updated");
 	    return 1;
@@ -7237,7 +7237,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	   
 	    gtk_adjustment_set_value( GTK_ADJUSTMENT(param_button[i].adj), (double) fval);
 	    //	    buffp[current]->param_set.parameter[i].f_val = fval;
-	    //      show_parameter_frame( &buffp[current]->param_set );
+	    //      show_parameter_frame( &buffp[current]->param_set ,buffp[current]->npts);
 	    //	    fprintf(stderr,"updated param %s to %lf\n",pname,fval);
 	    strcpy(output,"PARAM updated");
 	    return 1;	    
@@ -7504,7 +7504,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
       float scale;
       int pt;
       sscanf(input+6,"%i %f",&pt,&scale);
-      if (pt >= 0 && pt < buffp[*bnum]->param_set.npts ){
+      if (pt >= 0 && pt < buffp[*bnum]->npts ){
 	scale_data(buffp[*bnum],pt,scale);
 	strcpy(output,"DATA SCALED");
 	return 1;
@@ -7534,10 +7534,10 @@ void scale_data(dbuff *buff,int pt,float scale){
   float sval;
   
   for (j=0;j<buff->npts2;j++){
-    sval = scale/buff->data[2*pt+j*2*buff->param_set.npts];
-    for (i=0;i<buff->param_set.npts;i++){
-      buff->data[2*i+j*2*buff->param_set.npts] *= sval;
-      buff->data[2*i+j*2*buff->param_set.npts+1] *= sval;
+    sval = scale/buff->data[2*pt+j*2*buff->npts];
+    for (i=0;i<buff->npts;i++){
+      buff->data[2*i+j*2*buff->npts] *= sval;
+      buff->data[2*i+j*2*buff->npts+1] *= sval;
     }
   }
 
@@ -7553,7 +7553,7 @@ void shim_integrate( GtkWidget *action, dbuff *buff )
 
   CHECK_ACTIVE(buff);
 
-  //  fprintf(stderr,"%d %d\n\n", buff->param_set.npts, buff->npts2);
+  //  fprintf(stderr,"%d %d\n\n", buff->npts, buff->npts2);
 
 
   do_shim_integrate(buff,&int1,&int2,&int3);
@@ -7587,8 +7587,8 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
 
   // find region to integrate...
 
-  i1=(int) (buff->disp.xx1 * (buff->param_set.npts-1) +.5);
-  i2=(int) (buff->disp.xx2 * (buff->param_set.npts-1) +.5);
+  i1=(int) (buff->disp.xx1 * (buff->npts-1) +.5);
+  i2=(int) (buff->disp.xx2 * (buff->npts-1) +.5);
 
   /*
   j1=(int) (buff->disp.yy1 * (npts2-1) +.5);
@@ -7606,20 +7606,20 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
 
     for(i=i1;i<=i2;i++)
       for(j=j1;j<=j2;j++)
-	if (buff->data[2*i+2*j*buff->param_set.npts] > max)
-	  max = buff->data[2*i+2*j*buff->param_set.npts];
+	if (buff->data[2*i+2*j*buff->npts] > max)
+	  max = buff->data[2*i+2*j*buff->npts];
     
     thresh = max*.01;
     thresh = 0.0;
     for( i=i1;i<=i2;i++) {
       
-      freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
+      freq1 = - ( (double) i * buff->param_set.sw/buff->npts
 		  - (double) buff->param_set.sw/2.) *2 * M_PI;
       for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
-	if (fabs(buff->data[2*i+j*2*buff->param_set.npts]) > thresh){
+	if (fabs(buff->data[2*i+j*2*buff->npts]) > thresh){
 	  freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
-	  *int1 += freq2*freq1*buff->data[2*i + j* 2*buff->param_set.npts];
-	  *int2 += buff->data[2*i + j* 2*buff->param_set.npts];
+	  *int1 += freq2*freq1*buff->data[2*i + j* 2*buff->npts];
+	  *int2 += buff->data[2*i + j* 2*buff->npts];
 	}
       }
     }
@@ -7633,7 +7633,7 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
     int count=0;
     max = 0;
     imax = 0;
-    for (i=0;i<buff->param_set.npts;i++)
+    for (i=0;i<buff->npts;i++)
       if (buff->data[2*i] > max){
 	max = buff->data[2*i];
 	imax = i;
@@ -7645,7 +7645,7 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
     // now start at max, go out each way till the signal goes negative
 
     // find noise using x= 0.1 -> 0.15 
-    for (i=0.1*buff->param_set.npts;i<0.15*buff->param_set.npts;i++){
+    for (i=0.1*buff->npts;i<0.15*buff->npts;i++){
       count += 1;
       sum += buff->data[2*i];
       sum2 += buff->data[2*i]*buff->data[2*i];
@@ -7654,13 +7654,13 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
     thresh = max/100.;
     fprintf(stderr,"thresh is: %f\n",thresh);
 
-    for (i=imax;i<buff->param_set.npts;i++)
+    for (i=imax;i<buff->npts;i++)
       if (buff->data[2*i] < thresh) {
 	i2 = i-1;
-	i=buff->param_set.npts+1;
+	i=buff->npts+1;
       }
-    if (i == buff->param_set.npts){
-      i2 = buff->param_set.npts-1;
+    if (i == buff->npts){
+      i2 = buff->npts-1;
       fprintf(stderr,"no negative found on high side\n");
     }
     for(i=imax;i>=0;i--)
@@ -7676,13 +7676,13 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
     //  */
 
     for(i=i1;i<=i2;i++){
-      freq1 = - ( (double) i * buff->param_set.sw/buff->param_set.npts
+      freq1 = - ( (double) i * buff->param_set.sw/buff->npts
 		  - (double) buff->param_set.sw/2.);
-      *int1 += buff->data[2*i+buff->param_set.npts*2*buff->disp.record];
-      *int2 += buff->data[2*i+buff->param_set.npts*2*buff->disp.record]*freq1;
-      *int3 += buff->data[2*i+buff->param_set.npts*2*buff->disp.record]*freq1*freq1;
+      *int1 += buff->data[2*i+buff->npts*2*buff->disp.record];
+      *int2 += buff->data[2*i+buff->npts*2*buff->disp.record]*freq1;
+      *int3 += buff->data[2*i+buff->npts*2*buff->disp.record]*freq1*freq1;
       // this was just so we can see how terrible our weighted region looks.
-      //      buff->data[2*i+buff->param_set.npts*2*buff->disp.record] 
+      //      buff->data[2*i+buff->npts*2*buff->disp.record] 
       // *= freq1*freq1;
     }
     *int2 /= *int1;
@@ -7707,7 +7707,7 @@ void first_point_auto_phase(){
     ls = buffp[current]->process_data[LS].val;
   }
   fprintf(stderr,"left shift will be: %i\n",ls);
-  npts = buffp[current]->param_set.npts;
+  npts = buffp[current]->npts;
 
 
   // if we're going to baseline correct, do it now.

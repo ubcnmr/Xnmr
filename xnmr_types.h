@@ -72,7 +72,7 @@ typedef struct {
 #define MAX_PROCESS_FUNCTIONS 64
 
 typedef struct {
-  //  int npts1; /* number of pts in dimension 1:  moved into param_set */
+  int npts; /* number of pts in dimension 1:  moved into param_set */
   int npts2; /* this is how many records there are in memory, num_acqs_2d is
 		how many we'll acquire next go (in param_set) */
   int buffnum;

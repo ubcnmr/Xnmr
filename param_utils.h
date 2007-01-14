@@ -49,7 +49,7 @@ typedef struct{
 typedef struct {
   parameter_t parameter[ MAX_PARAMETERS ];
   int num_parameters;
-  int npts; /* number of points in data set */
+  //  int tnpts; /* number of points in data set - used only temporarily in show_parameter_frame_mutex_wrap */
   long unsigned int num_acqs;  // this thing needs to be arrayable
   unsigned int num_acqs_2d;
   unsigned long sw;
