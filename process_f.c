@@ -394,12 +394,12 @@ gint do_bft(GtkWidget *widget, double *unused)
     //    fprintf(stderr,"FT_FLAG is false\n");
     scale = 2.0;
   }
-  data = g_malloc(4* buff->npts*2*2);
+  data = g_malloc(sizeof(float)* buff->npts*2*2);
 
   for(i=0;i<buff->npts2;i++){
     /* do ft for each 1d spectrum */
     // copy data out 
-    memset(data,0,4*buff->npts*4);
+    memset(data,0,4*buff->npts*sizeof(float));
 
     for (j=0;j<buff->npts;j++){
       data[j*4]=buff->data[i*2*buff->npts + j*2];
@@ -1041,7 +1041,7 @@ GtkWidget* create_process_frame()
   GtkWidget *table, *frame, *button;
   GSList *group;
   int i;
-  int nu;
+  long nu;
   GtkWidget *hbox;
 
   active_process_data = NULL;
@@ -1652,7 +1652,7 @@ GtkWidget* create_process_frame_2d()
   GtkWidget *table, *frame, *button;
   //  GSList *group;
   //  int i;
-  int nu;
+  long nu;
 
 
   /* already done in create 1d 

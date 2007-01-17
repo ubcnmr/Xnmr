@@ -1160,7 +1160,7 @@ void draw_oned(dbuff *buff,float extraxoff,float extrayoff,float *data
     
   }
   if(buff->disp.mag){
-    temp_data = g_malloc(8*buff->npts);
+    temp_data = g_malloc(2*sizeof(float)*buff->npts);
     for (i=0;i<buff->npts;i++)
       temp_data[i*2] = sqrt(data[2*i]*data[2*i]+data[2*i+1]*data[2*i+1]);
     draw_row_trace(buff,extraxoff,extrayoff,temp_data,npts,&colours[BLUE],0);
@@ -3166,7 +3166,7 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
     /*
     if ( buff->npts2 %2 ==1){
       buff->npts2 -=1; // throw away last record 
-      buff->data=g_realloc(buff->data,2*4*buff->npts*buff->npts2);
+      buff->data=g_realloc(buff->data,2*sizeof(float)*buff->npts*buff->npts2);
       //fprintf(stderr,"points are odd, killing last\n");
       } */
 
@@ -4125,7 +4125,7 @@ return;
 
 }
 
-///////////////
+
 void file_export_binary(GtkAction *action,dbuff *buff)
 {
 
@@ -4193,9 +4193,9 @@ void file_export_binary(GtkAction *action,dbuff *buff)
 
     ny = (j2-j1)/(1+buff->is_hyper)+1;
 
-    lbuff = malloc(4*(ny+1)); 
+    lbuff = g_malloc(sizeof(float)*(ny+1)); 
 
-    // ok the first line is: number of point along y, then the y values
+    // ok the first line is: number of points along y, then the y values
      lbuff[0] = (float) ny;
 
 
@@ -4225,7 +4225,7 @@ void file_export_binary(GtkAction *action,dbuff *buff)
     }  
 
     //write out the first line:
-    fwrite(lbuff,4,ny+1,fstream);
+    fwrite(lbuff,sizeof(float),ny+1,fstream);
       
     // now do the data:
     
@@ -4240,23 +4240,18 @@ void file_export_binary(GtkAction *action,dbuff *buff)
 	lbuff[m] = buff->data[j*2*npts+2*i];
 	m+=1;
       }
-      fwrite(lbuff,4,ny+1,fstream);
+      fwrite(lbuff,sizeof(float),ny+1,fstream);
     }
     
     
     
-    free(lbuff);
+    g_free(lbuff);
 
     fclose(fstream);
     return;
 
 
 }
-
-///////////////////////
-
-
-
 
 
 
@@ -5094,7 +5089,7 @@ void do_spline(GtkAction *action, dbuff *buff){
   if (buff->npts != base.undo_num_points){
     if (base.undo_buff != NULL) 
       g_free(base.undo_buff);
-    base.undo_buff = g_malloc(buff->npts*8);
+    base.undo_buff = g_malloc(buff->npts*2*sizeof(float));
     base.undo_num_points = buff->npts;
   }
   for(i=0;i<base.undo_num_points*2;i++)
@@ -5102,7 +5097,7 @@ void do_spline(GtkAction *action, dbuff *buff){
   base.redo_buff = buff->buffnum;
   
 
-  temp_data = g_malloc(2*8*buff->npts);
+  temp_data = g_malloc(2*2*sizeof(float)*buff->npts);
   calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
   
   // now apply to data.
@@ -5155,7 +5150,7 @@ void show_spline_fit(GtkAction *action, dbuff *buff){
   }
   
   
-  temp_data = g_malloc(8*buff->npts);
+  temp_data = g_malloc(2*sizeof(float)*buff->npts);
   calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
   
   draw_row_trace(buff, 0.,0.,temp_data,buff->npts, &colours[BLUE],0);
@@ -5187,7 +5182,7 @@ void undo_spline(GtkAction *action, dbuff *buff){
   }
 }
 
-void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
+void baseline_spline(dbuff *buff, GdkEventButton * action, GtkWidget *widget)
 {
 
   GdkEventButton *event;
@@ -5292,7 +5287,7 @@ void baseline_spline(dbuff *buff, int action, GtkWidget *widget)
       return;
     }
 
-    else fprintf(stderr,"baseline_spline got unknown action: %i\n",action);
+    else fprintf(stderr,"baseline_spline got unknown action: \n");
   }
 
 
@@ -5680,8 +5675,8 @@ if the number of records on the input records doesn't match for "each each", err
     }
     else if (i == 1 || j == 1){ // one is a sum all
       float *temp_data;
-      temp_data = g_malloc(npts*8);
-      memset(temp_data,0,npts*8);
+      temp_data = g_malloc(npts*2*sizeof(float));
+      memset(temp_data,0,npts*2*sizeof(float));
       if (i == 1){// first is a sum all
 	// collapse the sum all into temp:
 	for (k=0;k<npts*2;k++)
@@ -5739,8 +5734,8 @@ if the number of records on the input records doesn't match for "each each", err
     
     if (i==1){
       //      fprintf(stderr,"first source is sum all\n");
-      temp_data1 = g_malloc(npts*8);
-      memset(temp_data1,0,npts*8);
+      temp_data1 = g_malloc(npts*2*sizeof(float));
+      memset(temp_data1,0,npts*2*sizeof(float));
       for (k=0;k<npts*2;k++)
 	for(l=0;l<buffp[sbnum1]->npts2;l++)
 	  temp_data1[k]+=buffp[sbnum1]->data[k+l*npts*2];
@@ -5749,8 +5744,8 @@ if the number of records on the input records doesn't match for "each each", err
     else data1 = &buffp[sbnum1]->data[(i-2)*npts*2];
     if (j==1){
       //      fprintf(stderr,"second source is sum all\n");
-      temp_data2 = g_malloc(npts*8);
-      memset(temp_data2,0,npts*8);
+      temp_data2 = g_malloc(npts*2*sizeof(float));
+      memset(temp_data2,0,npts*2*sizeof(float));
       for (k=0;k<npts*2;k++)
 	for(l=0;l<buffp[sbnum2]->npts2;l++)
 	  temp_data2[k]+=buffp[sbnum2]->data[k+l*npts*2];
@@ -5784,7 +5779,7 @@ if the number of records on the input records doesn't match for "each each", err
 
 
 
-void fit_add_components(dbuff *buff, int action, GtkWidget *widget){
+void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget){
 
   int sbnum;
   float xval,sw;
@@ -6155,11 +6150,11 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       // allocate memory for fitting routine.
 
       liv = 82+5*MAX_FIT;
-      iv = malloc(liv*sizeof(int));
+      iv = g_malloc(liv*sizeof(int));
       lv = 105 + p*(n+2*p+17)+2*n;
-      v = malloc(lv*sizeof(float));
+      v = g_malloc(lv*sizeof(float));
       // use the original npts here because n might vary.
-      spect = malloc(buffp[sbnum]->npts*2*sizeof(float));
+      spect = g_malloc(buffp[sbnum]->npts*2*sizeof(float));
 
 
       iv[0] = 0; // uses defaults for iv and v
@@ -6356,9 +6351,9 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
   get_out_of_fit:
       
-      free(v);
-      free(iv);
-      free(spect);
+      g_free(v);
+      g_free(iv);
+      g_free(spect);
   }
   
 

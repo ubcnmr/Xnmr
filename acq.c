@@ -9,6 +9,7 @@
 //#define NO_RT_SCHED
 
 #define OLD_PORT_INTERRUPT 
+
 //#define RTAI_INTERRUPT
 
 // we should read the first two of these out of /proc/pci
@@ -267,7 +268,7 @@ int init_shm()
   data_shm = (struct data_shm_t*) shmat( data_shm_id, (char*)data_shm ,0 );
   prog_shm = (struct prog_shm_t*) shmat( prog_shm_id, (char*)prog_shm ,0 );
 
-  if( (int)data_shm == -1 || (int)prog_shm == -1 ) {
+  if( (long)data_shm == -1 || (long)prog_shm == -1 ) {
     perror( "acq: Error attaching shared memory segments" );
     //    data_shm = NULL;
     //    prog_shm = NULL;
@@ -1466,7 +1467,7 @@ else{
 	fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
 	for( i=0; i<data_shm->npts*2; i++ ) {
 	  f = (float) data_shm->data_image[i];
-	  fwrite( &f, 4, 1, fstream );
+	  fwrite( &f, sizeof(float), 1, fstream );
 	}
 	
 	
@@ -1912,7 +1913,7 @@ else{
 	  
 	  for( i=0; i<data_shm->npts*2; i++ ) {
 	    f = (float) data_shm->data_image[i];
-	    fwrite( &f, 4, 1, fstream );
+	    fwrite( &f, sizeof(float), 1, fstream );
 	  }
 	
 	  	

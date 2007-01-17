@@ -1185,8 +1185,8 @@ void open_phase(GtkAction *action, dbuff *buff)
 		      G_CALLBACK( pivot_set_event), buff);
 
   if(buff->disp.dispstyle==SLICE_ROW){
-    phase_data.data=g_malloc(buff->npts*8);
-    phase_data.data2=g_malloc(buff->npts*8);
+    phase_data.data=g_malloc(buff->npts*2*sizeof(float));
+    phase_data.data2=g_malloc(buff->npts*2*sizeof(float));
     phase_npts = buff->npts;
     //copy the data to be phased to a safe place:
 
@@ -1198,8 +1198,8 @@ void open_phase(GtkAction *action, dbuff *buff)
 
   }
   else if(buff->disp.dispstyle==SLICE_COL){
-    phase_data.data=g_malloc(buff->npts2*4);
-    phase_data.data2=g_malloc(buff->npts2*4);
+    phase_data.data=g_malloc(buff->npts2*2*sizeof(float));
+    phase_data.data2=g_malloc(buff->npts2*2*sizeof(float));
     phase_npts = buff->npts2/2;
     printf("phase_npts is: %i\n",phase_npts);
     //copy the data to be phased to a safe place:

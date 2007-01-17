@@ -173,7 +173,7 @@ int xnmr_init_shm()
     }
     data_shm = (struct data_shm_t*) shmat( data_shm_id, (char*)data_shm ,0 );
     
-    if( (int) data_shm == -1 ) {
+    if( (long) data_shm == -1 ) {
       shmctl ( data_shm_id, IPC_RMID, NULL );
       perror( "xnmr_ipc : Error attaching shared memory segment" );
       fprintf(stderr,"Probably this means that another user is running Xnmr\n or Xnmr crashed, try Xnmr --noacq or ipcs\n");
@@ -190,7 +190,7 @@ int xnmr_init_shm()
 
   data_shm = (struct data_shm_t*) shmat( data_shm_id, (char*)data_shm ,0 );
 
-  if( (int)data_shm == -1 ) {
+  if( (long)data_shm == -1 ) {
     perror( "xnmr_ipc : Error attaching shared memory segment" );
       exit(1);
   }

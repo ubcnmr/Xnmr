@@ -165,7 +165,6 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 
   //    fprintf(stderr,"coming into start_button, norecur is: %i\n",norecur);
   
-  
   buff = buffp[ current ];
 
   if (norecur == 1){
@@ -263,6 +262,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
     // we just dealt with coming down and ACQ_STOPPED
     else {  
       if (acq_in_progress==ACQ_RUNNING){  // so this is button coming down but already running
+	/*
 	//	fprintf(stderr,"coming down but already running\n");
 	if ((int) data == 0 && data_shm->mode == NORMAL_MODE) {
 	  //	  fprintf(stderr,"button coming down but running data == 0\n");
@@ -271,7 +271,10 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 	if ((int) data == 1 && data_shm->mode == NORMAL_MODE_NOSAVE){
 	  //	  fprintf(stderr,"button coming down but running data == 1\n");
 	  return 0;
-	}
+	} 
+	data isn't used for anything anymore... */
+	fprintf(stderr,"button coming down but running\n");
+      
 	//	fprintf(stderr,"button coming down, but wasn't stopped setting norecur, raising button\n");
 	norecur=1;
 	gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );

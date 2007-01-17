@@ -218,7 +218,7 @@ void fitting(GtkAction *action,dbuff *buff);
 //void reset_dsp_and_synth(dbuff *buff, int action, GtkWidget *widget);
 void reset_dsp_and_synth(GtkAction *action,dbuff *buff);
 
-void baseline_spline(dbuff *buff, int action, GtkWidget *widget);
+void baseline_spline(dbuff *buff, GdkEventButton * action, GtkWidget *widget);
 void pick_spline_points(GtkAction *action,dbuff *buff);
 void do_spline(GtkAction *action,dbuff *buff);
 void clear_spline(GtkAction *action,dbuff *buff);

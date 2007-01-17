@@ -6,8 +6,7 @@
 
 
 #CC = icc
-
-CFLAGS = -g  -O2 -march=pentium3  -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
+CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 #O3 causes serious problems with rtai!
 
 # for icc:
@@ -75,7 +74,7 @@ buff.o: buff.c xnmr.h buff.h param_f.h panel.h param_utils.h xnmr_ipc.h p_signal
 	$(CC) $(CFLAGS) -c buff.c
 
 four1.o: four1.c
-	$(CC) $(CFLAGS) -c four1.c
+	$(CC) $(CFLAGS) -fPIC -c four1.c
 spline.o: spline.c
 	$(CC) $(CFLAGS) -c spline.c
 splint.o: splint.c

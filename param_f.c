@@ -47,7 +47,7 @@ GtkWidget *npts_spin_button;
 
 struct parameter_button_t param_button[ MAX_PARAMETERS ];
 int num_buttons = 0;
-int active_button = -1;
+long active_button = -1;
 char doing_2d_update=0;
 
 parameter_set_t* current_param_set = NULL;
@@ -1228,14 +1228,14 @@ gint update_paths( GtkWidget* widget, gpointer data )
   gint param_spin_pressed( GtkWidget* widget, GdkEventButton *event, gpointer data ) 
   { 
     // fprintf(stderr, "new active button is %d\n", (int) data ); 
-    active_button = (int) data; 
+    active_button = (long) data; 
     return FALSE;  // new for gtk+-2.0
   } 
 
 
   void show_parameter_frame( parameter_set_t *param_set, int npts) 
   { 
-    int i,tab_height; 
+    long i,tab_height; 
     char s[PATH_LENGTH],*lpath; 
 
     current_param_set = param_set; 
@@ -1373,7 +1373,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	  break; 
 	  
         default: 
-	  fprintf(stderr, "invalid type : %c can't build button %d\n", param_set->parameter[i].type, i ); 
+	  fprintf(stderr, "invalid type : %c can't build button %ld\n", param_set->parameter[i].type, i ); 
 	  break; 
         } 
     } 

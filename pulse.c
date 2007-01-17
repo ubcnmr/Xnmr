@@ -1119,7 +1119,7 @@ int is_a_float_device(int device_id)
    data_shm_id = shmget( DATA_SHM_KEY, data_size,0); 
    prog_shm_id = shmget( PROG_SHM_KEY, prog_size,0); 
 
-   if( (int)data_shm == -1 || (int)prog_shm == -1 ) { 
+   if( (long)data_shm == -1 || (long)prog_shm == -1 ) { 
      perror( "pulse: Error getting shared memory segments" ); 
      exit(1); 
    } 
@@ -1130,7 +1130,7 @@ int is_a_float_device(int device_id)
 
 
 
-   if( (int)data_shm == -1 || (int)prog_shm == -1 ) { 
+   if( (long)data_shm == -1 || (long)prog_shm == -1 ) { 
      perror( "pulse: Error attaching shared memory segments" ); 
      exit(1); 
    } 
