@@ -1,7 +1,7 @@
 # Makefile for Xnmr Project
 #
 # UBC Physics
-#
+
 # ffloat-store prevents reals from being stored in registers.
 
 
@@ -16,6 +16,9 @@ all: Xnmr acq libxnmr.so Xnmr_preproc
 
 spin_bug: spin_bug.c
 	cc -o spin_bug -g -Wall `pkg-config --cflags gtk+-2.0` spin_bug.c `pkg-config --libs gtk+-2.0`
+
+table_bug: table_bug.c
+	cc -o table_bug -g -Wall `pkg-config --cflags gtk+-2.0` table_bug.c `pkg-config --libs gtk+-2.0`
 
 chooser_bug.o: chooser_bug.c
 	cc -c chooser_bug.c $(CFLAGS)

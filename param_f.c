@@ -813,28 +813,27 @@ gint update_paths( GtkWidget* widget, gpointer data )
     num_buttons = 0; 
 
     param_frame = gtk_frame_new("Parameters"); 
-    gtk_widget_show( param_frame ); 
 
     gtk_container_set_border_width(GTK_CONTAINER (param_frame),5); 
-    gtk_widget_set_size_request(param_frame,850,300); 
+    //     gtk_widget_set_size_request(param_frame,900,300); 
 
     param_scrolled_window =  gtk_scrolled_window_new( NULL, NULL);
     gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW(param_scrolled_window),
 				     GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 				     
     gtk_container_add(GTK_CONTAINER(param_frame),param_scrolled_window);
-    gtk_widget_show(param_scrolled_window);
 
     /* arguments are homogeneous and spacing  */
-    param_table = gtk_table_new(10,6,TRUE); /* rows, columns, homogeneous  */
-    //    gtk_widget_set_size_request(param_table,850,0); // got me, but it seems to keep it from scrolling horizontally
+    param_table = gtk_table_new(3,6,TRUE); /* rows, columns, homogeneous  */
+    
+    gtk_table_resize(GTK_TABLE(param_table),12,6);
+    gtk_table_resize(GTK_TABLE(param_table),3,6);
+
 
     //    gtk_table_set_row_spacings(GTK_TABLE(param_table),1);
-    gtk_widget_show (param_table); 
 
 
     vbox=gtk_vbox_new(FALSE,0);
-    gtk_widget_show(vbox);
     gtk_box_pack_start(GTK_BOX(vbox),param_table,FALSE,FALSE,0);
     label=gtk_label_new("");
     gtk_box_pack_start(GTK_BOX(vbox),label,TRUE,TRUE,0);
@@ -851,33 +850,26 @@ gint update_paths( GtkWidget* widget, gpointer data )
     //    gtk_widget_set_size_request(GTK_WIDGET(label),50,25);
 
     gtk_table_attach_defaults(GTK_TABLE(param_table),label,0,1,0,1); 
-    gtk_widget_show( label ); 
     
 
     label = gtk_label_new( "Save Path:" ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),label,0,1,1,2); 
-    gtk_widget_show( label ); 
 
     label = gtk_label_new( "#Acquisitions:" ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),label,3,4,0,1); 
-    gtk_widget_show( label ); 
 
     label = gtk_label_new( "#Acquisitions 2d:" ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),label,3,4,1,2); 
-    gtk_widget_show( label ); 
 
   
     label = gtk_label_new( "dwell (us)" ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),label,2,3,2,3); 
-    gtk_widget_show( label ); 
 
     label = gtk_label_new( "sw (Hz)" ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),label,0,1,2,3); 
-    gtk_widget_show( label ); 
   
     label = gtk_label_new( "npts" ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),label,4,5,2,3); 
-    gtk_widget_show( label ); 
 
 
 
@@ -901,15 +893,12 @@ gint update_paths( GtkWidget* widget, gpointer data )
  
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( dwell_spin_button ), GTK_UPDATE_IF_VALID ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),dwell_spin_button,3,4,2,3); 
-    gtk_widget_show( dwell_spin_button ); 
 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( sw_spin_button ), GTK_UPDATE_IF_VALID ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),sw_spin_button,1,2,2,3); 
-    gtk_widget_show( sw_spin_button ); 
 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( npts_spin_button ), GTK_UPDATE_IF_VALID ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),npts_spin_button,5,6,2,3); 
-    gtk_widget_show( npts_spin_button ); 
 
 
 
@@ -948,8 +937,6 @@ gint update_paths( GtkWidget* widget, gpointer data )
     // get annoying messages about not being able to change.
     // 
 
-    gtk_widget_show( prog_text_box ); 
-    gtk_widget_show( save_text_box ); 
 
     acqs_adj = gtk_adjustment_new(1,1,10000000,1,10,0 ); 
     acqs_2d_adj = gtk_adjustment_new(1,1,65535,1,10,0 ); 
@@ -965,25 +952,21 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( acqs_spin_button ), GTK_UPDATE_IF_VALID ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),acqs_spin_button,4,5,0,1); 
-    gtk_widget_show( acqs_spin_button ); 
 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( acqs_2d_spin_button ), GTK_UPDATE_IF_VALID ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),acqs_2d_spin_button,4,5,1,2); 
-    gtk_widget_show( acqs_2d_spin_button ); 
 
 
 
     button = gtk_button_new_with_label( "Array" ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),button,5,6,0,1); 
     g_signal_connect( G_OBJECT( button ), "clicked", G_CALLBACK( show_2d_popup ), &active_button ); 
-    gtk_widget_show( button ); 
 
-    gtk_widget_show (param_table); 
 
 
 
     create_2d_popup(); 
-
+        gtk_widget_show_all(param_frame);
 
     return param_frame; 
   } 
@@ -1301,7 +1284,8 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
     // fprintf(stderr, "building %d buttons\n", param_set->num_parameters ); 
     tab_height = 3+(param_set->num_parameters+2)/3;
-    if (tab_height <  10) tab_height = 10;
+    if (tab_height <  3) tab_height = 3;
+    printf("resizing height to: %i\n",tab_height);
     gtk_table_resize(GTK_TABLE(param_table),tab_height,6);
     
     for( i=0; i < param_set->num_parameters; i++ ) { 
