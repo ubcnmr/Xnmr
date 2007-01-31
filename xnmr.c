@@ -332,6 +332,7 @@ int main(int argc,char *argv[])
 
   panwindow=gtk_window_new( GTK_WINDOW_TOPLEVEL );
 
+  gtk_window_set_default_size(GTK_WINDOW(panwindow),1000,300);
 
   g_signal_connect(G_OBJECT(panwindow),"delete_event",
 		     G_CALLBACK (destroy_all),NULL);

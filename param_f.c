@@ -818,17 +818,12 @@ gint update_paths( GtkWidget* widget, gpointer data )
     //     gtk_widget_set_size_request(param_frame,900,300); 
 
     param_scrolled_window =  gtk_scrolled_window_new( NULL, NULL);
-    gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW(param_scrolled_window),
-				     GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 				     
     gtk_container_add(GTK_CONTAINER(param_frame),param_scrolled_window);
 
     /* arguments are homogeneous and spacing  */
     param_table = gtk_table_new(3,6,TRUE); /* rows, columns, homogeneous  */
     
-    gtk_table_resize(GTK_TABLE(param_table),12,6);
-    gtk_table_resize(GTK_TABLE(param_table),3,6);
-
 
     //    gtk_table_set_row_spacings(GTK_TABLE(param_table),1);
 
@@ -836,18 +831,21 @@ gint update_paths( GtkWidget* widget, gpointer data )
     vbox=gtk_vbox_new(FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox),param_table,FALSE,FALSE,0);
     label=gtk_label_new("");
-    gtk_box_pack_start(GTK_BOX(vbox),label,TRUE,TRUE,0);
+    gtk_box_pack_start(GTK_BOX(vbox),label,TRUE,FALSE,0);
 
     gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(param_scrolled_window),vbox); 
 
+    gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW(param_scrolled_window),
+				     GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+
   
+
+
     /* 
      *  Now start to put parameter fields into the frame 
       */
 
     label = gtk_label_new( "Pulse Program:" ); 
-
-    //    gtk_widget_set_size_request(GTK_WIDGET(label),50,25);
 
     gtk_table_attach_defaults(GTK_TABLE(param_table),label,0,1,0,1); 
     
@@ -966,7 +964,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
 
     create_2d_popup(); 
-        gtk_widget_show_all(param_frame);
+    gtk_widget_show_all(param_frame);
 
     return param_frame; 
   } 
@@ -1285,9 +1283,8 @@ gint update_paths( GtkWidget* widget, gpointer data )
     // fprintf(stderr, "building %d buttons\n", param_set->num_parameters ); 
     tab_height = 3+(param_set->num_parameters+2)/3;
     if (tab_height <  3) tab_height = 3;
-    printf("resizing height to: %i\n",tab_height);
+
     gtk_table_resize(GTK_TABLE(param_table),tab_height,6);
-    
     for( i=0; i < param_set->num_parameters; i++ ) { 
 
       strcpy( s, "" ); 
@@ -1363,6 +1360,14 @@ gint update_paths( GtkWidget* widget, gpointer data )
     } 
 
     num_buttons = param_set->num_parameters; 
+
+    /* this feels like a hack - but it makes the scrolled window get
+       sized correctly */
+    gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW(param_scrolled_window),
+				     GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+    gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW(param_scrolled_window),
+				     GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+
 
   }
 

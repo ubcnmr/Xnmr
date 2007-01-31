@@ -469,17 +469,21 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
 GtkWidget* create_panels()
 
 {
-  GtkWidget *pantable, *page, *label, *button;
+  GtkWidget *panhbox,*panvbox, *page, *label, *button;
 
   acq_in_progress = ACQ_STOPPED;
  
   //fprintf(stderr, "creating control panel\n" );
 
-  pantable = gtk_table_new(9,3,FALSE);
   book = gtk_notebook_new();
 
+  panhbox=gtk_hbox_new(FALSE,0);
+  panvbox=gtk_vbox_new(FALSE,0);
+
   gtk_notebook_set_tab_pos(GTK_NOTEBOOK(book),GTK_POS_BOTTOM);
-  gtk_table_attach_defaults(GTK_TABLE(pantable),book,0,2,0,9);
+
+  gtk_box_pack_start(GTK_BOX(panhbox),book,TRUE,TRUE,0);
+  gtk_box_pack_start(GTK_BOX(panhbox),panvbox,FALSE,FALSE,0);
 
   label=gtk_label_new( "Process" );
   //  gtk_widget_show(label);
@@ -503,9 +507,9 @@ GtkWidget* create_panels()
 
 
   gtk_notebook_set_current_page(GTK_NOTEBOOK(book),0);
-  //  gtk_widget_show(pantable);
 
-  start_button = gtk_toggle_button_new_with_label( "Acquire and Save" );
+
+    start_button = gtk_toggle_button_new_with_label( "Acquire and Save" );
 
   if(no_acq == FALSE){
   
@@ -517,8 +521,7 @@ GtkWidget* create_panels()
   }
   else
     g_signal_connect (G_OBJECT(start_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
-  gtk_table_attach_defaults(GTK_TABLE(pantable),start_button,2,3,0,1);
-  //  gtk_widget_show(start_button);
+  gtk_box_pack_start(GTK_BOX(panvbox),start_button,TRUE,TRUE,0);
 
 
 
@@ -534,10 +537,8 @@ GtkWidget* create_panels()
   }
   else
     g_signal_connect (G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(noacq_button_press),NULL);
-  gtk_table_attach_defaults(GTK_TABLE(pantable),start_button_nosave,2,3,1,2);
-  //  gtk_widget_show(start_button_nosave);
-  
-
+  gtk_box_pack_start(GTK_BOX(panvbox),start_button_nosave,TRUE,TRUE,0);
+    
 
 
   repeat_button = gtk_toggle_button_new_with_label( "Repeat" );
@@ -553,15 +554,17 @@ GtkWidget* create_panels()
   }
   else
     g_signal_connect (G_OBJECT(repeat_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
-  gtk_table_attach_defaults(GTK_TABLE(pantable),repeat_button,2,3,2,3);
-  //  gtk_widget_show(repeat_button);
 
+  gtk_box_pack_start(GTK_BOX(panvbox),repeat_button,TRUE,TRUE,0);
+
+
+  
   button = gtk_button_new_with_label( "Process" );
   script_widgets.process_button = button;
 
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(process_data), NULL);
-  gtk_table_attach_defaults(GTK_TABLE(pantable),button,2,3,3,4);
-  //  gtk_widget_show(button);
+  gtk_box_pack_start(GTK_BOX(panvbox),button,TRUE,TRUE,0);
+
 
   repeat_p_button = gtk_toggle_button_new_with_label( "Repeat and Process" );
   if(no_acq ==FALSE){
@@ -569,31 +572,28 @@ GtkWidget* create_panels()
   }
   else
     g_signal_connect (G_OBJECT(repeat_p_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
-  gtk_table_attach_defaults(GTK_TABLE(pantable),repeat_p_button,2,3,4,5);
-  //  gtk_widget_show(repeat_p_button);
+  gtk_box_pack_start(GTK_BOX(panvbox),repeat_p_button,TRUE,TRUE,0);
 
   button = gtk_button_new_with_label("Reload");
   g_signal_connect( G_OBJECT( button ), "clicked", G_CALLBACK( reload ), NULL );
-  gtk_table_attach_defaults(GTK_TABLE(pantable),button,2,3,5,6);
-  //  gtk_widget_show(button);
+  gtk_box_pack_start(GTK_BOX(panvbox),button,TRUE,TRUE,0);
 
-
-
+  
   button = gtk_button_new_with_label("Kill");
   if( no_acq == FALSE ){
   g_signal_connect( G_OBJECT( button ), "clicked", G_CALLBACK( kill_button_clicked ), NULL );
   }
   else
     g_signal_connect(G_OBJECT(button),"clicked", G_CALLBACK(noacq_kill_button_press), NULL);
-  gtk_table_attach_defaults(GTK_TABLE(pantable),button,2,3,6,7);
-  //  gtk_widget_show(button);
+  gtk_box_pack_start(GTK_BOX(panvbox),button,TRUE,TRUE,0);
+
 
   if ( no_acq == FALSE )
     acq_label = gtk_label_new( "Acq Stopped\n " );
   else
     acq_label = gtk_label_new( "NoAcq mode" );
-  gtk_table_attach_defaults( GTK_TABLE(pantable),acq_label,2,3,7,8 );
-  //  gtk_widget_show( acq_label );
+  gtk_box_pack_start(GTK_BOX(panvbox),acq_label,TRUE,TRUE,0);
+
 
   /*
   acq_2d_label = gtk_label_new( "" );
@@ -602,16 +602,15 @@ GtkWidget* create_panels()
   */
 
   time_remaining_label = gtk_label_new( " \n \n " );
-  gtk_table_attach_defaults( GTK_TABLE(pantable),time_remaining_label,2,3,8,9 );
-  //  gtk_widget_show( time_remaining_label );
+  gtk_box_pack_start(GTK_BOX(panvbox),time_remaining_label,TRUE,TRUE,0);
 
   /*  completion_time_label = gtk_label_new( "completion:\n" );
-  gtk_table_attach_defaults( GTK_TABLE(pantable),completion_time_label,2,3,10,11);
+  gtk_box_pack_start(GTK_BOX(panvbox),completion_time_label,TRUE,TRUE,0);
   gtk_widget_show(completion_time_label);
   */
 
-  gtk_widget_show_all(pantable);
-  return pantable;
+  gtk_widget_show_all(panhbox);
+  return panhbox;
   
 }
 

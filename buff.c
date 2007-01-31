@@ -641,7 +641,6 @@ dbuff *create_buff(int num){
     g_signal_connect(G_OBJECT(sbutton),"clicked",
 		       G_CALLBACK(sbutton_routine),buff);
     
-    gtk_widget_show(hbox3);
     gtk_box_pack_start(GTK_BOX(vbox1),hbox3,FALSE,FALSE,0);
     
 
@@ -707,7 +706,6 @@ dbuff *create_buff(int num){
 
     buff->win.slice_2d_lab=gtk_label_new("Slice");
     button=gtk_button_new();
-    gtk_widget_show(button);
     g_signal_connect(G_OBJECT(button),"clicked",
 		       G_CALLBACK(slice_2D_routine),buff);
     gtk_container_add(GTK_CONTAINER(button),buff->win.slice_2d_lab);
@@ -4770,9 +4768,8 @@ void calc_rms(GtkAction *action,dbuff *buff)
   CHECK_ACTIVE(buff);
 
   npts2 = buff->npts2;
-  if (npts2 % 2 == 1) npts2 -= 1;
-
- for (j = 0; j<npts2;j+=buff->is_hyper+1){      //do each slice and output all to screen
+  if (npts2 % 2 == 1 && buff->is_hyper) npts2 -= 1;
+  for (j = 0; j<npts2;j+=buff->is_hyper+1){      //do each slice and output all to screen
    sum=0.;
    sum2=0.;
    sumi=0.;
