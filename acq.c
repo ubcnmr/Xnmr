@@ -1310,8 +1310,8 @@ else{
 	    //	    fprintf(stderr, "acq: waiting for an interrupt\n" );
 	    while( read( int_fd, buffer, 1 ) <= 0 && done >=0)
 	      {
-		perror( "acq: PP_irq read broken" );
-		fflush(stdout);
+		//perror( "acq: PP_irq read broken" );
+		//fflush(stdout);
 	      }
 	    //	    fprintf(stderr, "acq: interrupt received\n" );
 #endif

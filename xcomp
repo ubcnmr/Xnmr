@@ -3,8 +3,8 @@
 #CC=gcc3
 CC=gcc
 
-CFLAGS="-O2 -Wall `pkg-config --cflags glib-2.0` -I/usr/share/Xnmr/include/"
-LDFLAGS="-O2 -Wall `pkg-config --libs glib-2.0` -I/usr/share/Xnmr/include/"
+CFLAGS=" -Wall `pkg-config --cflags glib-2.0` -I/usr/share/Xnmr/include/"
+LDFLAGS=" -Wall `pkg-config --libs glib-2.0` -I/usr/share/Xnmr/include/"
 
 #check to see if the source file is .x ?
 #remove any trailing .c

@@ -476,9 +476,9 @@ void parameter_not_found( char *name){
      
 
 
-
-     // start dump
   /*
+     // start dump
+  
      if (first_time == 1){
        //Dump the pulse program to a file in two formats 
        
@@ -517,7 +517,7 @@ void parameter_not_found( char *name){
        fclose( fid ); 
      }
      
-  */
+  */  
      // end dump
 
   // begun may not have been set - if we didn't actually do anything...
@@ -711,13 +711,15 @@ int is_a_float_device(int device_id)
    } 
 
    //   fprintf(stderr,"event_no: %i time: %lf \n",prog_shm->no_events,time);
+
    counts = (long long int) ( ( time *  CLOCK_SPEED ) -  0.5 ); 
 
 
 
    if( time <= 0 || counts <0 ) {
-     if (time < 0)
-       fprintf(stderr,"event: time < 0, ignored\n");
+     //     if (time < 0)
+     fprintf(stderr,"event: time < 0, ignored\n");
+     fprintf(stderr,"time was: %lg, counts: %lli\n",time,counts);
      return 0; 
    }
 
@@ -2367,148 +2369,3 @@ void start_noisy_loop(){
 }
 
 
-/*
- int go_back_one( float time, unsigned char num, ... ) 
-
- { 
-   va_list args; 
-   static int first_time=1;
-   unsigned int val;
-   int i,event_no; 
-   int device_id; 
-   unsigned long long int counts,so_far,counter,c1,c2;  
-
-   // this routine is to insert a single clock cycle event into a pulse sequence - but it does it
-   // at a position time before the present.
-
-   if( time <= 0 ) {
-     fprintf(stderr,"go_back_one: time <=  0, ignored: %f\n",time);
-     prog_shm->event_error = 1;
-     return -1; 
-   }
-
-   if (prog_shm->no_events == 0){
-     fprintf(stderr,"go_back_one: no events yet!! ignored\n");
-     prog_shm->event_error = 1;
-     return -1;
-   }
-
-   
-   counts = (long long int) ( ( time * (float) CLOCK_SPEED ) + 0.5 );  // yes + not - !!
-
-   //   fprintf(stderr,"go_back_one: %lli counts\n",counts);
-   // figure out where to insert our event.
-
-   event_no = -5;
-   so_far = 0;
-   for (i = prog_shm->no_events-1 ; i >= 0 ; i--){
-     so_far += TIME_OF(i) + 1;
-     if (so_far >= counts){
-       //       fprintf(stderr,"go_back_one: event %i\n",i);
-       event_no = i;
-       i=-5;
-     }
-   }
-   if( i == -1 ){ // then the pulse program is shorter than the time specified.
-     //     fprintf(stderr,"ok, go_back_one takes us to the first event\n");
-     counts = counts - so_far;
-     if (first_time == 1){
-       fprintf(stderr,"go_back_one: increasing pulseprog length by: %12.9f s\n",(float) counts /(float) CLOCK_SPEED);
-       first_time = 0;
-     }
-     shift_events(0);  // move all events from 0 on down to 1 on down.
-     event_no = 0;
-     set_timer(event_no,0);
-     
-     //     set defaults into first event
-     for (i = 0 ;i<num_dev;i++)
-       write_device(i,hardware_config[i].def_val,0);
-
-     counts -= 1; // that's for the zeroth event
-
-     if (counts > MAX_CLOCK_CYCLES){
-       fprintf(stderr,"what??? go_back_one: counts > MAX_CLOCK_CYCLES\n");
-       prog_shm->event_error = 1;
-     }
-
-     if (counts > 0){ // this is pointless - counts must always be >= 0 here?
-       counts -=1; // that's for this coming event
-       shift_events(0);  // already put defaults into first event
-       set_timer(event_no+1,counts);
-       //       fprintf(stderr,"first event, counts: %lli\n",counts);
-     }
-
-     // ok, so now we can stick the requested events into the first event
-   }
-   else{ // our event goes sometime into event # event_no
-     // three cases, either our event is at the start, in the middle or at the end of this event
-
-     //     fprintf(stderr,"so_far: %lli, counts: %lli\n",so_far,counts);
-
-     counter = TIME_OF(event_no) + 1;
-
-     if (so_far == counts){ // its at the very beginning
-       if (counter > 1) { // and the event is more than one clock cycle
-	 //	 fprintf(stderr,"go_back_one: exactly the first of an event\n");
-	 shift_events(event_no);
-	 counter -= 2;
-	 set_timer(event_no+1,counter);
-	 set_timer(event_no,0);
-
-       }// if the counter is only for 1 cycle, we're already set.
-       else{
-	 // fprintf(stderr,"already perfect event\n");
-       }
-     }
-     else if (so_far - counter + 1 == counts){ // its exactly the last one
-       //	 fprintf(stderr,"go_back_one: exactly the last count of an event\n");
-	 shift_events(event_no);
-	 counter -= 2;
-	 set_timer(event_no,counter);
-	 set_timer(event_no+1,0);
-	 event_no += 1;
-     }
-     else{ // its somewhere in the middle of the event
-       //	 fprintf(stderr,"go_back_one: somewhere in the middle of an event\n");
-	 shift_events(event_no);
-	 shift_events(event_no);
-	 c1 = (so_far - counts - 1 );
-	 set_timer(event_no,c1);
-	 set_timer(event_no+1,0);
-	 c2 = (counter - c1 - 3);
-	 set_timer(event_no+2,c2);
-	 event_no += 1;
-
-     }
-   }
-     // now write the requested devices into event_no
-
-   //set all the specified device information 
-
-   va_start( args, num ); 
-
-   for( i=0; i<num; i++ ) { 
-     device_id = (unsigned char) va_arg( args, int  ); 
-     if (device_id >= RF_OFFSET){ 
-       //       fprintf(stderr,"go_back_one: translating device: %i ",device_id);
-       device_id = tran_table[device_id-RF_OFFSET];
-       //       fprintf(stderr,"to device: %i\n",device_id);
-     }
-     val = va_arg( args, unsigned int ); 
-     //     fprintf(stderr,"go_back_one: device: %i, val %i\n",device_id,val);
-     write_device( device_id, val,event_no); 
-    
-   } 
-
-
-   if (event_no < 0 ){
-     prog_shm->event_error = 1;
-     fprintf(stderr,"go_back_one: event_no < 0\n");
-   }
-
-   return 0; 
-   va_end(args); 
-   
- }
-
-*/

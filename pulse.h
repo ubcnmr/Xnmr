@@ -24,7 +24,6 @@
 #define P180 180.
 #define P270 270.
 
-//#define SYNC_DSP go_back_one(get_dwell()*256,1,AD_SYNC,1)
 #define SYNC_DSP go_back(get_dwell()*256,(float) 1./CLOCK_SPEED,1,AD_SYNC,1)
 
 #define GET_PARAMETER_FLOAT( var ) fetch_float( #var, &var )

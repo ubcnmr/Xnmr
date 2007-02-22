@@ -3634,7 +3634,7 @@ gint check_overwrite( dbuff* buff, char* path )
     }
   }
 
-  fprintf(stderr,"about to mkdir: %s\n",path);
+  //  fprintf(stderr,"about to mkdir: %s\n",path);
 
 
   // ok, so we try to make the directory, though this now should nearly always fail, 

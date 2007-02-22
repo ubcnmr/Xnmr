@@ -22,6 +22,8 @@
     The whole EVENT needn't be on one line, but if it isn't, use a \ to indicate continuation on the next line
     Don't break a {device, value} pair across a line.
 
+    Modified Feb 22, 2007 so that if the device is a PHASE, AMP or GRAD device, we insert a (float) before the argument
+    One thing that is very confusing is that in the va_arg calls, we look for a double...
 
 */
 
@@ -29,9 +31,9 @@
 
 int deal(char *lbuff, FILE *infile, FILE *outfile){
 
-  char *p0,*p1,*eo;
+  char *p0,*p1,*eo,*tok2;
   char tok[NAME_LEN],olbuff[LBUFF_LEN];
-  int l,count;
+  int l,count,is_float;
 
   // here we need to parse the command line, figure out how many devices we're trying to control, and create the correct c
   // code.
@@ -93,15 +95,40 @@ int deal(char *lbuff, FILE *infile, FILE *outfile){
 	printf("\nFound a { without matching } on the same line\n");
 	return 1;
       }
+      // ok, so p1 points to the { and p1[l] points to the }
+      // check to see if we start with PHASE or AMP
+      
       strncpy(tok,p1+1,l);
+      p1 = p1+l+1;
+
       tok[l]=0;
+      // now tok has both our args in it.
+
       // make sure that the device, value pair acutally is a pair - that it has a "," in it
-      if (strstr(tok,",") == NULL){
+      tok2=strstr(tok,",");
+      if (tok2 == NULL){
 	printf("\nA device value pair doesn't seem to be a pair\n");
 	return 1;
       }
-      snprintf(&olbuff[strlen(olbuff)],LBUFF_LEN-strlen(olbuff),",%s",tok);
-      p1 = p1+l+1;
+      // now tok2 points to the ,
+
+      tok2[0]=0;
+      //      printf("first arg: %s, second arg: %s\n",tok,&tok2[1]);
+      
+      is_float = 0;
+
+      if((strstr(tok,"PHASE") != NULL ) || (strstr(tok,"GRAD") != NULL))
+	is_float = 1;
+
+      // treat AMP separately, because _AMP devices are the actual integer devices.
+      if((strstr(tok,"AMP") != NULL) && (strstr(tok,"_AMP") == NULL))
+	is_float = 1;
+      
+      // check first args for PHASE, AMP, GRAD
+      if (is_float)
+	snprintf(&olbuff[strlen(olbuff)],LBUFF_LEN-strlen(olbuff),",%s,(float) %s",tok,tok2+1);
+      else
+	snprintf(&olbuff[strlen(olbuff)],LBUFF_LEN-strlen(olbuff),",%s,%s",tok,tok2+1);
     }
 
     l = strcspn(p1+1,"{;\\");
