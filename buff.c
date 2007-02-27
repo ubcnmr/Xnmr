@@ -6694,13 +6694,8 @@ void queue_expt(GtkAction *action, dbuff *buff){
   }
 
 
-
-  // also want to add label to say how many expts in queue.
-
-
   if (data_shm->mode != NORMAL_MODE)
     popup_msg("Warning: currently acquisition is set to save to acq_temp!!",TRUE);
-
 
 
   if (upload_buff == buff->buffnum){
@@ -6708,6 +6703,9 @@ void queue_expt(GtkAction *action, dbuff *buff){
     return;
   }
 
+
+  // if we're a 2d buff currently, return to row view and resize buff to a 1d
+  if (buff->npts2 > 1) buff_resize(buff,buff->npts,1);
 
   // print buff num and file name into combo box
 
@@ -6719,10 +6717,13 @@ void queue_expt(GtkAction *action, dbuff *buff){
 
   queue.num_queued += 1;
 
+  // also want to add label to say how many expts in queue.
   set_queue_label();
 
   snprintf(path,PATH_LENGTH,"Buffer %i with save path:\n %s\n added to queue",
 	   buff->buffnum,buff->param_set.save_path);
+
+
 
   popup_msg(path,TRUE);
   

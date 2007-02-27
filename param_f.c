@@ -330,7 +330,7 @@ void update_acqs(int acqs){
 }
 
 
-  void update_2d_buttons()      //This methods updates the buttons when acq moves to a new dimension 
+  void update_2d_buttons()      //This methods updates the buttons when acq moves to a new value in 2nd d
   { 
     int i; 
     int rec;
