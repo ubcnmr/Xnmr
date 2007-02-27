@@ -481,7 +481,7 @@ int start_pprog()
 
   FILE *fs;
   char s[PATH_LENGTH];
-  char dpath[PATH_LENGTH],spath[PATH_LENGTH],*sp,command[2*PATH_LENGTH+3];
+  char dpath[PATH_LENGTH],spath[PATH_LENGTH],*sp,command[2*PATH_LENGTH+6];
   pid = fork();
 
   if( pid == 0 ) {  //start the pulse program
@@ -533,7 +533,7 @@ int start_pprog()
       path_strcat(spath,sp+1); // add the program
       path_strcat(spath,".x"); // put on the .x
       printf("source-code source is: %s\n",spath);
-      sprintf(command,"cp %s %s",spath,dpath);
+      sprintf(command,"cp -p %s %s",spath,dpath);
       printf("copy command is: %s\n",command);
       system(command);
       // if it fails, oh well.

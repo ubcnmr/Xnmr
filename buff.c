@@ -3686,8 +3686,8 @@ gint do_save( dbuff* buff, char* path )
 {
 
   FILE* fstream;
-  char fileN[ PATH_LENGTH ];
-  char s[ PARAMETER_LEN ];
+  char fileN[ PATH_LENGTH ],fileS[PATH_LENGTH];
+  char s[ PARAMETER_LEN ],command[2*PATH_LENGTH+6];
   int temp_npts2;
   //  fprintf(stderr, "do_save: got path: %s while current dir is: %s\n ", path,getcwd(fileN,PATH_LENGTH));
 
@@ -3743,6 +3743,24 @@ gint do_save( dbuff* buff, char* path )
   fwrite( buff->data, sizeof( float ), buff->npts*buff->npts2*2, fstream ); 
   
   fclose( fstream );
+
+
+  // now, if we had a reload path and its different from the save path, 
+  // find the pulse program and copy it, if it exists:
+  path_strcpy(fileN,path);
+  path_strcat(fileN,"/program"); // destination
+
+  
+  path_strcpy(fileS,buff->path_for_reload);
+  printf("path_for_reload is: %s\n",fileS);
+  path_strcat(fileS,"/program");
+  if (strncmp(fileS,fileN,PATH_LENGTH) != 0){
+    sprintf(command,"cp -p %s %s",fileS,fileN);
+    printf("source and dest appear to be different, going to try to copy program\nwith command: %s\n",command);
+    system(command);
+  }
+
+
 
   /* strip filename out of the path, and stick the path into global path */
 
