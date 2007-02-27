@@ -47,8 +47,7 @@ GtkWidget* time_remaining_label;
 //GtkWidget* completion_time_label;
 
 int upload_buff = 0;
-
-
+int last_upload_buff;  // used only for removing * from buffer names
 
 int  setup_channels(){
 
@@ -104,7 +103,7 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 
   //  fprintf(stderr,"in kill clicked, setting not green\nin progress: %i, mode: %i\n",acq_in_progress,data_shm->mode);
   gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
-
+  
   send_sig_acq( ACQ_KILL ); 
   
   if (acq_in_progress == ACQ_STOPPED) return 0;
@@ -204,9 +203,13 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 	//	fprintf(stderr,"setting mode NOSAVE\n");
 	data_shm->mode = NORMAL_MODE_NOSAVE;
       }
-
+      
       acq_process_data = buffp[ current ]->process_data;
+
+      last_upload_buff = upload_buff;
       upload_buff = current;
+      set_window_title(buffp[last_upload_buff]); // remove its star
+
       acq_param_set = current_param_set;
 
       // should really do this here, I think, and in repeat button, and repeat and process.
@@ -253,6 +256,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       send_sig_acq( ACQ_START );
       gdk_color_parse("green",&color);
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+      set_window_title(buffp[upload_buff]); // add a * to the name
 
       return 0;
         
@@ -346,7 +350,11 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
       data_shm->mode = REPEAT_MODE;  
       acq_process_data = buffp[ current ]->process_data;
       //fprintf(stderr, "Sending start repeat signal to ACQ\n" );      
+
+      last_upload_buff = upload_buff;
       upload_buff = current;
+      set_window_title(buffp[last_upload_buff]); // remove its star
+
       acq_param_set = current_param_set;
       // should really do this here, I think, and in repeat button, and repeat and process.
       send_paths();
@@ -362,6 +370,7 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
 
       acq_in_progress = ACQ_REPEATING;
+      set_window_title(buffp[upload_buff]);
       redraw = 0;
       //      last_draw();
       send_sig_acq( ACQ_START );
@@ -419,7 +428,12 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
       check_buff_size();
       data_shm->mode = REPEAT_MODE;        
       acq_process_data = buffp[ current ]->process_data;
+
+
+      last_upload_buff = upload_buff;
       upload_buff = current;
+      set_window_title(buffp[last_upload_buff]); // remove its star
+
       acq_param_set = current_param_set;
       // should really do this here, I think, and in repeat button, and repeat and process.
       send_paths();
@@ -432,6 +446,7 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
 
       acq_in_progress = ACQ_REPEATING_AND_PROCESSING;
+      set_window_title(buffp[upload_buff]);
       redraw = 0;
 
       //      last_draw();

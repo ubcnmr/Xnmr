@@ -704,11 +704,6 @@ void acq_signal_handler()
 	g_idle_add((GtkFunction) set_acqn_labels_mutex_wrap,NULL);
 
 	path_strcpy(buffp[upload_buff]->path_for_reload,data_shm->save_data_path);
-  //	fprintf(stderr,"xnmr_ipc put: %s\n",buffp[upload_buff]->path_for_reload);
-	//	if (data_shm->num_acqs_2d == 1 && data_shm->acqn != 0)
-	//  fprintf(stderr,"got ACQ_DONE from ACQ_RUNNING, only completed %li of %li acqns\n",
-	//     data_shm->acqn,data_shm->num_acqs );
-	//	g_idle_add ( (GtkFunction) set_window_title, buffp[upload_buff]);
 	break;
       }
     case ACQ_ERROR:

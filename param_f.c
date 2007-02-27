@@ -1150,14 +1150,21 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
   	  case 't': 
   	    // fprintf(stderr, "loading parameter %d of type text\n",i ); 
-	    if (message_printed == 0){
-	      fprintf(stderr,"\n\ntext parameters are no longer needed for double. Change types to double in pulse progs and use GET_PARAMETER_DOUBLE\n");
-	      fprintf(stderr,"also change frequency lines in param file to: sf1 f 55.84 0 500 .001 .01 7 -\n\n");
-	      message_printed = 1;
-	    }
+
 
   	    param_set->parameter[i].type = 't'; 
   	    sscanf( s, PARAMETER_FILE_FORMAT_TEXT, param_set->parameter[i].name, param_set->parameter[i].t_val ); 
+
+
+	    // if this is a text parameter for sf, print a warning.
+	    if (strstr(param_set->parameter[i].name,"sf") != NULL){
+	      if (message_printed == 0){
+		fprintf(stderr,"\n\ntext parameters are no longer needed for double. Change types to double in pulse progs and use GET_PARAMETER_DOUBLE\n");
+		fprintf(stderr,"also change frequency lines in param file to: sf1 f 55.84 0 500 .001 .01 7 -\n\n");
+		message_printed = 1;
+	      }
+	    }
+
 
   	    for(j=0;j<old_param_set.num_parameters;j++){ 
   	      if (strcmp(param_set->parameter[i].name,old_param_set.parameter[j].name) ==0){ 
@@ -1755,6 +1762,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
 
     gtk_widget_show( popup_data.win ); 
+    gdk_window_raise(popup_data.win->window);
     return; 
   } 
 

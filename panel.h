@@ -31,6 +31,7 @@ extern GtkWidget* time_remaining_label;
 extern char no_acq;
 extern int upload_buff;
 
+
 /*
  *   Possible values of variable acq_in_progress
  */

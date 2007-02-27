@@ -764,7 +764,9 @@ dbuff *create_buff(int num){
       
       gdk_color_parse("green",&color);
       gtk_widget_modify_bg(buff->win.ct_box,GTK_STATE_NORMAL,&color);
-      
+      set_window_title(buff); // to set a * in the name
+
+
       // clone from acq already did this:
       //      set_ch1(buff,data_shm->ch1); 
       //      set_ch2(buff,data_shm->ch2);
@@ -3862,7 +3864,11 @@ void set_window_title(dbuff *buff)
 {
   char s[PATH_LENGTH];
   
- snprintf(s,PATH_LENGTH,"Buff: %i, %s",buff->buffnum,buff->path_for_reload);
+  // if we are the upload buff, we get a *
+  if (buffp[upload_buff] == buff)
+    snprintf(s,PATH_LENGTH,"*Buff: %i, %s",buff->buffnum,buff->path_for_reload);
+  else
+    snprintf(s,PATH_LENGTH,"Buff: %i, %s",buff->buffnum,buff->path_for_reload);
  // fprintf(stderr,"title for window: %s\n",s);
  gtk_window_set_title(GTK_WINDOW(buff->win.window),s);
  return;

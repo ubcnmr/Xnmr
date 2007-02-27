@@ -481,7 +481,7 @@ int start_pprog()
 
   FILE *fs;
   char s[PATH_LENGTH];
-
+  char dpath[PATH_LENGTH],spath[PATH_LENGTH],*sp,command[2*PATH_LENGTH+3];
   pid = fork();
 
   if( pid == 0 ) {  //start the pulse program
@@ -518,6 +518,27 @@ int start_pprog()
     if (fs != NULL){
       fclose(fs);
       //      fprintf(stderr,"launching pprog using: %s\n",s);
+
+      // copy the source code of the program into the user's directory.
+      path_strcpy(dpath,data_shm->save_data_path);
+      make_path( dpath);
+      path_strcat(dpath,"program");
+      printf("source-code dest: %s\n",dpath);
+
+      path_strcpy(spath,s); // get the program name
+      sp=strrchr(spath,'/'); // find the last /
+      sp[0]=0; // wipe it out
+      path_strcat(spath,"/compiled/"); // append to it
+      sp=strrchr(s,'/'); // find the last / in the program
+      path_strcat(spath,sp+1); // add the program
+      path_strcat(spath,".x"); // put on the .x
+      printf("source-code source is: %s\n",spath);
+      sprintf(command,"cp %s %s",spath,dpath);
+      printf("copy command is: %s\n",command);
+      system(command);
+      // if it fails, oh well.
+      // if it fails, we should do .c instead of .x
+
       execl( s, NULL, NULL );
     }
 
@@ -760,7 +781,6 @@ int run()
   setegid(rgid);
 
 
-
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) < 0 ) {
     //    fprintf(stderr,"acq: error in dir. creation\n");
     if( errno != EEXIST ) {
@@ -810,6 +830,10 @@ int run()
       return 0;
     }
     fclose( fstream );
+   
+
+    // the pulse program source is copied into this directory
+    // in start_pprog
     
     
   }
