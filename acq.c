@@ -523,7 +523,7 @@ int start_pprog()
       path_strcpy(dpath,data_shm->save_data_path);
       make_path( dpath);
       path_strcat(dpath,"program");
-      printf("source-code dest: %s\n",dpath);
+      //      printf("source-code dest: %s\n",dpath);
 
       path_strcpy(spath,s); // get the program name
       sp=strrchr(spath,'/'); // find the last /
@@ -532,12 +532,12 @@ int start_pprog()
       sp=strrchr(s,'/'); // find the last / in the program
       path_strcat(spath,sp+1); // add the program
       path_strcat(spath,".x"); // put on the .x
-      printf("source-code source is: %s\n",spath);
+      //      printf("source-code source is: %s\n",spath);
       sprintf(command,"cp -p %s %s",spath,dpath);
-      printf("copy command is: %s\n",command);
+      //      printf("copy command is: %s\n",command);
       system(command);
       // if it fails, oh well.
-      // if it fails, we should do .c instead of .x
+      // if it fails, we should try to do .c instead of .x
 
       execl( s, NULL, NULL );
     }

@@ -3750,13 +3750,10 @@ gint do_save( dbuff* buff, char* path )
   path_strcpy(fileN,path);
   path_strcat(fileN,"/program"); // destination
 
-  
   path_strcpy(fileS,buff->path_for_reload);
-  printf("path_for_reload is: %s\n",fileS);
   path_strcat(fileS,"/program");
   if (strncmp(fileS,fileN,PATH_LENGTH) != 0){
     sprintf(command,"cp -p %s %s",fileS,fileN);
-    printf("source and dest appear to be different, going to try to copy program\nwith command: %s\n",command);
     system(command);
   }
 
@@ -4584,6 +4581,10 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
     if (buff->buffnum == current)
       show_parameter_frame ( &buff->param_set,buff->npts);
   }
+  
+  // try to do something intelligent with the reload path.
+  // pull out of the shared mem with the data, unless acq is finished and we have more info.
+  path_strcpy(buff->path_for_reload,data_shm->save_data_path);
   
 }
 
@@ -6240,21 +6241,21 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	     || gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE){
 
 	    if (out_len < max_len)
-	      out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f +/- %-8.2f % 8g +/- %-8g",i+1,
+	      out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f \302\261 %-8.2f % 8g \302\261 %-8g",i+1,
 				  x[pnum],stddev[pnum],x[pnum+1]*fit_data.amp_scale,stddev[pnum+1]*fit_data.amp_scale) ;
 	    pnum+=2;
 	    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE && out_len < max_len){
-	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",x[pnum],stddev[pnum]) ;
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %-8.2f",x[pnum],stddev[pnum]) ;
 	      pnum +=1 ;
 	    }
 	    else if (out_len < max_len)
-	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",0.,0.)-1;
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %-8.2f",0.,0.)-1;
 	    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE && out_len < max_len){
-	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %- 8.2f",x[pnum],stddev[pnum]);
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %- 8.2f",x[pnum],stddev[pnum]);
 	      pnum +=1 ;
 	    }
 	    else if (out_len < max_len)
-	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f +/- %-8.2f",0.,0.);
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %-8.2f",0.,0.);
 	    if (out_len > 0) 
 	      out_len += snprintf(&out_string[out_len],max_len-out_len,"\n");
 	  }
