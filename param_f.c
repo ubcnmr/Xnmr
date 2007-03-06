@@ -94,11 +94,6 @@ gint allowed_to_change(int test_bnum){
   if (am_i_queued(test_bnum) == TRUE) return FALSE;
   // if user tries to change one that's not acquiring or queued.
   return TRUE;
-  /*
-  if ((am_i_queued(test_bnum) == TRUE || (upload_buff == test_bnum && acq_in_progress !=ACQ_STOPPED))
-      && from_make_active == 0)
-    return FALSE;
-    return TRUE; */
 }
 
 gint allowed_to_change_repeat(int test_bnum){ 
@@ -1151,7 +1146,6 @@ gint update_paths( GtkWidget* widget, gpointer data )
   	  case 't': 
   	    // fprintf(stderr, "loading parameter %d of type text\n",i ); 
 
-
   	    param_set->parameter[i].type = 't'; 
   	    sscanf( s, PARAMETER_FILE_FORMAT_TEXT, param_set->parameter[i].name, param_set->parameter[i].t_val ); 
 
@@ -1165,16 +1159,15 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	      }
 	    }
 
-
   	    for(j=0;j<old_param_set.num_parameters;j++){ 
-  	      if (strcmp(param_set->parameter[i].name,old_param_set.parameter[j].name) ==0){ 
+  	      if (strcmp(param_set->parameter[i].name,old_param_set.parameter[j].name) == 0){ 
 		if (old_param_set.parameter[j].type == 'f'){
 		  sprintf(param_set->parameter[i].t_val,"%.7lf",old_param_set.parameter[j].f_val*old_param_set.parameter[j].unit);
 		}
-		else if (old_param_set.parameter[i].type == 't'){ // assume it was also a 't'
+		else if (old_param_set.parameter[j].type == 't'){ // assume it was also a 't'
 		  strncpy(param_set->parameter[i].t_val,old_param_set.parameter[j].t_val,PARAM_T_VAL_LEN); 
 		}
-		else fprintf(stderr,"new parameter is t, old unrecognized for param: %s\n",param_set->parameter[i].name);
+		else fprintf(stderr,"new parameter is t, old type unrecognized for param: %s.  old type: %c\n",param_set->parameter[i].name,old_param_set.parameter[j].type);
   		j=old_param_set.num_parameters; 
   	      } 
   	    } 
@@ -1953,6 +1946,10 @@ gint update_paths( GtkWidget* widget, gpointer data )
   { 
     char path[ PATH_LENGTH ]; 
     dbuff *buff; 
+
+    if (am_i_queued(current)){
+      popup_msg("Can't reload into queued buffer",TRUE);
+    }
 
     if (upload_buff == current && acq_in_progress != ACQ_STOPPED) {
       redraw = 1;

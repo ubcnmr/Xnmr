@@ -1333,7 +1333,7 @@ void file_open(GtkAction *action,dbuff *buff)
   GtkWidget *filew;
 
   if (allowed_to_change(buff->buffnum) == FALSE){
-    popup_msg("Can't open while Acquisition is running\n",TRUE);
+    popup_msg("Can't open while Acquisition is running or queued\n",TRUE);
     return;
   }
 
@@ -3880,7 +3880,7 @@ void set_window_title(dbuff *buff)
   char s[PATH_LENGTH];
   
   // if we are the upload buff, we get a *
-  if (buffp[upload_buff] == buff)
+  if (buffp[upload_buff] == buff && no_acq == FALSE)
     snprintf(s,PATH_LENGTH,"*Buff: %i, %s",buff->buffnum,buff->path_for_reload);
   else
     snprintf(s,PATH_LENGTH,"Buff: %i, %s",buff->buffnum,buff->path_for_reload);
@@ -4510,9 +4510,14 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   if ((void *)action != (void *) buff) CHECK_ACTIVE(buff);
 
 
-  //  if (buff->buffnum == upload_buff && action == 0 && no_acq == FALSE ) return; // if user pulled it down from the acq buffer
   if (buff->buffnum == upload_buff && (void *) action != (void *) buff && no_acq == FALSE) return;
 
+
+  // if I'm queued, give an error and get out.
+  if (am_i_queued(buff->buffnum)){
+    popup_msg("Can't clone into a queue'd buffer!",TRUE);
+    return;
+  }
 
   if ( connected == FALSE ){
     popup_msg("Can't clone from acq - not connected to shm",TRUE);
@@ -4524,7 +4529,6 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   show_active_border();
 
 
-  //  buff->param_set.num_parameters = 0;  moved below
   buff->param_set.num_acqs = data_shm->num_acqs;
 
   buff->acq_npts=data_shm->npts;
@@ -4538,8 +4542,6 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
     gtk_label_set_text(GTK_LABEL(buff->win.ct_label),s);
   }
   buff->param_set.num_acqs_2d= data_shm->num_acqs_2d;
-  //  buff->param_set.dwell = data_shm->time_per_point*1e6;
-  //  buff->param_set.sw = 1.0/data_shm->time_per_point;
 
   buff->param_set.dwell = data_shm->dwell;
   buff->param_set.sw = 1.0/data_shm->dwell*1e6;
@@ -4575,7 +4577,6 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   upload_data(buff); 
   
 
-  //  if (action == 0 ) { // means user pulled from menu.
   if ((void *) buff != (void *) action ) { // means user pulled from menu.
     draw_canvas(buff);
     if (buff->buffnum == current)
@@ -4585,6 +4586,7 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   // try to do something intelligent with the reload path.
   // pull out of the shared mem with the data, unless acq is finished and we have more info.
   path_strcpy(buff->path_for_reload,data_shm->save_data_path);
+  //  printf("put %s in the reload path\n",buff->path_for_reload);
   
 }
 
@@ -6705,7 +6707,12 @@ void queue_expt(GtkAction *action, dbuff *buff){
 
 
   // if we're a 2d buff currently, return to row view and resize buff to a 1d
-  if (buff->npts2 > 1) buff_resize(buff,buff->npts,1);
+  if (buff->npts2 > 1) {
+    buff_resize(buff,buff->npts,1);
+    draw_canvas(buff);
+    update_2d_buttons_from_buff(buff);
+
+  }
 
   // print buff num and file name into combo box
 
