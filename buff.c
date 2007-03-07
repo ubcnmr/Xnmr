@@ -4515,7 +4515,7 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
 
   // if I'm queued, give an error and get out.
   if (am_i_queued(buff->buffnum)){
-    popup_msg("Can't clone into a queue'd buffer!",TRUE);
+    popup_msg("Can't clone into a queued buffer!",TRUE);
     return;
   }
 

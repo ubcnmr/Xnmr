@@ -1944,12 +1944,12 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
 
   { 
+    // this gets called with NULL,NULL at the end of an acquisition.
+    // and if we started up running.
+
     char path[ PATH_LENGTH ]; 
     dbuff *buff; 
 
-    if (am_i_queued(current)){
-      popup_msg("Can't reload into queued buffer",TRUE);
-    }
 
     if (upload_buff == current && acq_in_progress != ACQ_STOPPED) {
       redraw = 1;
@@ -1967,8 +1967,13 @@ gint update_paths( GtkWidget* widget, gpointer data )
       return; // don't do anything if we're in the uploading, just do upload 
     }
 
-    if( widget != NULL )  
-      buff = buffp[ current ];  // this means user pushed button
+    if( widget != NULL ) { // this means user pushed button
+      if (am_i_queued(current)){
+	popup_msg("Can't reload into queued buffer",TRUE);
+	return;
+      }
+      buff = buffp[ current ];  
+    }
     else 
       buff = buffp[ upload_buff ]; // here we call at end of acq
     if (buff == NULL){
