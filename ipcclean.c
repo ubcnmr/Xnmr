@@ -42,9 +42,9 @@ int main()
   int progid;
   int msgqid;
 
-  dataid = shmget( DATA_SHM_KEY, sizeof( struct data_shm_t ), IPC_CREAT|0660);
-  progid = shmget( PROG_SHM_KEY, sizeof( struct prog_shm_t ), IPC_CREAT|0660);
-  msgqid = msgget( MSG_KEY, IPC_CREAT|0660 );     
+  dataid = shmget( DATA_SHM_KEY, sizeof( struct data_shm_t ), 0);
+  progid = shmget( PROG_SHM_KEY, sizeof( struct prog_shm_t ), 0);
+  msgqid = msgget( MSG_KEY, 0 );     
 
   shmctl ( progid, IPC_RMID, NULL ); 
   shmctl ( dataid, IPC_RMID, NULL );

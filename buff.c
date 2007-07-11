@@ -117,7 +117,7 @@ gint window_focus(GtkWidget *widget,GdkEventExpose *event,dbuff *buff){
 
 
 dbuff *create_buff(int num){
-
+  int temp_current;
   static GtkActionEntry entries[] = {
     {"FileMenu",NULL,"_File"},
     { "DisplayMenu",NULL,"_Display"},
@@ -294,6 +294,7 @@ dbuff *create_buff(int num){
     buff->param_set.dwell = 2.0;
     buff->param_set.sw = 1.0/buff->param_set.dwell*1e6;
     buff->buffnum = num;
+    buffp[num] = buff;// this is duplicated where we call create_buff
     buff_resize( buff, 2048, 1 );
     buff->acq_npts=buff->npts;
     buff->ct = 0;
@@ -427,7 +428,8 @@ dbuff *create_buff(int num){
     // this has to do with the box that pops up to say you can't update parameters during acquisition.
     old_update_open = no_update_open;
     no_update_open = 1;
-    
+    temp_current = current;
+    current = buff->buffnum;
     //    fprintf(stderr,"create_buff, about to show_parameter_frame\n");
     show_parameter_frame( &buff->param_set,buff->npts );
     //    fprintf(stderr,"create_buff, done show_parameter_frame\n");
@@ -435,7 +437,7 @@ dbuff *create_buff(int num){
     no_update_open = old_update_open;
 
     show_process_frame( buff->process_data );
-
+    current=temp_current;
     count++;
 
     // put some data into the buffer.
@@ -3058,8 +3060,8 @@ void show_active_border()
   dbuff *buff;
   GdkRectangle rect;
 
- buff=buffp[current];
- if(buff != NULL){
+  buff=buffp[current];
+  if(buff != NULL && colourgc != NULL){
     gdk_gc_set_foreground(colourgc,&colours[RED]);
    /* draw border in red */
     /*left edge */
