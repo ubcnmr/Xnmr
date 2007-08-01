@@ -3882,14 +3882,15 @@ gint pix_to_y(dbuff * buff,int yval){
 void set_window_title(dbuff *buff)
 {
   char s[PATH_LENGTH];
-  
-  // if we are the upload buff, we get a *
-  if (buffp[upload_buff] == buff && no_acq == FALSE)
-    snprintf(s,PATH_LENGTH,"*Buff: %i, %s",buff->buffnum,buff->path_for_reload);
-  else
-    snprintf(s,PATH_LENGTH,"Buff: %i, %s",buff->buffnum,buff->path_for_reload);
- // fprintf(stderr,"title for window: %s\n",s);
- gtk_window_set_title(GTK_WINDOW(buff->win.window),s);
+  if (buff != NULL){
+    // if we are the upload buff, we get a *
+    if (buffp[upload_buff] == buff && no_acq == FALSE)
+      snprintf(s,PATH_LENGTH,"*Buff: %i, %s",buff->buffnum,buff->path_for_reload);
+    else
+      snprintf(s,PATH_LENGTH,"Buff: %i, %s",buff->buffnum,buff->path_for_reload);
+    // fprintf(stderr,"title for window: %s\n",s);
+    gtk_window_set_title(GTK_WINDOW(buff->win.window),s);
+  }
  return;
  
 
