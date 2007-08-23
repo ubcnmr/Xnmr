@@ -990,7 +990,6 @@ void draw_raster(dbuff *buff)
   min=-max;
 
 
-
   /* now, if we have more points to show than there are pixels in the x
    direction, step through pixels and draw lines
 
@@ -1033,7 +1032,9 @@ void draw_raster(dbuff *buff)
 	xp2=(i+1-i1)*buff->win.sizex/(i2+1-i1)+1;
 	da=buff->data[2*i+j*npts1*2];
 	//	ci=(int) floor((da-min)/(max-min)*(NUM_COLOURS-1) +.5);
-	ci=(int) floor((da-min)/(max-min)*(NUM_COLOURS-1e-12));
+	if (max == min) ci = 0;
+	else
+	  ci=(int) floor((da-min)/(max-min)*(NUM_COLOURS-1e-12));
 	ci=NUM_COLOURS-ci;
 	
 	gdk_gc_set_foreground(colourgc,&colours[ci-1]);
