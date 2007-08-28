@@ -191,7 +191,8 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
         && upload_buff==current) 
       send_params(); 
     return;   
-  } 
+} 
+
 
 
   gint update_t_param(GtkEntry* ent , parameter_t *event, parameter_t *param) 
@@ -199,17 +200,9 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     double temp; 
     char tempstr[UTIL_LEN];
     parameter_t *n_param=NULL;
-    //    int i;
-    //    static char norecur=0;
     
-    /* don't need no recur here, same as update_paths.  we only grab 'activate' and 'focus_out'    
-       simply setting the value doesn't invoke the callback
-      if(norecur == 1){
-      norecur = 0;
-      fprintf(stderr,"update_t_param: doing norecur\n");
-      return FALSE; 
-      } */
-
+    n_param = param;
+    /* Aug 28, 2007.  This isn't reliable.  Put in wrap function for other cases.
     if (param == NULL) {
       //      fprintf(stderr,"got param == null, must be a direct activate callback\n");
       n_param = event;
@@ -218,7 +211,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       //      fprintf(stderr,"got a param, is a focus out\n");
       n_param = param;
     }
-
+    */
 
     // focus out doesn't seem to give the right param data back...
     /*    for (i=0;i<current_param_set->num_parameters;i++){
@@ -281,6 +274,13 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
       send_params(); 
    return FALSE;   
   } 
+gint update_t_param_wrap(GtkEntry* ent, parameter_t *event, parameter_t *param){
+  return   update_t_param(ent,param,event);
+
+
+}
+
+
 /*
   void update_sw_dwell(){ 
     // there is a potentially subtle problem here, that when  
@@ -301,6 +301,7 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
   }
 
 */
+
 
   void update_npts(int npts){ 
     /* this routine isn't a callback - the callback for the npts 
@@ -1341,14 +1342,14 @@ gint update_paths( GtkWidget* widget, gpointer data )
       
 	  gtk_entry_set_text( GTK_ENTRY( param_button[i].ent ), param_set->parameter[i].t_val ); 
 
-	  g_signal_connect(G_OBJECT (param_button[i].ent), "activate", G_CALLBACK (update_t_param), &param_set->parameter[i] ); 
+	  g_signal_connect(G_OBJECT (param_button[i].ent), "activate", G_CALLBACK (update_t_param_wrap), &param_set->parameter[i] ); 
 	  g_signal_connect(G_OBJECT (param_button[i].ent), "focus_out_event", G_CALLBACK (update_t_param), &param_set->parameter[i] ); 
 
 	  param_button[i].label = gtk_label_new( s ); 
 	  gtk_table_attach_defaults(GTK_TABLE(param_table),param_button[i].label,(i%3)*2, (i%3)*2+1, (i/3)+3, (i/3)+4 ); 
 	  gtk_table_attach_defaults(GTK_TABLE(param_table),param_button[i].ent,(i%3)*2+1, (i%3)*2+2, (i/3)+3, (i/3)+4 ); 
-	  g_signal_connect( G_OBJECT( param_button[i].ent), "button_press_event", G_CALLBACK( param_spin_pressed ), (gpointer) i );  
-	  update_t_param( GTK_ENTRY( param_button[i].ent ), &param_set->parameter[i] ,NULL ); 
+	  g_signal_connect( G_OBJECT( param_button[i].ent), "button_press_event", G_CALLBACK( param_spin_pressed ), (gpointer) i);  
+	  update_t_param( GTK_ENTRY( param_button[i].ent ),NULL,&param_set->parameter[i]); 
 	  gtk_widget_show( param_button[i].ent ); 
 	  gtk_widget_show( param_button[i].label ); 
 	  break; 

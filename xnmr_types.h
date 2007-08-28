@@ -95,7 +95,7 @@ typedef struct {
     GtkWidget *autocheck,*hypercheck;
     GtkWidget *row_col_lab,*slice_2d_lab;
     GtkWidget *p1_label,*p2_label,*ct_label,*ct_box;
-    GtkWidget *symm_check;
+    GtkWidget *symm_check,*true_complex;
     int sizex,sizey; /* number of pixels for drawing, total is +2 */
     int buffid;
     int press_pend;

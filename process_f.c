@@ -2134,6 +2134,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   float *new_data;
   double spared;
   char is_symm;
+  char true_complex;
 
   if( widget == NULL ) {
     buff = buffp[ upload_buff ];
@@ -2149,6 +2150,14 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   }
 
   is_symm = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check));
+  true_complex = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.true_complex));
+  
+
+  // can't have hyper and true complex at the same time.
+  // if true complex is active, then we say its true complex.
+
+					      
+
   /*********
 
   if(buff->win.press_pend>0) {
@@ -2164,7 +2173,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
      sure we have a power of two as npts 
 
   - or, do a factor of 2 so we have room to put in the imaginaries - if not hyper*/
-  if (buff->is_hyper)
+  if (buff->is_hyper || true_complex )
     spared= 1.0;
   else
     spared=2.0;
@@ -2177,8 +2186,36 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     scale = buff->npts2/4.0;
   else
     scale = 2.0;
+  
+  if (true_complex){
+    printf("doing true_complex FT2d\n");
+    new_data = g_malloc(buff->npts2*sizeof(float)*2);
+    if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
+    
+    
+    // copy out
+    for(i=0;i<buff->npts;i++){
+      for (j=0;j<buff->npts2;j++){
+	new_data[j*2] = buff->data[j*buff->npts*2+2*i];
+	new_data[j*2+1] = buff->data[j*buff->npts*2+2*i+1];
+      }
+      // do the ft
+      four1(new_data-1,buff->npts2,1);
 
-  if (buff->is_hyper == FALSE){ 
+      // descramble
+      for(j=0;j<buff->npts2;j++){
+	spare = new_data[j]/scale;
+	new_data[j]=new_data[j+buff->npts2]/scale;
+	new_data[j+buff->npts2]=spare;
+      }
+      // copy back:
+      for (j=0;j<buff->npts2;j++){
+	buff->data[j*buff->npts*2+2*i] = new_data[2*j];
+	buff->data[j*buff->npts*2+2*i+1] = new_data[2*j+1];
+      }
+    }
+  }
+  else if (buff->is_hyper == FALSE){ 
     //    popup_msg("hypercomplex flag not set, doing real FT?",TRUE);
     fprintf(stderr,"hypercomplex flag not set, doing real FT\n");
     new_data = g_malloc(buff->npts2 * sizeof(float) );
@@ -2226,7 +2263,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       
 
   }
-  else{// is hypercomplex
+  else {// is hypercomplex
     new_data = g_malloc(buff->npts2 * sizeof(float));
     //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");

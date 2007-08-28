@@ -679,11 +679,16 @@ dbuff *create_buff(int num){
     g_signal_connect(G_OBJECT(buff->win.hypercheck),"clicked",
 		       G_CALLBACK(hyper_check_routine),buff);
     
+    // true complex checkbox
+    buff->win.true_complex = gtk_check_button_new_with_label("Complex");
+    gtk_box_pack_start(GTK_BOX(vbox1),buff->win.true_complex,FALSE,FALSE,0);
+
     
     // symmetric button
     buff->win.symm_check = gtk_check_button_new_with_label("Is Symm");
     gtk_box_pack_start(GTK_BOX(vbox1),buff->win.symm_check,FALSE,FALSE,0);
     
+
 
     hbox=gtk_hbox_new(FALSE,1);
     gtk_box_pack_start(GTK_BOX(vbox1),hbox,FALSE,FALSE,0);
