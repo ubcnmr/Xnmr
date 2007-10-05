@@ -4634,8 +4634,11 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   point = pix_to_x(buff, event->x);
 
   // now in here, need to figure out what the new frequency should be, and set it.
-
+#ifdef MSL200
+  if (get_ch1(buff) == 'B') strncpy(param_search,"sf2",4);
+#else
   if (get_ch1(buff) == 'C') strncpy(param_search,"sf2",4);
+#endif
   else strncpy(param_search,"sf1",4);
 
 
