@@ -15,6 +15,7 @@
 #include "xnmr_ipc.h"
 #include "panel.h"
 #include "param_utils.h"
+#include "h_config.h"
 #include "xnmr.h"
 
 #include <stdlib.h>
@@ -646,9 +647,14 @@ gint update_paths( GtkWidget* widget, gpointer data )
       //    fprintf(stderr,"in sw adj\n"); 
       current_param_set->sw = adj->value; 
       if (!doing_sw_dwell) { 
+	long int decimate;
         doing_sw_dwell=TRUE; 
-        gtk_adjustment_set_value( GTK_ADJUSTMENT( dwell_adj ),  
-  				1.0/adj->value*1000000); 
+	// get the closest we're going to get:
+	decimate = (long int) (DEFAULT_RCVR_CLK/adj->value+0.5);
+	//	printf("setting dwell to: %f\n",1./DEFAULT_RCVR_CLK*decimate*1e6);
+        gtk_adjustment_set_value( GTK_ADJUSTMENT( dwell_adj ), 1./DEFAULT_RCVR_CLK*decimate*1e6 ); 
+	current_param_set->sw = (long int) DEFAULT_RCVR_CLK/decimate; 
+	//	printf("stored sw as: %li\n",current_param_set->sw);
         doing_sw_dwell=FALSE; 
       } 
     } 
@@ -656,8 +662,13 @@ gint update_paths( GtkWidget* widget, gpointer data )
       //    fprintf(stderr,"in dwell adj\n"); 
       current_param_set->dwell = adj->value; 
       if(!doing_sw_dwell){ 
+	long int decimate;
         doing_sw_dwell=TRUE; 
-        gtk_adjustment_set_value(GTK_ADJUSTMENT( sw_adj ),1.0/adj->value*1000000); 
+	decimate = (long int) (adj->value/1e6*DEFAULT_RCVR_CLK +0.5);
+	//	printf("setting sw to %f\n",DEFAULT_RCVR_CLK/decimate);
+        gtk_adjustment_set_value(GTK_ADJUSTMENT( sw_adj ),DEFAULT_RCVR_CLK/decimate); 
+	current_param_set->dwell = decimate/DEFAULT_RCVR_CLK*1e6; 
+	//	printf("stored dwell as: %f\n",current_param_set->dwell);
         doing_sw_dwell=FALSE; 
       } 
     } 
@@ -872,7 +883,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     sw_adj = gtk_adjustment_new(1000000,1,2000000,1,10,0 ); 
     npts_adj = gtk_adjustment_new(2048,1,MAX_DATA_NPTS,1,1,0); 
   
-    dwell_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( dwell_adj ), 0.5, 1 ); 
+    dwell_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( dwell_adj ), 0.5, 2 ); 
     sw_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( sw_adj ), 0.5, 0 ); 
     npts_spin_button = gtk_spin_button_new(GTK_ADJUSTMENT(npts_adj),0.5,0); 
   
@@ -893,10 +904,6 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( npts_spin_button ), GTK_UPDATE_IF_VALID ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),npts_spin_button,5,6,2,3); 
-
-
-
-  
 
     prog_text_box = gtk_entry_new();
     gtk_entry_set_max_length(GTK_ENTRY(prog_text_box), PATH_LENGTH ); 

@@ -2195,10 +2195,10 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  
  
  if (buff->flags & FT_FLAG){         //frequency domain
-   f1 = -( (float) pt1 * buff->param_set.sw/buff->npts
-	   - (float) buff->param_set.sw/2.);
-   f2 = -( (float) pt2 * buff->param_set.sw/buff->npts
-	   - (float) buff->param_set.sw/2.);
+   f1 = -( (float) pt1 * 1./buff->param_set.dwell*1e6/buff->npts
+	   - (float) 1./buff->param_set.dwell*1e6/2.);
+   f2 = -( (float) pt2 * 1./buff->param_set.dwell*1e6/buff->npts
+	   - (float) 1./buff->param_set.dwell*1e6/2.);
  } 
  else{                              //time domain
    f1 = (float) pt1 * buff->param_set.dwell;
@@ -3017,8 +3017,8 @@ gint press_in_win_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff)
 
 
       // fifth line the frequency or time in direct dimension
-    new_freq = - ( (double) buff->disp.record2 * buff->param_set.sw/buff->npts
-		 - (double) buff->param_set.sw/2.);
+    new_freq = - ( (double) buff->disp.record2 *1./buff->param_set.dwell*1e6/buff->npts
+		 - (double) 1./buff->param_set.dwell*1e6/2.);
     if (buff->flags & FT_FLAG)
       snprintf(title,UTIL_LEN,"%8.1f Hz delta: %8.1f Hz",
 	      new_freq,new_freq-last_freq);
@@ -3960,7 +3960,7 @@ void file_export(GtkAction *action,dbuff *buff)
       fprintf(fstream,"#point, Hz, real, imag\n");
       for(i = i1 ; i <= i2 ; i++ )
 	fprintf(fstream,"%i %f %f %f\n",i, 
-		-(float)buff->param_set.sw*((float) i-(float)npts/2.0)/(float)npts,
+		-1./buff->param_set.dwell*1e6*((float) i-(float)npts/2.0)/(float)npts,
 		buff->data[i*2+j],buff->data[i*2+1+j]);
     }
     else{
@@ -4086,7 +4086,7 @@ void file_export(GtkAction *action,dbuff *buff)
       for(i=i1;i<=i2;i++){
 	fprintf(fstream,"%i ",i);
 	if (buff->flags & FT_FLAG)
-	  fprintf(fstream,"%f %i ",-(float)buff->param_set.sw*((float)i-(float)npts/2.)/(float)npts,j);
+	  fprintf(fstream,"%f %i ",-1./buff->param_set.dwell*1e6*((float)i-(float)npts/2.)/(float)npts,j);
 	else
 	  fprintf(fstream,"%f %i ",buff->param_set.dwell*i/1e6,j);
 	if (hd != 0){
@@ -4108,7 +4108,7 @@ void file_export(GtkAction *action,dbuff *buff)
 	for ( j=j1;j<=j2;j += 1+ buff->is_hyper ){
 	  for(i=i1 ; i<=i2 ;i++)
 	    fprintf(fstream,"%i %f %i %f %f\n",i,
-		    -(float)buff->param_set.sw*((float)i-(float)npts/2.)/(float)npts,
+		    -1./buff->param_set.dwell*1e6*((float)i-(float)npts/2.)/(float)npts,
 		    j, buff->data[j*2*npts+2*i],buff->data[j*2*npts+2*i+1]);
 	  fprintf(fstream,"\n");
 	}
@@ -4129,7 +4129,7 @@ void file_export(GtkAction *action,dbuff *buff)
 	for ( j=j1;j<=j2;j += 1+ buff->is_hyper ){
 	  for(i=i1 ; i<=i2 ;i++)
 	    fprintf(fstream,"%i %f %i %f %f %f\n",i,
-		    -(float)buff->param_set.sw*((float)i-(float)npts/2.)/(float)npts,
+		    -1./buff->param_set.dwell*1e6*((float)i-(float)npts/2.)/(float)npts,
 		    j, -(((float)j)*sw2/buff->npts2-(float)sw2/2.),buff->data[j*2*npts+2*i],buff->data[j*2*npts+2*i+1]);
 	  fprintf(fstream,"\n");
 	}
@@ -4214,11 +4214,11 @@ void file_export_binary(GtkAction *action,dbuff *buff)
     
     hd = pfetch_float(&buff->param_set,"dwell2",&dwell2,0);
     if (hd == 1)
-      sw2 =1/dwell2;
+      sw2 =1./dwell2;
     else
       hd=  pfetch_float(&buff->param_set,"sw2",&sw2,0);
     if (hd == 1)
-      dwell2=1/sw2;
+      dwell2=1./sw2;
 
 
     ny = (j2-j1)/(1+buff->is_hyper)+1;
@@ -4262,7 +4262,7 @@ void file_export_binary(GtkAction *action,dbuff *buff)
     for (i=i1;i<=i2;i+=1){
       
       if (buff->flags & FT_FLAG)
-	lbuff[0]=-(float)buff->param_set.sw*((float)i-(float)npts/2.)/(float)npts;
+	lbuff[0]=-1./buff->param_set.dwell*1e6*((float)i-(float)npts/2.)/(float)npts;
       else
 	lbuff[0]=(float)buff->param_set.dwell*i/1e6;
       m=1;
@@ -4670,8 +4670,8 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   }
 
   // ok, now figure out our offset from res
-  diff = (point * buff->param_set.sw/buff->npts
-	- buff->param_set.sw/2.);
+  diff = (point * 1./buff->param_set.dwell*1e6/buff->npts
+	- 1./buff->param_set.dwell*1e6/2.);
   //  if (sf_is_float == 0) diff = diff/1e6;  freq's are always in MHz - a slightly unfortunate historical choice...
   diff /= 1e6;
   old_freq -= diff;
@@ -5845,7 +5845,7 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
     
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.components),fit_data.num_components+1);
       // now set the values in it
-      sw = buffp[sbnum]->param_set.sw;
+      sw = 1./buffp[sbnum]->param_set.dwell*1e6;
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.center[fit_data.num_components-1]),-xval*sw+sw/2);
       
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[fit_data.num_components-1]),FALSE);
@@ -5911,7 +5911,7 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
 	x_left = (max/2.-b)/m;
 	//      fprintf(stderr,"using %f for left edge\n",x_left);
 	width += (xpt-x_left)
-	  *buffp[sbnum]->param_set.sw/buffp[sbnum]->npts;
+	  * 1./buffp[sbnum]->param_set.dwell*1e6/buffp[sbnum]->npts;
       }
       
       if (i_right != xpt){
@@ -5921,7 +5921,7 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
 	x_right = (max/2.-b)/m;
 	//      fprintf(stderr,"using %f for right edge\n",x_right);
 	
-	width += (x_right-xpt)*buffp[sbnum]->param_set.sw/buffp[sbnum]->npts;
+	width += (x_right-xpt)*1./buffp[sbnum]->param_set.dwell*1e6/buffp[sbnum]->npts;
 	
       }
       //    fprintf(stderr,"so width is: %f\n",width);
@@ -7652,8 +7652,8 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
     thresh = 0.0;
     for( i=i1;i<=i2;i++) {
       
-      freq1 = - ( (double) i * buff->param_set.sw/buff->npts
-		  - (double) buff->param_set.sw/2.) *2 * M_PI;
+      freq1 = - ( (double) i * 1./buff->param_set.dwell*1e6/buff->npts
+		  - (double) 1./buff->param_set.dwell*1e6/2.) *2 * M_PI;
       for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
 	if (fabs(buff->data[2*i+j*2*buff->npts]) > thresh){
 	  freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
@@ -7715,8 +7715,8 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
     //  */
 
     for(i=i1;i<=i2;i++){
-      freq1 = - ( (double) i * buff->param_set.sw/buff->npts
-		  - (double) buff->param_set.sw/2.);
+      freq1 = - ( (double) i * 1./buff->param_set.dwell*1e6/buff->npts
+		  - (double) 1./buff->param_set.dwell*1e6/2.);
       *int1 += buff->data[2*i+buff->npts*2*buff->disp.record];
       *int2 += buff->data[2*i+buff->npts*2*buff->disp.record]*freq1;
       *int3 += buff->data[2*i+buff->npts*2*buff->disp.record]*freq1*freq1;

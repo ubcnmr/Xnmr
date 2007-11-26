@@ -1644,7 +1644,13 @@ int is_a_float_device(int device_id)
 
 float get_dwell()
 {
-  return data_shm->dwell/1000000.;
+  long int decimate;
+  // figure out what was really meant as the dwell in here.
+  // find the nearest value that is an integer decimation from the receiver clk rate.
+  decimate = (long int) (data_shm->dwell/1000000 *DEFAULT_RCVR_CLK +0.5);
+  //  printf("in get_dwell, had dwell of: %f, nearest was: %f\n",data_shm->dwell,1./DEFAULT_RCVR_CLK * decimate*1e6);
+  return (1./DEFAULT_RCVR_CLK * decimate);
+    //  return data_shm->dwell/1000000.;
 }
 
 unsigned long get_acqn()

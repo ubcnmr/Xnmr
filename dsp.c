@@ -100,8 +100,8 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   
   fscanf(fptr1,"%ld",&lvalue);
   clk = lvalue;
-  //  fprintf(stderr,"clk speed from file: %ld, ignoring, using 60000000\n",clk);
-  clk=60000000.;
+  //  fprintf(stderr,"clk speed from file: %ld, ignoring, using %f\n",clk,DEFAULT_RCVR_CLK);
+  clk=DEFAULT_RCVR_CLK;
   
   fscanf(fptr1,"%d",&value);  
   if (value != 1) {
@@ -201,7 +201,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   
 
   // look out for under sampling:
-  if ((freq > 30000000) && (freq < 60000000)) freq=60000000-freq;
+  if ((freq > DEFAULT_RCVR_CLK/2.) && (freq < DEFAULT_RCVR_CLK)) freq=DEFAULT_RCVR_CLK-freq;
   // 0-30 and 60-90 work by themselves
   //  fprintf(stderr,"receiver trying to get freq:%f\n",freq);
   div = freq/(double)clk;

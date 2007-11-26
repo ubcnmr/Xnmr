@@ -807,7 +807,7 @@ gint do_shim_filter(GtkWidget * widget,double *val)
   }
 
   shift = (int) *val;
-  sw = buff->param_set.sw;
+  sw = 1./buff->param_set.dwell*1e6;
   imax = sw/shift/4.;
   
   fprintf(stderr,"imax wants to be: %i\n",imax);
@@ -2070,8 +2070,8 @@ gint unwind_2d(GtkWidget *widget, double *unused)
   
   for (i=0;i<npts;i++){
     // what's the freq at this point?
-    freq = - ( (double) i * buff->param_set.sw/npts
-	       - (double) buff->param_set.sw/2.);
+    freq = - ( (double) i * 1./buff->param_set.dwell*1e6/npts
+	       - (double) 1./buff->param_set.dwell*1e6/2.);
     // so the phase to unwind is:
     phase = freq*tau*2*M_PI;
     

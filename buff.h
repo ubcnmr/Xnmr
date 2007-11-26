@@ -178,7 +178,7 @@ gint slice_2D_routine(GtkWidget *widget,dbuff *buff);
 gint buff_resize( dbuff* buff, int npts1, int npts2 );
 
 gint do_load( dbuff* buff, char* path);
-gint do_load_wrapper( GtkWidget* widget, GtkFileSelection* fs );
+
 
 gint do_save( dbuff* buff, char* fileN );
 
