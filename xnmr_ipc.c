@@ -372,9 +372,9 @@ int send_sig_acq( char sig )
 }
 
 
-void set_acqn_labels()
+void set_acqn_labels(int start)
 {
-  int hour,min,sec;
+  int hour,min,sec,count=0;
   char s[UTIL_LEN*2];
 
   time_t completion_time;  
@@ -389,9 +389,17 @@ void set_acqn_labels()
   gtk_label_set_text( GTK_LABEL (acq_label), s );
   //  snprintf( s,UTIL_LEN, "na2 %d / %d", data_shm->last_acqn_2d+1, data_shm->num_acqs_2d );
   //  gtk_label_set_text( GTK_LABEL (acq_2d_label), s );
+  
+   // this is an ugly hack...
+  if (start == 1 && data_shm->time_remaining == 0)
+    do{
+      usleep(20);
+      count += 1;
+    }while (count < 50 && data_shm->time_remaining == 0 );
   hour = (int) (data_shm->time_remaining/3600./CLOCK_SPEED);
   min = (int) (data_shm->time_remaining/60./CLOCK_SPEED - hour*60.);
   sec = (int) (data_shm->time_remaining*1.0/CLOCK_SPEED - hour*3600. - min*60.);
+  //  printf("in set_acqn_labels, time remaining is: %f\n",data_shm->time_remaining/20000000.);
 
 
   // set completion time label:
@@ -430,7 +438,7 @@ void set_acqn_labels()
 gint set_acqn_labels_mutex_wrap(){
   gdk_threads_enter();
   //  fprintf(stderr,"in set_acqn_labels_mutex_wrap\n");
-  set_acqn_labels();
+  set_acqn_labels(0);
   gdk_threads_leave();
   return FALSE;
 }
@@ -450,7 +458,7 @@ gint upload_and_draw_canvas_with_process( dbuff *buff )
 {
 
   if( redraw == 1 ) {
-    set_acqn_labels();
+    set_acqn_labels(0);
     if (upload_buff ==current) update_2d_buttons();
     upload_data( buff );
     // I think this was leftover from Nicolet
@@ -475,7 +483,7 @@ gint upload_and_draw_canvas_mutex_wrap( dbuff *buff ){
 gint upload_and_draw_canvas( dbuff *buff )
 {
   if( redraw == 1 ) {
-    set_acqn_labels(); 
+    set_acqn_labels(0); 
     if (upload_buff == current) update_2d_buttons();
     upload_data( buff );
     // I think this was leftover from Nicolet
@@ -704,6 +712,9 @@ void acq_signal_handler()
 	g_idle_add((GtkFunction) set_acqn_labels_mutex_wrap,NULL);
 
 	path_strcpy(buffp[upload_buff]->path_for_reload,data_shm->save_data_path);
+	// provide user a bell so they know we're done.
+	printf("\a");
+	fflush(stdout);
 	break;
       }
     case ACQ_ERROR:
@@ -724,6 +735,14 @@ void acq_signal_handler()
     case P_PROGRAM_ACQ_TIMEOUT:
     case ACQ_FILE_ERROR:
     case PERMISSION_ERROR:
+
+      // provide user a bell so they know we're done with error.
+      printf("\a");
+      fflush(stdout);
+      usleep(250000);
+      printf("\a");
+      fflush(stdout);
+
       result = acq_in_progress;
       acq_in_progress = ACQ_STOPPED;
       redraw = 0;  //CM dec 2, 2001 - hopefully this will fix the "failure to draw after stop with

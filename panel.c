@@ -254,6 +254,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       //      fprintf(stderr,"starting!\n");
       check_buff_size();  
       send_sig_acq( ACQ_START );
+      set_acqn_labels(1);
       gdk_color_parse("green",&color);
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
       set_window_title(buffp[upload_buff]); // add a * to the name
@@ -374,6 +375,7 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
       redraw = 0;
       //      last_draw();
       send_sig_acq( ACQ_START );
+      set_acqn_labels(1);
     }
 
     else {     //if this is an invalid press, set the button inactive
@@ -451,6 +453,7 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
 
       //      last_draw();
       send_sig_acq( ACQ_START );
+      set_acqn_labels(1);
     }
 
     else {     //if this is an invalid press, set the button inactive

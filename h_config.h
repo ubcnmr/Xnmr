@@ -19,6 +19,7 @@
  *  Pulse Hardware information
  */
 
+
 #define NUM_DEVICES 45
 #define MAX_EVENTS 32768
 #define NUM_CHIPS 21

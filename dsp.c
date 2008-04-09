@@ -12,7 +12,7 @@
 #include "param_utils.h"
 #include "adepp.h"
 #include "dsp.h"
-
+#include "h_config.h"
 // globals:  
 
 static int last_sw=0;
