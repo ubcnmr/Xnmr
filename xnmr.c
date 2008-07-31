@@ -86,7 +86,7 @@ ln -s /usr/src/Xnmr/current/h_config.h /usr/share/Xnmr/config/h_config.h
 ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
 ln -s /usr/src/Xnmr/current/xnmrrc /usr/share/Xnmr/config/xnmrrc
 
-ln -s /usr/src/Xnmr/current/xnmr__buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
+ln -s /usr/src/Xnmr/current/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
 
   pulse_hardware.h  in /usr/share/Xnmr/config/
   h_config.h        
