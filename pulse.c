@@ -2359,6 +2359,19 @@ void return_to_present(){
   position_stored=0;
 }
 
+
+void jump_back_by(double time){
+
+  if (currently_going_back != 0 || position_stored != 0){
+    fprintf(stderr,"already going back or position stored, can't jump back again\n");
+    return;
+  }
+  how_far_back = time*CLOCK_SPEED;
+  currently_going_back = 1;
+  position_stored=1;
+
+}
+
 void pprog_is_noisy(){
   
   prog_shm->is_noisy = 1;

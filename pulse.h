@@ -90,7 +90,7 @@ void store_position();
 
 void jump_to_stored();
 void return_to_present();
-
+void jump_back_by(double time);
 
 void pprog_internal_timeout();
 
