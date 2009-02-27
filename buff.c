@@ -1336,7 +1336,6 @@ return;
 }
 
 
-
 void file_open(GtkAction *action,dbuff *buff)
 
 {
@@ -1370,7 +1369,7 @@ void file_open(GtkAction *action,dbuff *buff)
       if (filename[strlen(filename)-1] == '/' ) filename[strlen(filename)-1] = 0;
       //      fprintf(stderr,"path is: %s\n",filename);
       
-      do_load( buff, filename);
+      do_load( buff, filename,0);
     }
     else popup_msg("buffer was destroyed, can't open",TRUE);
     g_free(filename);
@@ -3412,7 +3411,7 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
 
 
 
-gint do_load( dbuff* buff, char* path )
+gint do_load( dbuff* buff, char* path, int fid )
 {
  
   char p[ PARAMETER_LEN ] = "";
@@ -3426,6 +3425,9 @@ gint do_load( dbuff* buff, char* path )
   unsigned long sw,acqns;
   float swf;
   float dwell;
+
+  struct stat sbuf;
+  // if fid = 1 then we try to load from the fid rather than from the "data"
 
   //  fprintf(stderr, "do_load: got path: %s while current dir is: %s\n", path,getcwd(fileN,PATH_LENGTH));
 
@@ -3575,11 +3577,22 @@ gint do_load( dbuff* buff, char* path )
     buff->flags = fl1|fl2;
   }
   
+  if (fid == 1){
+    path_strcpy( fileN, path);
+    path_strcat( fileN, "/data.fid" );
+    if (stat(fileN,&sbuf) != 0){
+      fid = 0;
+    }
+    else{ // data.fid exists, assume that its time domain data.
+      buff->flags = 0;
+    }
+  }
+  if (fid != 1){ // coded like this for a reason - so if we reset from above
+    path_strcpy( fileN, path);
+    path_strcat( fileN, "/data" );
+  }
   //Now we have to load the data, this is easy
-  
-  path_strcpy( fileN, path);
-  path_strcat( fileN, "/data" );
-  
+    
   fstream = fopen( fileN, "r" );
   
   if( fstream == NULL ) {
@@ -3699,7 +3712,8 @@ gint do_save( dbuff* buff, char* path )
   char fileN[ PATH_LENGTH ],fileS[PATH_LENGTH];
   char s[ PARAMETER_LEN ],command[2*PATH_LENGTH+6];
   int temp_npts2;
-  //  fprintf(stderr, "do_save: got path: %s while current dir is: %s\n ", path,getcwd(fileN,PATH_LENGTH));
+  //  fprintf(stderr, "do_save: got path: %s while current dir is: %s\n ", path,getcwd(fileN,PATH_LENGTH))
+  struct stat sbuf;
 
   path_strcpy( fileN, path);
   path_strcat( fileN, "/params" );
@@ -3743,6 +3757,23 @@ gint do_save( dbuff* buff, char* path )
 
   fclose( fstream );
 
+  // if there is no data.fid in the reload path, then copy the old data
+  // into the new data.fid, to save the raw-est data available.
+  // if this is a save on top of old data, this preserves the original data.
+  // if this is a save_as, it still preserves the original data.
+  
+  path_strcpy(fileS,buff->path_for_reload);
+  path_strcat(fileS,"/data.fid");
+  if( stat(fileS,&sbuf) != 0 ){ // it doesn't exist
+      path_strcpy(fileS,buff->path_for_reload);
+      path_strcat(fileS,"/data");
+
+      path_strcpy(fileN,path);
+      path_strcat(fileN,"/data.fid"); 
+      sprintf(command,"cp -p %s %s",fileS,fileN);
+      system(command);
+    }
+ 
 
   path_strcpy( fileN, path);
   path_strcat( fileN, "/data" );
@@ -3767,6 +3798,16 @@ gint do_save( dbuff* buff, char* path )
     system(command);
   }
 
+  // same with backup of fid
+  path_strcpy(fileN,path);
+  path_strcat(fileN,"/data.fid"); // destination
+
+  path_strcpy(fileS,buff->path_for_reload);
+  path_strcat(fileS,"/data.fid");
+  if (strncmp(fileS,fileN,PATH_LENGTH) != 0){
+    sprintf(command,"cp -p %s %s",fileS,fileN);
+    system(command);
+  }
 
 
   /* strip filename out of the path, and stick the path into global path */
@@ -7137,7 +7178,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
 
       //      fprintf(stderr,"calling do_load with input: %s, current is %i\n",input+5,current);
       
-      eo = do_load(buffp[current],input+5);
+      eo = do_load(buffp[current],input+5,0);
 
       if (eo == -1){
 	strcpy(output,"FILE NOT LOADED");

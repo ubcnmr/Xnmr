@@ -751,7 +751,7 @@ int run()
 
 
   FILE* fstream;
-  char path[PATH_LENGTH],fileN[PATH_LENGTH],fileN2[PATH_LENGTH];
+  char path[PATH_LENGTH],fileN[PATH_LENGTH],fileN2[PATH_LENGTH],fileNfid[PATH_LENGTH];
   float f;
   char end_1d_loop=0,end_2d_loop=0;
 #ifndef NOHARDWARE
@@ -825,6 +825,18 @@ int run()
     //We have to empty the file 
     
     fstream = fopen( fileN, "w" );
+    if (fstream == NULL){
+      cant_open_file();
+      return 0;
+    }
+    fclose( fstream );
+
+    // same again for backup of fid
+
+    path_strcpy( fileNfid, path);
+    path_strcat( fileNfid, "data.fid" );
+
+    fstream = fopen( fileNfid, "w" );
     if (fstream == NULL){
       cant_open_file();
       return 0;
@@ -1487,6 +1499,16 @@ else{
 	  fwrite( &f, sizeof(float), 1, fstream );
 	}
 	
+	fclose( fstream );
+
+	fstream = fopen( fileNfid, "r+" );
+	//      fprintf(stderr,"seeking to: %i\n",data_shm->last_acqn_2d*data_shm->npts*2*sizeof(float));
+	fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
+	for( i=0; i<data_shm->npts*2; i++ ) {
+	  f = (float) data_shm->data_image[i];
+	  fwrite( &f, sizeof(float), 1, fstream );
+	}
+	
 	
 	fclose( fstream );
 	// rewrite the param file
@@ -1924,6 +1946,19 @@ else{
 	  //	  fprintf(stderr,"writing out data\n");
 	  // write out the data
 	  fstream = fopen( fileN, "r+" );
+	  
+	  //      fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
+	  fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2*sizeof (float), SEEK_SET);
+	  
+	  for( i=0; i<data_shm->npts*2; i++ ) {
+	    f = (float) data_shm->data_image[i];
+	    fwrite( &f, sizeof(float), 1, fstream );
+	  }
+	
+	  	
+	
+	  fclose( fstream );
+	  fstream = fopen( fileNfid, "r+" );
 	  
 	  //      fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
 	  fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2*sizeof (float), SEEK_SET);

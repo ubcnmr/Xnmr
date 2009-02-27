@@ -1991,7 +1991,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     path_strcpy( path, buff->path_for_reload); 
     //    fprintf(stderr,"in reload, path is: %s\n",path);
     if (strcmp(path,"") == 0 ) return;
-    do_load( buff, path); 
+    do_load( buff, path,1);  //always read in the fid.
 
     return; 
   } 
