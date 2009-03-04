@@ -5,10 +5,10 @@
 //
 
 
-//#define NOHARDWARE
+#define NOHARDWARE
 //#define NO_RT_SCHED
 
-#define OLD_PORT_INTERRUPT 
+//#define OLD_PORT_INTERRUPT 
 
 //#define RTAI_INTERRUPT
 
