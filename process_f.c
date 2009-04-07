@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #define GTK_DISABLE_DEPRECATED
 /* process_f.c
  *
@@ -789,49 +790,49 @@ gint do_left_shift_2d_and_display(GtkWidget * widget,double *val)
   }
 
 
-gint do_shim_filter(GtkWidget * widget,double *val)
+gint do_truncate(GtkWidget * widget,double *val)
 {
-  int i,j,shift,imax;
   dbuff* buff;
-  float sw;
-
-  // this is a frequency in Hz
+  int old_npts,acq_points;
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
   else 
     buff = buffp[ current ];
   if (buff == NULL){
-    popup_msg("do_shim_filter panic! buff is null!",TRUE);
+    popup_msg("do_truncate panic! buff is null!",TRUE);
     return 0;
   }
 
-  shift = (int) *val;
-  sw = 1./buff->param_set.dwell*1e6;
-  imax = sw/shift/4.;
+  old_npts=buff->npts;
+  acq_points=buff->acq_npts;
   
-  fprintf(stderr,"imax wants to be: %i\n",imax);
-  if (imax > buff->npts) imax = buff->npts;
-  for( j=0; j<buff->npts2; j++ )
-    for( i=0; i<imax; i++ ) {
-      buff->data[2*i+j*2*buff->npts] *= sin (2*M_PI*i*shift/sw);
-      buff->data[2*i+1+j*2*buff->npts] *= sin(2*M_PI*i*shift/sw);
-    }
+  if ((int) *val ==old_npts) return 0;  
 
+  cursor_busy(buff);
+  buff_resize(buff,(int) *val,buff->npts2);
 
-    
+  // ok, if we're here because the user pressed a button or we're actively running, then
+  // change the npts.  
+  // The other possibility is from an automatic upload_and_process while we're not focussed on the current buff.
+  if (widget !=NULL || upload_buff == current) update_npts((int) *val); 
+
+  
+
+  // reset this since the update_npts call may have messed it up.
+  buff->acq_npts=acq_points;
 
   return 0;
 
 
   }
 
-gint do_shim_filter_and_display(GtkWidget * widget,double *val)
+gint do_truncate_and_display(GtkWidget * widget,double *val)
 {
   dbuff *buff;
   gint result;
 
-  result = do_shim_filter( widget, val );
+  result = do_truncate( widget, val );
 
   if( widget == NULL ) {
     fprintf(stderr,"widget is nyull\n");
@@ -1064,26 +1065,6 @@ GtkWidget* create_process_frame()
    *  This is where all the process buttons are set up
    */ 
 
-  nu=CR;
-  // default value actually set in buff.c 
-  process_button[nu].adj= gtk_adjustment_new( 9, 1, PSRBMAX , 1, 2, 0 );
-  g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
-  button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00,0 );
-  gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu,nu+1);
-  gtk_widget_show( button );
-  //  gtk_adjustment_set_value( GTK_ADJUSTMENT( process_button[nu].adj ), 11 );
-
-  process_button[nu].button = gtk_check_button_new();
-  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu,nu+1);
-  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle), (void*) nu);
-  gtk_widget_show(process_button[nu].button);
-
-  button = gtk_button_new_with_label( "Cross correlation" );
-  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_cross_correlate_and_display), &(GTK_ADJUSTMENT(process_button[nu].adj) -> value) );
-  process_button[nu].func = do_cross_correlate;
-  gtk_widget_show(button);
 
   /*
    *  The first Baseline correct
@@ -1125,11 +1106,10 @@ GtkWidget* create_process_frame()
   process_button[nu].func = do_left_shift;
   gtk_widget_show(button);
 
-
   /*
-   * shim-filter - should be removed...
+   * truncate 
    */
-  nu=SF;
+  nu=TR;
   process_button[nu].adj= gtk_adjustment_new( 0, 0, 10000000, 1, 2, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
@@ -1142,11 +1122,37 @@ GtkWidget* create_process_frame()
   g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle), 
       (void*) nu);
   gtk_widget_show(process_button[nu].button);
-  button = gtk_button_new_with_label( "Shim Filter" );
+  button = gtk_button_new_with_label( "Truncate" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_shim_filter_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
-  process_button[nu].func = do_shim_filter;
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_truncate_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  process_button[nu].func = do_truncate;
   gtk_widget_show(button);
+
+  /*
+   * cross correlation
+   */
+  nu=CR;
+  // default value actually set in buff.c 
+  //  process_button[nu].adj= gtk_adjustment_new( 9, 1, PSRBMAX , 1, 2, 0 );
+  process_button[nu].adj= gtk_adjustment_new( 9, 1, 4096 , 1, 2, 0 );
+  g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
+  button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00,0 );
+  gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu,nu+1);
+  gtk_widget_show( button );
+  //  gtk_adjustment_set_value( GTK_ADJUSTMENT( process_button[nu].adj ), 11 );
+
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu,nu+1);
+  g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle), (void*) nu);
+  gtk_widget_show(process_button[nu].button);
+
+  button = gtk_button_new_with_label( "Cross correlation" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_cross_correlate_and_display), &(GTK_ADJUSTMENT(process_button[nu].adj) -> value) );
+  process_button[nu].func = do_cross_correlate;
+  gtk_widget_show(button);
+
 
 
 
@@ -1468,6 +1474,53 @@ gint do_cross_correlate_and_display( GtkWidget *widget, double *bits )
   return result;
 }
 
+float get_chu_seq(int n){
+
+  static int pos=-1;
+  float phase;
+  int np;
+  
+  if (n < 0){
+    pos=-1;
+    return 0.;
+  }
+
+  pos += 1;
+  pos = pos %n;
+  if (n %2 == 0)
+    phase =180.*pos*pos/n;
+  else
+    phase = 180.*pos*(pos+1)/n;
+  np=phase/360.;
+  phase=phase-np*360;
+  return phase;
+}
+
+float get_frank_seq(int n){
+
+  static int pos=-1;
+  static int f=0;
+  float phase;
+  int np;
+  if (n < 0) {
+    pos=-1;
+    f=0;
+    return 0.;
+  }
+
+  pos += 1;
+  if (pos == n){
+    f += 1;
+    if ( f== n)
+      f = 0;
+  }
+  pos = pos % n;
+  phase = 360.*pos*f/n;
+  np=phase/360.;
+  phase=phase-np*360;
+  //  fprintf(stderr,"pos: %i, phase: %f\n",pos,phase);
+  return phase;
+}
 
 gchar psrb(int bits,int init){
   // routine that generates a pseudo random bit sequence.  See Horowitz and Hill
@@ -1530,9 +1583,43 @@ gchar psrb(int bits,int init){
 
 
 }
+gint do_cross_correlate( GtkWidget *widget, double *bits ){
+  // figure out if we should be doing an mlbs, frank or chu correlation, and do the right one.
+  // we do think by looking for 'frank' or 'chu' in the pulse program name
 
-gint do_cross_correlate( GtkWidget *widget, double *bits )
+  dbuff *buff;
 
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_cross_correlate panic! buff is null!",TRUE);
+    return 0;
+  }
+
+  if (strcasestr(buff->param_set.exec_path,"frank")){
+    printf("doing frank cross correlate\n");
+    return do_cross_correlate_frank(widget,bits);
+  }
+  else
+    if (strcasestr(buff->param_set.exec_path,"chu")){
+    printf("doing frank cross correlate\n");
+    return do_cross_correlate_chu(widget,bits);
+    }
+    else{
+      printf("doing mlbs cross correlate\n");
+      return do_cross_correlate_mlbs(widget,bits);
+    }
+      
+
+
+
+}
+
+
+gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
+// this is the new mlbs version
 {
   static int len[PSRBMAX] = {0,0,7,15,31,63,127,0,511,1023,2047,0,0,0,32767,0,131071,262143};
 
@@ -1561,27 +1648,14 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
     return -1;
   }
 
-  num_seq = (int) buff->npts/len[ num_bits-1 ] - 1;
-  
+  num_seq = (int) buff->npts/len[ num_bits-1 ];
+  xsize = num_seq*len[ num_bits - 1 ];
+  printf("mlbs correlate: len: %i, xsize: %i\n",len[num_bits-1],xsize);
+
   if (buff->npts < len[ num_bits-1 ]){
     popup_msg("do_cross_correlate: too few points for mlbs\n",TRUE);
     return 0;
   }
-  /*  
-      if (num_seq < 1){ 
-      popup_msg("do_cross_correlate: num_seq < 1",TRUE);
-      return 0;
-      }
-  */
-  
-  fprintf(stderr,"cross_correlate: num_seq is %i\n",num_seq);
-      
-  xsize = buff->npts;
-  if (xsize < len[ num_bits - 1]*2){
-    xsize = len[ num_bits - 1]*2;   
-    num_seq = 1;
-  }
-    
   new_data = g_malloc(sizeof(float) * xsize);
   //reals are stored in: buff->data[2*i+j*2*buff->npts]
   //imag in:             buff->data[2*i+1+j*2*buff->npts]
@@ -1607,8 +1681,8 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
     // do the cross-correlation:
     for (i = 0 ; i < len[num_bits-1] ; i++){ 
       buff->data[2*i+j*2*buff->npts]=0.;
-      for( k = 0 ; k < num_seq*len[num_bits-1] ; k++ ){
-	buff->data[2*i+j*2*buff->npts] += mreg[k]*new_data[k+i];
+      for( k = 0 ; k < xsize ; k++ ){
+	buff->data[2*i+j*2*buff->npts] += mreg[k]*new_data[(k+i)%xsize];
       }
     }
     for (i=len[num_bits-1];i<buff->npts;i++)
@@ -1617,14 +1691,14 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
 
 
     // now the imag:
-    for(i=0;i<buff->npts;i++) 
+    for(i=0;i<xsize;i++) 
       new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts+1];
 
     // do the cross-correlation:
     for (i=0;i< len[num_bits-1];i++){ 
       buff->data[2*i+j*2*buff->npts+1]=0.;
-      for(k=0;k<num_seq* len[num_bits-1];k++){
-	buff->data[2*i+j*2*buff->npts+1] += mreg[k]*new_data[k+i];
+      for(k=0;k<xsize;k++){
+	buff->data[2*i+j*2*buff->npts+1] += mreg[k]*new_data[(k+i)%xsize];
       }
     }
     for (i=len[num_bits-1];i<buff->npts;i++)
@@ -1637,6 +1711,167 @@ gint do_cross_correlate( GtkWidget *widget, double *bits )
 
   buff_resize(buff,len[num_bits-1],buff->npts2);
   if (widget !=NULL || upload_buff == current) update_npts(len[num_bits-1]); 
+  g_free(new_data);
+  g_free(mreg);
+  return 0;
+}
+
+
+gint do_cross_correlate_frank( GtkWidget *widget, double *bits ){
+// this is the frank version
+
+
+  int i, j,k;
+  dbuff *buff;
+  float *new_data;
+  float *mreg,pha;
+  int num_seq;
+  int xsize; // the size of the data set we'll be cross correlating.
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_cross_correlate panic! buff is null!",TRUE);
+    return 0;
+  }
+  
+  // for frank, *bits is the sqrt of the length of the sequence.
+  
+  if (buff->npts < (int) (*bits * *bits) ){
+    popup_msg("do_cross_correlate: too few points\n",TRUE);
+    return 0;
+  }
+  num_seq = (int) buff->npts/ (*bits * *bits); // how many sequences we actually will use in the correlation.
+
+  xsize = (int)(*bits* *bits)*num_seq;  // how many points we'll use
+    
+  new_data = g_malloc(sizeof(float) * xsize*2);
+  //reals are stored in: buff->data[2*i+j*2*buff->npts]
+  //imag in:             buff->data[2*i+1+j*2*buff->npts]
+
+  // array for storing bit coefficients
+  mreg = g_malloc(sizeof(float) * xsize*2);
+
+
+  //  fprintf(stderr,"in do_cross_correlate, bits: %i\n",(int) *bits);
+  get_frank_seq(-1); // reset it.
+  for (i=0;i<xsize;i++){
+    pha  = get_frank_seq((int) *bits);
+    //    printf("phase: %f\n",pha);
+    mreg[2*i]=cos(M_PI*pha/180.);
+    mreg[2*i+1]=sin(M_PI*pha/180.);
+  }
+  for( j=0; j<buff->npts2; j++ ){  // j loops through the 2d records
+
+    // copy the data to new_data
+    for(i=0;i< xsize ;i++) {
+      new_data[2*i] = buff->data[2*(i%buff->npts)+j*2*buff->npts];
+      new_data[2*i+1] = buff->data[2*(i%buff->npts)+j*2*buff->npts+1];
+    }
+    printf("in frank cross correlate.  Building data set of %i points, using %i points\n",(int)( *bits * *bits),xsize);
+    // do the cross-correlation:
+    for (i = 0 ; i < (int)(*bits* *bits) ; i++){ 
+      buff->data[2*i+j*2*buff->npts]=0.;
+      buff->data[2*i+j*2*buff->npts+1]=0.;      
+      for( k = 0 ; k < xsize ; k++ ){
+	buff->data[2*i+j*2*buff->npts] += mreg[2*k]*new_data[2*((k+i)%xsize)]-mreg[2*k+1]*new_data[2*((k+i)%xsize)+1];
+	buff->data[2*i+j*2*buff->npts+1] += mreg[2*k]*new_data[2*((k+i)%xsize)+1]+mreg[2*k+1]*new_data[2*((k+i)%xsize)];
+      }
+
+    }
+    for (i= (int)(*bits* *bits);i<buff->npts;i++){
+      buff->data[2*i+j*2*buff->npts]= 0.;
+      buff->data[2*i+j*2*buff->npts+1]= 0.;
+    }
+
+
+  }
+
+  buff_resize(buff,(int) (*bits* *bits),buff->npts2);
+  if (widget !=NULL || upload_buff == current) update_npts((int)(*bits* *bits)); 
+
+  g_free(new_data);
+  g_free(mreg);
+  return 0;
+}
+
+
+gint do_cross_correlate_chu( GtkWidget *widget, double *bits ){
+// this is the chu version
+
+
+  int i, j,k;
+  dbuff *buff;
+  float *new_data;
+  float *mreg,pha;
+  int num_seq;
+  int xsize; // the size of the data set we'll be cross correlating.
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_cross_correlate panic! buff is null!",TRUE);
+    return 0;
+  }
+  
+  // for chu, *bits is the length of the sequence.
+  
+  if (buff->npts < (int) *bits ){
+    popup_msg("do_cross_correlate: too few points\n",TRUE);
+    return 0;
+  }
+  num_seq = (int) buff->npts/ *bits ; // how many sequences we actually will use in the correlation.
+
+  xsize = *bits*num_seq;  // how many points we'll use
+    
+  new_data = g_malloc(sizeof(float) * xsize*2);
+  //reals are stored in: buff->data[2*i+j*2*buff->npts]
+  //imag in:             buff->data[2*i+1+j*2*buff->npts]
+
+  // array for storing bit coefficients
+  mreg = g_malloc(sizeof(float) * xsize*2);
+
+
+  //  fprintf(stderr,"in do_cross_correlate, bits: %i\n",(int) *bits);
+  get_chu_seq(-1); // reset it.
+  for (i=0;i<xsize;i++){
+    pha  = get_chu_seq((int) *bits);
+    //    printf("phase: %f\n",pha);
+    mreg[2*i]=cos(M_PI*pha/180.);
+    mreg[2*i+1]=sin(M_PI*pha/180.);
+  }
+  for( j=0; j<buff->npts2; j++ ){  // j loops through the 2d records
+
+    // copy the data to new_data
+    for(i=0;i< xsize ;i++) {
+      new_data[2*i] = buff->data[2*(i%buff->npts)+j*2*buff->npts];
+      new_data[2*i+1] = buff->data[2*(i%buff->npts)+j*2*buff->npts+1];
+    }
+    printf("in chu cross correlate.  Building data set of %i points, using %i points\n",(int) *bits,xsize);
+    // do the cross-correlation:
+    for (i = 0 ; i < *bits ; i++){ 
+      buff->data[2*i+j*2*buff->npts]=0.;
+      buff->data[2*i+j*2*buff->npts+1]=0.;      
+      for( k = 0 ; k < xsize ; k++ ){
+	buff->data[2*i+j*2*buff->npts] += mreg[2*k]*new_data[2*((k+i)%xsize)]-mreg[2*k+1]*new_data[2*((k+i)%xsize)+1];
+	buff->data[2*i+j*2*buff->npts+1] += mreg[2*k]*new_data[2*((k+i)%xsize)+1]+mreg[2*k+1]*new_data[2*((k+i)%xsize)];
+      }
+
+    }
+    for (i= *bits;i<buff->npts;i++){
+      buff->data[2*i+j*2*buff->npts]= 0.;
+      buff->data[2*i+j*2*buff->npts+1]= 0.;
+    }
+
+
+  }
+
+  buff_resize(buff,*bits,buff->npts2);
+  if (widget !=NULL || upload_buff == current) update_npts(*bits); 
 
   g_free(new_data);
   g_free(mreg);
@@ -2134,7 +2369,6 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   float *new_data;
   double spared;
   char is_symm;
-  char true_complex;
 
   if( widget == NULL ) {
     buff = buffp[ upload_buff ];
@@ -2150,14 +2384,6 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   }
 
   is_symm = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.symm_check));
-  true_complex = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.true_complex));
-  
-
-  // can't have hyper and true complex at the same time.
-  // if true complex is active, then we say its true complex.
-
-					      
-
   /*********
 
   if(buff->win.press_pend>0) {
@@ -2173,7 +2399,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
      sure we have a power of two as npts 
 
   - or, do a factor of 2 so we have room to put in the imaginaries - if not hyper*/
-  if (buff->is_hyper || true_complex )
+  if (buff->is_hyper)
     spared= 1.0;
   else
     spared=2.0;
@@ -2186,36 +2412,8 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     scale = buff->npts2/4.0;
   else
     scale = 2.0;
-  
-  if (true_complex){
-    printf("doing true_complex FT2d\n");
-    new_data = g_malloc(buff->npts2*sizeof(float)*2);
-    if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
-    
-    
-    // copy out
-    for(i=0;i<buff->npts;i++){
-      for (j=0;j<buff->npts2;j++){
-	new_data[j*2] = buff->data[j*buff->npts*2+2*i];
-	new_data[j*2+1] = buff->data[j*buff->npts*2+2*i+1];
-      }
-      // do the ft
-      four1(new_data-1,buff->npts2,1);
 
-      // descramble
-      for(j=0;j<buff->npts2;j++){
-	spare = new_data[j]/scale;
-	new_data[j]=new_data[j+buff->npts2]/scale;
-	new_data[j+buff->npts2]=spare;
-      }
-      // copy back:
-      for (j=0;j<buff->npts2;j++){
-	buff->data[j*buff->npts*2+2*i] = new_data[2*j];
-	buff->data[j*buff->npts*2+2*i+1] = new_data[2*j+1];
-      }
-    }
-  }
-  else if (buff->is_hyper == FALSE){ 
+  if (buff->is_hyper == FALSE){ 
     //    popup_msg("hypercomplex flag not set, doing real FT?",TRUE);
     fprintf(stderr,"hypercomplex flag not set, doing real FT\n");
     new_data = g_malloc(buff->npts2 * sizeof(float) );
@@ -2263,7 +2461,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       
 
   }
-  else {// is hypercomplex
+  else{// is hypercomplex
     new_data = g_malloc(buff->npts2 * sizeof(float));
     //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");

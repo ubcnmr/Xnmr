@@ -138,10 +138,10 @@ typedef struct {
 
 /*  symbols defining the positions of the processing functions */
 
-#define CR 0
-#define BC1 1
-#define LS 2
-#define SF 3
+#define BC1 0
+#define LS 1
+#define TR 2
+#define CR 3
 #define EM 4
 #define GM 5
 #define ZF 6

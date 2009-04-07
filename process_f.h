@@ -49,6 +49,9 @@ gint do_offset_cal_2D_and_display( GtkWidget *widget, double *unused);
 gint do_offset_cal_2D_a( GtkWidget *widget, double *unused);
 gint do_offset_cal_2D_a_and_display( GtkWidget *widget, double *unused);
 
+gint do_cross_correlate_mlbs( GtkWidget *widget, double *val);
+gint do_cross_correlate_chu( GtkWidget *widget, double *val);
+gint do_cross_correlate_frank( GtkWidget *widget, double *val);
 gint do_cross_correlate( GtkWidget *widget, double *val);
 gint do_cross_correlate_and_display( GtkWidget *widget, double *val);
 
