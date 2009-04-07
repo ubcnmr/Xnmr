@@ -3462,7 +3462,20 @@ gint do_load( dbuff* buff, char* path, int fid )
 	  &new_npts1,&new_acq_npts,&acqns, &new_npts2 ,&swf,&dwell);
   //  fprintf(stderr,"do_load: np1 %u na %u np2 %u sw: %lu dwell: %f\n",new_npts1,acqns,new_npts2,sw,dwell);
   sw= (unsigned long ) (swf+0.1);
-  buff_resize( buff, new_npts1, new_npts2 );
+
+  // need to figure out if we're going to read the data or the fid before we resize:
+  if (fid == 1){
+    path_strcpy( fileN, path);
+    path_strcat( fileN, "/data.fid" );
+    if (stat(fileN,&sbuf) != 0){
+      fid = 0;
+    }
+  }
+    
+  if (fid == 1)
+    buff_resize( buff, new_acq_npts, new_npts2 );
+  else
+    buff_resize( buff, new_npts1, new_npts2 );
 
   //this resets the acq_npts in the buff struct, so fix it 
   buff->acq_npts=new_acq_npts;
@@ -3580,14 +3593,9 @@ gint do_load( dbuff* buff, char* path, int fid )
   if (fid == 1){
     path_strcpy( fileN, path);
     path_strcat( fileN, "/data.fid" );
-    if (stat(fileN,&sbuf) != 0){
-      fid = 0;
-    }
-    else{ // data.fid exists, assume that its time domain data.
-      buff->flags = 0;
-    }
+    buff->flags = 0;
   }
-  if (fid != 1){ // coded like this for a reason - so if we reset from above
+  else{
     path_strcpy( fileN, path);
     path_strcat( fileN, "/data" );
   }
@@ -3599,8 +3607,9 @@ gint do_load( dbuff* buff, char* path, int fid )
     perror( "do_load: couldn't open data file" );
     return -1;
   }
-  
+  //  printf("buff-npts is: %i\n",buff->npts);
   i=fread( buff->data, sizeof( float ), buff->npts*buff->npts2*2, fstream );
+
   
   //  fprintf(stderr,"read %i points\n",i);
   fclose( fstream );

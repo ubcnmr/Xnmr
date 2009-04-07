@@ -476,7 +476,7 @@ void parameter_not_found( char *name){
      
 
 
-  /*
+  //  /*
      // start dump
   
      if (first_time == 1){
@@ -517,7 +517,7 @@ void parameter_not_found( char *name){
        fclose( fid ); 
      }
      
-  */  
+     //  */  
      // end dump
 
   // begun may not have been set - if we didn't actually do anything...
