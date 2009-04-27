@@ -682,6 +682,8 @@ dbuff *create_buff(int num){
     // true complex checkbox
     buff->win.true_complex = gtk_check_button_new_with_label("Complex");
     gtk_box_pack_start(GTK_BOX(vbox1),buff->win.true_complex,FALSE,FALSE,0);
+    g_signal_connect(G_OBJECT(buff->win.true_complex),"clicked",
+		       G_CALLBACK(complex_check_routine),buff);
 
     
     // symmetric button
@@ -824,6 +826,7 @@ dbuff *create_buff(int num){
     gtk_combo_box_insert_text(GTK_COMBO_BOX(fit_data.d_buff),inum+1,s);
     
     add_sub.index[inum] = num;
+    buff->flags = FT_FLAG;
     
     return buff;
     
@@ -1198,18 +1201,19 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 
   int i,i1,i2,x,x2,y,y2,exint,eyint,recadd;
   float *data;
-  int ndpoints;
+  int ndpoints,true_complex;
   
   data=buff->data;
 
 
+  true_complex = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.true_complex));
 
   if (buff->is_hyper == 0){
 
     i1=(int) (buff->disp.yy1 * (buff->npts2-1)+.5);
     i2=(int) (buff->disp.yy2 * (buff->npts2-1)+.5);
   }
-  else{
+  else{ // it is hyper
     i1 = (int) (buff->disp.yy1 * (buff->npts2/2-1)+.5);
     i2 = (int) (buff->disp.yy2 * (buff->npts2/2-1)+.5);
     i1 *= 2; 
@@ -1262,15 +1266,15 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,
 		  ndpoints);
   }
-   if(buff->disp.imag && buff->is_hyper){
-
+  if(buff->disp.imag && buff->is_hyper){
+    
     x= 1;
     y=(int) -((data[recadd*(i1+1)+2*buff->disp.record2]
 	       +buff->disp.yoffset)*buff->win.sizey
 	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
     y = MIN(y,buff->win.sizey);
     y = MAX(y,1);
-
+    
     gdk_gc_set_foreground(colourgc,&colours[GREEN]);
     dpoints[0].x = x+exint;
     dpoints[0].y = y+eyint;
@@ -1315,6 +1319,69 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		       *(data[recadd*(i+1)+2*buff->disp.record2])
 		       +(data[recadd*i+2*buff->disp.record2])
 		       *(data[recadd*i+2*buff->disp.record2]))
+		  +buff->disp.yoffset)*buff->win.sizey*
+	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+      y2 = MIN(y2,buff->win.sizey);
+      y2 = MAX(y2,1);
+      dpoints[ndpoints].x = x2+exint;
+      dpoints[ndpoints].y = y2+eyint;
+      ndpoints += 1;
+    }
+    gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,ndpoints);
+   } 
+   if(buff->disp.imag && true_complex){
+
+    x= 1;
+    y=(int) -((data[recadd*i1+2*buff->disp.record2+1]
+	       +buff->disp.yoffset)*buff->win.sizey
+	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+    y = MIN(y,buff->win.sizey);
+    y = MAX(y,1);
+
+    gdk_gc_set_foreground(colourgc,&colours[GREEN]);
+    dpoints[0].x = x+exint;
+    dpoints[0].y = y+eyint;
+
+    ndpoints = 1;
+
+    for(i=i1+1;i<=i2;i+=1){
+      x2=(i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
+      y2=(int) -((data[recadd*i+2*buff->disp.record2+1]
+		  +buff->disp.yoffset)*buff->win.sizey*
+	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+      y2 = MIN(y2,buff->win.sizey);
+      y2 = MAX(y2,1);
+
+      dpoints[ndpoints].x = x2+exint;
+      dpoints[ndpoints].y = y2+eyint;
+      ndpoints += 1;
+    }
+    gdk_draw_lines(buff->win.pixmap,colourgc,dpoints
+		    ,ndpoints);
+   } 
+   if(buff->disp.mag && true_complex){
+    x= 1;
+    y=(int) -((sqrt((data[recadd*i1+2*buff->disp.record2])
+		    *(data[recadd*i1+2*buff->disp.record2])
+		    +(data[recadd*i1+2*buff->disp.record2+1])
+		    *(data[recadd*i1+2*buff->disp.record2+1]))
+	       +buff->disp.yoffset)*buff->win.sizey
+	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+    y = MIN(y,buff->win.sizey);
+    y = MAX(y,1);
+    
+    gdk_gc_set_foreground(colourgc,&colours[BLUE]);
+    dpoints[0].x = x+exint;
+    dpoints[0].y = y+eyint;
+
+    ndpoints = 1;
+    
+    for(i=i1+1;i<=i2;i+=1){
+      x2=(i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
+      y2=(int) -((sqrt((data[recadd*i+2*buff->disp.record2])
+		       *(data[recadd*i+2*buff->disp.record2])
+		       +(data[recadd*i+2*buff->disp.record2+1])
+		       *(data[recadd*i+2*buff->disp.record2+1]))
 		  +buff->disp.yoffset)*buff->win.sizey*
 	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
       y2 = MIN(y2,buff->win.sizey);
@@ -3132,12 +3199,42 @@ void show_active_border()
  return;
 }
 
+gint complex_check_routine(GtkWidget *widget,dbuff *buff){
+  static int norecur = 0;
+  // all we do here is check to make sure we aren't both complex and hyper
+  CHECK_ACTIVE(buff);
+
+  if (norecur == 1){
+    norecur = 0;
+    return TRUE;
+  }
+  // if phase window is open for our buff, get lost
+  if (phase_data.is_open == 1 && phase_data.buffnum == buff->buffnum){
+    norecur=1;
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+  }
+
+  if(buff->win.press_pend >0){
+    norecur = 1;
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+    return TRUE;
+  }
+
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)) &&
+      gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck)))
+    
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),0);
+    if(buff->disp.dispstyle==SLICE_COL){
+      draw_canvas(buff);
+    }
+  return TRUE;
+
+}
 gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
 {
   //fprintf(stderr,"in hyper_check \n");
   static int norecur = 0;
   char title[UTIL_LEN];
-
 
   if (norecur == 1) {
     norecur=0;
@@ -3151,6 +3248,17 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),buff->is_hyper);
     return TRUE;
   }
+  // if phase window is open for our buff, get lost
+  if (phase_data.is_open == 1 && phase_data.buffnum == buff->buffnum){
+    norecur=1;
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),buff->is_hyper);
+  }
+
+  // can't be complex and hyper
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)) &&
+      gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.true_complex)))
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.true_complex),0);
+
 
   if(GTK_TOGGLE_BUTTON(widget)->active){
 
@@ -3163,11 +3271,6 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
       return TRUE;
     }
 
-    // if phase window is open for our buff, get lost
-    if (phase_data.is_open == 1 && phase_data.buffnum == buff->buffnum){
-      norecur=1;
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),buff->is_hyper);
-    }
 
     
     /* if npts is odd, deal with it */
@@ -3187,7 +3290,8 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
     }
     if(buff->is_hyper == FALSE){
       buff->is_hyper=TRUE;
-      draw_canvas(buff);
+      //      printf("set is_hyper to true\n");
+	draw_canvas(buff);
     }
     return TRUE;
   }
@@ -3197,7 +3301,8 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
      just for ticking the box incorrectly */
   if (buff->is_hyper) {
     buff->is_hyper = FALSE;
-    draw_canvas(buff);
+    //      printf("set is_hyper to false\n");
+      draw_canvas(buff);
     return TRUE;
   }
      

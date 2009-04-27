@@ -168,6 +168,7 @@ void show_active_border();
 gint phase_buttons(GtkWidget *widget,gpointer data);
 
 gint hyper_check_routine(GtkWidget *widget,dbuff *buff);
+gint complex_check_routine(GtkWidget *widget,dbuff *buff);
 
 gint plus_button(GtkWidget *widget,dbuff *buff);
 gint minus_button(GtkWidget *widget,dbuff *buff);

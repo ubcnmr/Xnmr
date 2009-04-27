@@ -1094,25 +1094,15 @@ white set up below  */
 
 
 
-
-
-
-
-
-
-
   /* setup a busy cursor */
   cursorclock=gdk_cursor_new(GDK_CLOCK);
-
-
 
   if( result_shm == 1 && !no_acq ) {
     fprintf(stderr,"connecting to old shm\n");
     upload_buff = current;
     // fprintf(stderr, "initializing IPC signals and sending an idle_draw_canvas\n" );
 
-    
-    
+        
     init_ipc_signals();
 	
     
@@ -1158,20 +1148,21 @@ white set up below  */
 //void open_phase( dbuff *buff, int action, GtkWidget *widget )
 void open_phase(GtkAction *action, dbuff *buff)
 {
-  int buffnum,i;
+  int buffnum,i,true_complex;
   float old_low,old_up,future_p1;
   char temps[UTIL_LEN];
 
   CHECK_ACTIVE(buff);
-
+  true_complex = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.true_complex));
   buffnum=buff->buffnum;
   if (phase_data.is_open==1 || buff->win.press_pend >0 || 
       (buff->disp.dispstyle != SLICE_ROW && buff->disp.dispstyle !=SLICE_COL ))
       return;
   
   /* if its a column, has to be hyper */
-  if(buff->disp.dispstyle ==SLICE_COL && !buff->is_hyper){
-    popup_msg("can't phase a column unless its hypercomplex",TRUE);
+  if(buff->disp.dispstyle ==SLICE_COL && !buff->is_hyper && !true_complex){
+    popup_msg("can't phase a column unless its hypercomplex or true complex",TRUE);
+    printf("true_complex: %i, is_hyper: %i\n",true_complex,buff->is_hyper);
     return;
   }
 
@@ -1199,22 +1190,36 @@ void open_phase(GtkAction *action, dbuff *buff)
 
   }
   else if(buff->disp.dispstyle==SLICE_COL){
+    if (buff->npts2 % 2 == 1 && buff->is_hyper){
+      popup_msg("Can't phase hypercomplex 2d on odd number of npts2",TRUE);
+      return;
+    }
     phase_data.data=g_malloc(buff->npts2*2*sizeof(float));
     phase_data.data2=g_malloc(buff->npts2*2*sizeof(float));
-    phase_npts = buff->npts2/2;
+    if (buff->is_hyper)
+      phase_npts = buff->npts2/2;
+    else  if(true_complex)
+      phase_npts=buff->npts2;
+    
     printf("phase_npts is: %i\n",phase_npts);
     //copy the data to be phased to a safe place:
 
-    for(i=0;i<phase_npts;i++){
-      phase_data.data[2*i]=buff->data[buff->npts*2*2*i+
-				       2*buff->disp.record2];
-      phase_data.data[2*i+1]=buff->data[buff->npts*2*(2*i+1)
-					 +2*buff->disp.record2];
+    if (buff->is_hyper){
+      for(i=0;i<phase_npts;i++){
+	phase_data.data[2*i]=buff->data[buff->npts*2*2*i+
+					2*buff->disp.record2];
+	phase_data.data[2*i+1]=buff->data[buff->npts*2*(2*i+1)
+					  +2*buff->disp.record2];
+      }
     }
-
+    if (true_complex){
+      for(i=0;i<phase_npts;i++){
+	phase_data.data[2*i]=buff->data[buff->npts*2*i+2*buff->disp.record2];
+	phase_data.data[2*i+1]=buff->data[buff->npts*2*i+2*buff->disp.record2+1];
+      }
+    }
   }
   /* copy the data into the first spot */
-
 
   phase_data.buffnum=buffnum;
   phase_data.pivot=0.0;
@@ -1268,8 +1273,6 @@ void open_phase(GtkAction *action, dbuff *buff)
   gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),future_p1);
 
 
-
-
   phase_data.last_phase1=GTK_ADJUSTMENT(phase1_ad)->value;
 
 
@@ -1286,7 +1289,7 @@ void open_phase(GtkAction *action, dbuff *buff)
 
 gint phase_buttons(GtkWidget *widget,gpointer data)
 {
-  int i, j,npts1;
+  int i, j,npts1,true_complex;
   float lp0,lp1,dp0,dp1;
   dbuff *buff;
   /* first check to make sure buffer still exists */
@@ -1294,6 +1297,7 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
 
     buff=buffp[phase_data.buffnum];
     npts1=buff->npts;  
+    true_complex = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.true_complex));
 
     lp0=GTK_ADJUSTMENT(phase0_ad)->value;
     lp1=GTK_ADJUSTMENT(phase1_ad)->value;
@@ -1356,34 +1360,63 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
 	else popup_msg("npts changed, didn't apply phase",TRUE);
       }// end slice row
       else{ /* SLICE_COL */
-	if (phase_npts == buff->npts2/2){
+	if ((phase_npts == buff->npts2/2 && buff->is_hyper) || (phase_npts == buff->npts2 && true_complex)){
 	  if(widget==phase_data.apply_all){
-	    for(j=0;j<buff->npts*2;j++){// does real and imag of 1d's
-	      for(i=0;i<buff->npts2/2;i++){
-		phase_data.data[2*i]=buff->data[j+buff->npts*2*2*i];
-		phase_data.data[2*i+1]=buff->data[j+
-						  buff->npts*2*(2*i+1)];
+	    if (buff->is_hyper){
+	      for(j=0;j<buff->npts*2;j++){// does real and imag of 1d's
+		for(i=0;i<buff->npts2/2;i++){
+		  phase_data.data[2*i]=buff->data[j+buff->npts*2*2*i];
+		  phase_data.data[2*i+1]=buff->data[j+
+						    buff->npts*2*(2*i+1)];
+		}
+		do_phase(phase_data.data,phase_data.data2,dp0,dp1,buff->npts2/2);
+		for(i=0;i<buff->npts2/2;i++){
+		  buff->data[j+buff->npts*2*2*i]=phase_data.data2[2*i];
+		  buff->data[j+buff->npts*2*(2*i+1)]
+		    =phase_data.data2[2*i+1];
+		}
 	      }
-	      do_phase(phase_data.data,phase_data.data2,dp0,dp1,buff->npts2/2);
-	      for(i=0;i<buff->npts2/2;i++){
-		buff->data[j+buff->npts*2*2*i]=phase_data.data2[2*i];
-		buff->data[j+buff->npts*2*(2*i+1)]
-		  =phase_data.data2[2*i+1];
+	    }
+	    else if (true_complex){
+	      for(j=0;j<buff->npts;j++){
+		for(i=0;i<buff->npts2;i++){
+		  phase_data.data[2*i]=buff->data[2*j+buff->npts*2*i];
+		  phase_data.data[2*i+1]=buff->data[2*j+buff->npts*2*i+1];
+		}
+		do_phase(phase_data.data,phase_data.data2,dp0,dp1,buff->npts2);
+		for(i=0;i<buff->npts2;i++){
+		  buff->data[2*j+buff->npts*2*i]=phase_data.data2[2*i];
+		  buff->data[2*j+buff->npts*2*i+1]=phase_data.data2[2*i+1];
+		}
 	      }
 	    }
 	  }
 	  else{ // not apply all 
-	    for (j=2*buff->disp.record2;j<2*buff->disp.record2+2;j++){
-	      for(i=0;i<buff->npts2/2;i++){
-		phase_data.data[2*i]=buff->data[j+buff->npts*2*2*i];
-		phase_data.data[2*i+1]=buff->data[j+
-						  buff->npts*2*(2*i+1)];
+	    if (buff->is_hyper){
+	      for (j=2*buff->disp.record2;j<2*buff->disp.record2+2;j++){
+		for(i=0;i<buff->npts2/2;i++){
+		  phase_data.data[2*i]=buff->data[j+buff->npts*2*2*i];
+		  phase_data.data[2*i+1]=buff->data[j+
+						    buff->npts*2*(2*i+1)];
+		}
+		do_phase(phase_data.data,phase_data.data2,dp0,dp1,buff->npts2/2);
+		for(i=0;i<buff->npts2/2;i++){
+		  buff->data[j+buff->npts*2*2*i]=phase_data.data2[2*i];
+		  buff->data[j+buff->npts*2*(2*i+1)]
+		    =phase_data.data2[2*i+1];
+		}
 	      }
-	      do_phase(phase_data.data,phase_data.data2,dp0,dp1,buff->npts2/2);
-	      for(i=0;i<buff->npts2/2;i++){
-		buff->data[j+buff->npts*2*2*i]=phase_data.data2[2*i];
-		buff->data[j+buff->npts*2*(2*i+1)]
-		  =phase_data.data2[2*i+1];
+	    }
+	    else if (true_complex){
+	      j=2*buff->disp.record2;
+	      for(i=0;i<buff->npts2;i++){
+		phase_data.data[2*i]=buff->data[j+buff->npts*2*i];
+		phase_data.data[2*i+1]=buff->data[j+1+buff->npts*2*i];
+	      }
+	      do_phase(phase_data.data,phase_data.data2,dp0,dp1,buff->npts2);
+	      for(i=0;i<buff->npts2;i++){
+		buff->data[j+buff->npts*2*i]=phase_data.data2[2*i];
+		buff->data[j+buff->npts*2*i+1]=phase_data.data2[2*i+1];
 	      }
 	    }
 	  }
