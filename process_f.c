@@ -960,13 +960,13 @@ gint do_phase_2d_wrapper( GtkWidget* widget, double *unused )
   else{// true complex
     for( i=0; i<buff->npts; i++ ){
       for(j=0;j<buff->npts2;j++){
-	pdat[2*j]=buff->data[2*i+j*buff->npts];
-	pdat[2*j+1]=buff->data[2*i+1+j*buff->npts];
+	pdat[2*j]=buff->data[2*i+j*2*buff->npts];
+	pdat[2*j+1]=buff->data[2*i+1+j*2*buff->npts];
       }
-      do_phase(pdat,pdat,dp0,dp1,buff->npts2/2);
+      do_phase(pdat,pdat,dp0,dp1,buff->npts2);
       for(j=0;j<buff->npts2;j++){
-	buff->data[2*i+j*buff->npts]=pdat[2*j];
-	buff->data[2*i+1+j*buff->npts]=pdat[2*j+1];
+	buff->data[2*i+2*j*buff->npts]=pdat[2*j];
+	buff->data[2*i+1+2*j*buff->npts]=pdat[2*j+1];
       }
 
     }

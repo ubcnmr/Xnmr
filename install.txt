@@ -7,9 +7,10 @@
   make  (works if you're lucky, may need something like: F77=gfortran make -e
   cp libport.a /usr/local/lib
 
-3) get the Xnmr sources: I'll put them at: ftp://spider.phas.ubc.ca/xnmr.tar.gz
+3) get the Xnmr sources: I'll put them at: 
+http://phas.ubc.ca/~michal/Xnmr.tar.gz
 
-become root: sudo -i
+become root: with su or sudo -i
 cd /usr/src/
 mkdir Xnmr
 cd Xnmr
