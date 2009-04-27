@@ -134,6 +134,8 @@ dbuff *create_buff(int num){
     { "Append",NULL,"Append","<control>A","Append to previous",G_CALLBACK(file_append)},
     { "Export",NULL,"_Export",NULL,"Export to ascii",G_CALLBACK(file_export)},
     { "Export Binary",NULL,"Export _Binary",NULL,"Export binary",G_CALLBACK(file_export_binary)},
+    { "Export Image",NULL,"Export _Image",NULL,"Export image",G_CALLBACK(file_export_image)},
+    { "Export Magnitude Image",NULL,"Export _Magnitude",NULL,"Export Magnitude",G_CALLBACK(file_export_magnitude_image)},
     { "Close",GTK_STOCK_CLOSE,"_Close",NULL,"Close Buffer",G_CALLBACK(file_close)},
     { "Exit",GTK_STOCK_QUIT,"E_xit",NULL,"Exit Xnmr",G_CALLBACK(file_exit)},
     { "Real",NULL,"_Real","<alt>R","Show Real trace",G_CALLBACK(toggle_real)},
@@ -176,6 +178,8 @@ dbuff *create_buff(int num){
    "    <menuitem action='Append'/>"
    "    <menuitem action='Export'/>"
    "    <menuitem action='Export Binary'/>"
+   "    <menuitem action='Export Image'/>"
+   "    <menuitem action='Export Magnitude Image'/>"
    "    <separator/>"
    "    <menuitem action='Close'/>"
    "    <menuitem action='Exit'/>"
@@ -4433,6 +4437,172 @@ void file_export_binary(GtkAction *action,dbuff *buff)
     g_free(lbuff);
 
     fclose(fstream);
+    return;
+
+
+}
+
+
+void file_export_image(GtkAction *action,dbuff *buff)
+{
+
+  int i1,i2,j1,j2,i,j,npts,ny,npts2;
+  float max,min;
+  char fileN[PATH_LENGTH];
+  FILE *fstream;
+
+  CHECK_ACTIVE(buff);
+
+  // first juggle the filename
+
+  if (strcmp(buff->path_for_reload,"") == 0){
+    popup_msg("Can't export, no reload path?",TRUE);
+    return;
+  }
+
+  if (buff->npts2 < 2  ||  buff->disp.dispstyle != RASTER){
+    popup_msg("Export image only works for 2D data",TRUE);
+    return;
+  }
+
+  npts = buff->npts;
+
+  path_strcpy(fileN,buff->path_for_reload);
+  path_strcat(fileN,"image.pgm");
+  fprintf(stderr,"using filename: %s\n",fileN);
+  fstream = fopen(fileN,"wb");
+  if ( fstream == NULL){
+    popup_msg("Error opening file for export",TRUE);
+    return;
+  }
+  
+
+  // routine exports what is viewable on screen now.
+  npts2 = buff->npts2;
+  if (buff->is_hyper)
+    npts2 /= 2;
+    //    if (npts2 %2 == 1) npts2 -=1;
+
+    i1=(int) (buff->disp.xx1 * (npts-1) +.5);
+    i2=(int) (buff->disp.xx2 * (npts-1) +.5);
+    
+    j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
+    j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
+    
+    if (buff->is_hyper){
+      j1 *= 2;
+      j2 *= 2;
+    }
+
+    ny = (j2-j1)/(1+buff->is_hyper)+1;
+    
+    max = buff->data[j1*2*npts+2*i1];
+    min = max;
+    if (max == min) max=min+1.;
+
+    for(j=j1;j<=j2;j+=1+buff->is_hyper){
+      for (i=i1;i<=i2;i++){
+	if (buff->data[2*j*npts+2*i] > max) max = buff->data[2*j*npts+2*i];
+	if (buff->data[2*j*npts+2*i] < min) min = buff->data[2*j*npts+2*i];
+      }
+    }
+    
+    // generate a pgm file.
+    fprintf(fstream,"P5\n");
+    fprintf(fstream,"#phased, 255 = max: %f 0 = min: %f\n",max,min);
+    fprintf(fstream,"%i %i\n",i2-i1+1,ny);
+    fprintf(fstream,"255\n");
+    for(j=j1;j<=j2;j+=1+buff->is_hyper){
+      for (i=i1;i<=i2;i++)
+	fputc((char) ((buff->data[2*j*npts+2*i]-min)/(max-min)*255.99999),fstream);
+      //	fprintf(fstream,"%i ",(int) ((buff->data[j*2*npts+2*i]-min)/(max-min)*255.99999));
+      //      fprintf(fstream,"\n");
+    }      
+
+    fclose(fstream);
+    return;
+
+
+}
+
+
+void file_export_magnitude_image(GtkAction *action,dbuff *buff)
+{
+  int i1,i2,j1,j2,i,j,npts,ny,npts2;
+  float max;
+  char fileN[PATH_LENGTH];
+  FILE *fstream;
+
+  CHECK_ACTIVE(buff);
+
+  // first juggle the filename
+
+  if (strcmp(buff->path_for_reload,"") == 0){
+    popup_msg("Can't export, no reload path?",TRUE);
+    return;
+  }
+
+  if (buff->npts2 < 2  ||  buff->disp.dispstyle != RASTER){
+    popup_msg("Export image only works for 2D data",TRUE);
+    return;
+  }
+
+  npts = buff->npts;
+
+  path_strcpy(fileN,buff->path_for_reload);
+  path_strcat(fileN,"image.pgm");
+  fprintf(stderr,"using filename: %s\n",fileN);
+  fstream = fopen(fileN,"wb");
+  if ( fstream == NULL){
+    popup_msg("Error opening file for export",TRUE);
+    return;
+  }
+  
+
+  // routine exports what is viewable on screen now.
+  npts2 = buff->npts2;
+  if (buff->is_hyper)
+    npts2 /= 2;
+    //    if (npts2 %2 == 1) npts2 -=1;
+
+    i1=(int) (buff->disp.xx1 * (npts-1) +.5);
+    i2=(int) (buff->disp.xx2 * (npts-1) +.5);
+    
+    j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
+    j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
+    
+    if (buff->is_hyper){
+      j1 *= 2;
+      j2 *= 2;
+    }
+
+    ny = (j2-j1)/(1+buff->is_hyper)+1;
+    
+    max = buff->data[j1*2*npts+2*i1]*buff->data[j1*2*npts+2*i1];
+
+    for(j=j1;j<=j2;j+=1+buff->is_hyper){
+      for (i=i1;i<=i2;i++){
+	if (buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i] > max) max = buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i];
+      }
+    }
+
+    max=sqrt(max);
+    // generate a pgm file.
+    fprintf(fstream,"P5\n");
+    fprintf(fstream,"#magnitude mode, 255 is max: %f \n",max);
+    fprintf(fstream,"%i %i\n",i2-i1+1,ny);
+    fprintf(fstream,"255\n");
+    for(j=j1;j<=j2;j+=1+buff->is_hyper){
+      for (i=i1;i<=i2;i++)
+	fputc((char) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i])/max*255.99999),fstream);
+	//	fprintf(fstream,"%i ",(int) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i])/max*255.99999));
+      //  fprintf(fstream,"\n");
+    }      
+
+    fclose(fstream);
+    return;
+
+
     return;
 
 
