@@ -28,14 +28,15 @@ int sfetch_float( char* params, char* name, float* var, unsigned int acqn_2d )
 
 {
   char* start;
-  char s[PARAM_NAME_LEN],nname[PARAM_NAME_LEN+2];
+  char s[PARAM_NAME_LEN],nname[PARAM_NAME_LEN+3];
   unsigned int i;
   char result = -1;
   char *breaker, *match;
 
 
-  strncpy(nname,name,PARAM_NAME_LEN);
-  strcat(nname," ="); //safe
+  //  strncpy(nname,name,PARAM_NAME_LEN);
+  //  strcat(nname," ="); //safe - for end, not for start.
+  snprintf(nname,PARAM_NAME_LEN+3,"\n%s =",name); // safe!
   start = params;
   i=0;
   
@@ -48,10 +49,10 @@ int sfetch_float( char* params, char* name, float* var, unsigned int acqn_2d )
     else breaker += 2;
     match = strstr ( start , nname); 
     if (match < breaker && match != NULL){
-      sscanf( match, PARAMETER_FORMAT_FLOAT , s , var);
+      sscanf( match+1, PARAMETER_FORMAT_FLOAT , s , var);
       result = 0;
     }
-    start = breaker;
+    start = breaker-1;
   }
   //  fprintf(stderr,"returning: %s, %f\n",name,*var);
 
@@ -61,15 +62,17 @@ int sfetch_float( char* params, char* name, float* var, unsigned int acqn_2d )
 int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
 {
   char* start;
-  char s[PARAM_NAME_LEN],nname[PARAM_NAME_LEN+2];
+  char s[PARAM_NAME_LEN],nname[PARAM_NAME_LEN+3];
   unsigned int i;
   char result = -1;
   char *match, *breaker;
 
   // both text double and true doubles come here...
 
-  strncpy(nname,name,PARAM_NAME_LEN);
-  strcat(nname," ="); //safe
+  //  strncpy(nname,name,PARAM_NAME_LEN);
+  //  strcat(nname," ="); //safe
+  snprintf(nname,PARAM_NAME_LEN+3,"\n%s =",name); // safe!
+
   start = params;
   i=0;
 
@@ -84,6 +87,7 @@ int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
     else breaker += 2;
     match = strstr ( start ,nname); 
     if (match < breaker && match != NULL){
+      match += 1; // get past the \n
       if (match[strlen(nname)+1] == '\''){ // this is to deal with old text-style doubles
 	sscanf(match,PARAMETER_FORMAT_DOUBLET, s , var);
       }
@@ -91,7 +95,7 @@ int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
 	sscanf( match, PARAMETER_FORMAT_DOUBLE , s , var);
       result = 0;
     }
-    start = breaker;
+    start = breaker-1;
   }
 
   //  fprintf(stderr,"returning %s, %f\n",name,*var);
@@ -103,15 +107,16 @@ int sfetch_int( char* params, char* name, int* var, unsigned int acqn_2d )
 
 {
   char* start;
-  char s[PARAM_NAME_LEN],nname[PARAM_NAME_LEN+2];
+  char s[PARAM_NAME_LEN],nname[PARAM_NAME_LEN+3];
   unsigned int i;
   char result = -1;
   char *match, *breaker;
 
   start = params;
   i=0;
-  strncpy(nname,name,PARAM_NAME_LEN);
-  strcat(nname," =");  //safe
+  //  strncpy(nname,name,PARAM_NAME_LEN);
+  //  strcat(nname," =");  //safe
+  snprintf(nname,PARAM_NAME_LEN+3,"\n%s =",name); // safe!
 
   //parse the params string one line at a time
   for ( i = 0; i <= acqn_2d ; i++){
@@ -123,10 +128,10 @@ int sfetch_int( char* params, char* name, int* var, unsigned int acqn_2d )
     else breaker += 2;
     match = strstr ( start , nname); 
     if (match < breaker && match != NULL){
-      sscanf( match, PARAMETER_FORMAT_INT , s , var);
+      sscanf( match+1, PARAMETER_FORMAT_INT , s , var);
       result = 0;
     }
-    start = breaker;
+    start = breaker - 1;
   }
   //  fprintf(stderr,"returning: %s, %i\n",name,*var);
 
@@ -136,15 +141,19 @@ int sfetch_int( char* params, char* name, int* var, unsigned int acqn_2d )
 int sfetch_text( char* params, char* name, char* var, unsigned int acqn_2d )
 {
   char* start;
-  char s[PARAM_NAME_LEN],nname[PARAM_NAME_LEN+2];
+  char s[PARAM_NAME_LEN],nname[PARAM_NAME_LEN+3];
   unsigned int i;
   char result = -1;
   char *match, *breaker;
 
   start = params;
   i=0;
-  strncpy(nname,name,PARAM_NAME_LEN);
-  strcat(nname," ="); //safe
+
+  //  strncpy(nname,name,PARAM_NAME_LEN);
+  //  strcat(nname," ="); //safe
+
+  snprintf(nname,PARAM_NAME_LEN+3,"\n%s =",name); // safe!
+
 
   //parse the params string one line at a time
   for ( i = 0; i <= acqn_2d ; i++){
@@ -156,14 +165,14 @@ int sfetch_text( char* params, char* name, char* var, unsigned int acqn_2d )
     else breaker += 2;
     match = strstr ( start , nname); 
     if (match < breaker && match != NULL){
-      if (sscanf( match, PARAMETER_FORMAT_TEXT_S , s , var) < 2){
+      if (sscanf( match+1, PARAMETER_FORMAT_TEXT_S , s , var) < 2){
 	// means we couldn't find an opening quote.  try the old way
-	sscanf(match, PARAMETER_FORMAT_TEXT_O, s, var);
+	sscanf(match+1, PARAMETER_FORMAT_TEXT_O, s, var);
       }
       if (var[0] == '\'') var[0] = 0;
       result = 0;
     }
-    start = breaker;
+    start = breaker - 1;
   }
   //  fprintf(stderr,"returning: %s, %s\n",name,var);
 
@@ -175,11 +184,13 @@ int sfetch_text( char* params, char* name, char* var, unsigned int acqn_2d )
 int is_2d_param( char* params, char* name )
 {
   char *start;
-  char compstring[PARAM_NAME_LEN+2];
+  char compstring[PARAM_NAME_LEN+3];
 
-  snprintf(compstring,PARAM_NAME_LEN+2,"%s =",name);
+  snprintf(compstring,PARAM_NAME_LEN+3,"\n%s =",name);
 
   start = strstr( params, PARAMETER_2D_BREAK );
+  
+  start = start -1; // start looking at the line break.
 
   if( start == NULL )  // if no 2d break exists, its not a 2d param
     return 0;
