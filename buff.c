@@ -3523,7 +3523,7 @@ gint buff_resize( dbuff* buff, int npts1, int npts2 )
 gint do_load( dbuff* buff, char* path, int fid )
 {
  
-  char p[ PARAMETER_LEN ] = "";
+  char params[ PARAMETER_LEN ] = "",*p;
   char s[PATH_LENGTH],ch1,ch2;
   char fileN[ PATH_LENGTH ];
   FILE* fstream;
@@ -3537,6 +3537,9 @@ gint do_load( dbuff* buff, char* path, int fid )
 
   struct stat sbuf;
   // if fid = 1 then we try to load from the fid rather than from the "data"
+
+  p = params+1; // to deal with the \n
+  params[0]='\n';
 
   //  fprintf(stderr, "do_load: got path: %s while current dir is: %s\n", path,getcwd(fileN,PATH_LENGTH));
 
@@ -3658,7 +3661,7 @@ gint do_load( dbuff* buff, char* path, int fid )
 
 
   load_param_file( fileN, &buff->param_set );
-  load_p_string( p, buff->npts2, &buff->param_set );
+  load_p_string( params, buff->npts2, &buff->param_set );
   buff->param_set.num_acqs = acqns;
   buff->npts2 = buff->npts2;
   buff->param_set.dwell=dwell;
@@ -3860,7 +3863,7 @@ gint do_save( dbuff* buff, char* path )
   make_param_string( &buff->param_set, s );
   buff->param_set.num_acqs_2d=temp_npts2;
 
-  fprintf( fstream, s);
+  fprintf( fstream, s+1); // +1 to remove the \n at the start.
   fclose( fstream );
 
   // save proc params
@@ -4615,13 +4618,17 @@ int file_append(GtkAction *action, dbuff *buff)
 {
   char s[PATH_LENGTH],s2[PATH_LENGTH],s3[UTIL_LEN],old_exec[PATH_LENGTH];
   FILE *fstream;
-  char params[PARAMETER_LEN];
+  char *params,pparams[PARAMETER_LEN+1];
   int npts,acq_npts,npts2;
   unsigned long sw,acqns;
   float dwell;
   double float_val,float_val2;
   int i,int_val;
   unsigned long local_ct;
+
+  // this is to deal with the fact the sfetch routines need a \n at the beginning
+  params=pparams+1;
+  pparams[0]='\n';
 
   //  fprintf(stderr,"in file_append\n");
   CHECK_ACTIVE(buff);
@@ -4708,14 +4715,14 @@ int file_append(GtkAction *action, dbuff *buff)
     switch ( buff->param_set.parameter[i].type )
       {
       case 'i':
-	sfetch_int ( params,buff->param_set.parameter[i].name,&int_val,npts2-1 );
+	sfetch_int ( pparams,buff->param_set.parameter[i].name,&int_val,npts2-1 );
 	if (int_val != buff->param_set.parameter[i].i_val)
 	  fprintf(fstream,PARAMETER_FORMAT_INT,buff->param_set.parameter[i].name,
 		  buff->param_set.parameter[i].i_val);
 
 	break;
       case 'f':
-	sfetch_double( params,buff->param_set.parameter[i].name,&float_val,npts2-1);
+	sfetch_double( pparams,buff->param_set.parameter[i].name,&float_val,npts2-1);
 	snprintf(s2,PATH_LENGTH,PARAMETER_FORMAT_DOUBLEP,buff->param_set.parameter[i].name,
 		 buff->param_set.parameter[i].f_digits,
 		 buff->param_set.parameter[i].f_val,
@@ -4729,7 +4736,7 @@ int file_append(GtkAction *action, dbuff *buff)
 
 	break;
       case 't':
-	sfetch_text( params,buff->param_set.parameter[i].name,s2 ,npts2-1);
+	sfetch_text( pparams,buff->param_set.parameter[i].name,s2 ,npts2-1);
 	if (strcmp( s2, buff->param_set.parameter[i].t_val) != 0)
 	  fprintf(fstream,PARAMETER_FORMAT_TEXT_P,buff->param_set.parameter[i].name,
 		  buff->param_set.parameter[i].t_val);
@@ -7931,11 +7938,10 @@ void shim_integrate( GtkWidget *action, dbuff *buff )
 
 gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
 
-  int i, i1,i2,npts2,imax;
-  // int j,j1,j2;
-  float freq1;
-  //  float freq2,thresh = 0;
   float max=0;
+  float freq;
+  double integ=0,integ1=0,integ2=0;
+  int maxpt,i;
 
   // int 1 is the integral,
   // int2 is weighted by f
@@ -7945,115 +7951,50 @@ gint  do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3){
   *int2=0.;
   *int3=0.;
   
-  npts2 = buff->npts2;
-  if (buff->is_hyper)
-    npts2 /= 2;
 
-  // find region to integrate...
-
-  i1=(int) (buff->disp.xx1 * (buff->npts-1) +.5);
-  i2=(int) (buff->disp.xx2 * (buff->npts-1) +.5);
-
-  /*
-  j1=(int) (buff->disp.yy1 * (npts2-1) +.5);
-  j2=(int) (buff->disp.yy2 * (npts2-1) +.5);
-  
-  if (buff->is_hyper){
-    j1 *= 2;
-    j2 *= 2;
-  }
-    
-
-  fprintf(stderr, "limits are: %i to %i and %i to %i\n",i1,i2,j1,j2);
-
-  if (npts2 != 1){
-
-    for(i=i1;i<=i2;i++)
-      for(j=j1;j<=j2;j++)
-	if (buff->data[2*i+2*j*buff->npts] > max)
-	  max = buff->data[2*i+2*j*buff->npts];
-    
-    thresh = max*.01;
-    thresh = 0.0;
-    for( i=i1;i<=i2;i++) {
-      
-      freq1 = - ( (double) i * 1./buff->param_set.dwell*1e6/buff->npts
-		  - (double) 1./buff->param_set.dwell*1e6/2.) *2 * M_PI;
-      for( j = j1 ; j <= j2 ; j += 1 + buff->is_hyper){
-	if (fabs(buff->data[2*i+j*2*buff->npts]) > thresh){
-	  freq2 = -( (double) j/buff->npts2 - (double) 1/2.)*2*M_PI; // ie sw is 1.
-	  *int1 += freq2*freq1*buff->data[2*i + j* 2*buff->npts];
-	  *int2 += buff->data[2*i + j* 2*buff->npts];
-	}
-      }
-    }
-    fprintf(stderr,"shim integrals: %f %f\n",*int1,*int2);
-    return 1;
-  }
-  else */
-  { // single record
+  // single record
     // find maximum:
-    float sum=0.,sum2=0.,thresh;
-    int count=0;
+  
+  // use from peak to peak/BASE
+#define BASE 75
     max = 0;
-    imax = 0;
+    maxpt = 0;
     for (i=0;i<buff->npts;i++)
       if (buff->data[2*i] > max){
 	max = buff->data[2*i];
-	imax = i;
+	maxpt = i;
       }
     
+    printf("in do_shim_integrate.  max of %f at pt %i\n",max,maxpt);
+    // now start at max, go out each way till the signal gets to peak/BASE
 
-    /*  much better off keeping same limits every time. */
+   
+    i=maxpt;
+    while (i < buff->npts && buff->data[2*i] > max/BASE){
+      freq = - ( (double) i *1./buff->param_set.dwell*1e6/buff->npts
+		 - (double) 1./buff->param_set.dwell*1e6/2.);
 
-    // now start at max, go out each way till the signal goes negative
+      integ += buff->data[2*i];
+      integ1 += buff->data[2*i] *freq;
+      integ2 += buff->data[2*i] *freq *freq;
+      i += 1;
 
-    // find noise using x= 0.1 -> 0.15 
-    for (i=0.1*buff->npts;i<0.15*buff->npts;i++){
-      count += 1;
-      sum += buff->data[2*i];
-      sum2 += buff->data[2*i]*buff->data[2*i];
     }
-    thresh = 5* sqrt(sum2/count-sum*sum/count/count);
-    thresh = max/100.;
-    fprintf(stderr,"thresh is: %f\n",thresh);
-
-    for (i=imax;i<buff->npts;i++)
-      if (buff->data[2*i] < thresh) {
-	i2 = i-1;
-	i=buff->npts+1;
-      }
-    if (i == buff->npts){
-      i2 = buff->npts-1;
-      fprintf(stderr,"no negative found on high side\n");
+    i=maxpt-1;
+    while (i >0 && buff->data[2*i] > max/BASE){
+      freq = - ( (double) i *1./buff->param_set.dwell*1e6/buff->npts
+		 - (double) 1./buff->param_set.dwell*1e6/2.);
+      integ += buff->data[2*i];
+      integ1 += buff->data[2*i] *freq;
+      integ2 += buff->data[2*i] *freq *freq;
+      i -= 1;
     }
-    for(i=imax;i>=0;i--)
-      if (buff->data[2*i] < thresh){
-	i1=i+1;
-	i=-2;
-      }
-    if (i != -3){
-      i1 = 0;
-      fprintf(stderr,"no negative found on low side\n");
-    }
-    fprintf(stderr,"limits: %i %i\n",i1,i2);
-    //  */
-
-    for(i=i1;i<=i2;i++){
-      freq1 = - ( (double) i * 1./buff->param_set.dwell*1e6/buff->npts
-		  - (double) 1./buff->param_set.dwell*1e6/2.);
-      *int1 += buff->data[2*i+buff->npts*2*buff->disp.record];
-      *int2 += buff->data[2*i+buff->npts*2*buff->disp.record]*freq1;
-      *int3 += buff->data[2*i+buff->npts*2*buff->disp.record]*freq1*freq1;
-      // this was just so we can see how terrible our weighted region looks.
-      //      buff->data[2*i+buff->npts*2*buff->disp.record] 
-      // *= freq1*freq1;
-    }
-    *int2 /= *int1;
-    *int3 /= *int1;
-    fprintf(stderr,"Shim integrals: %f %f %f, width: %f\n",*int1,*int2,*int3,sqrt(*int3-*int2 * *int2));
+    integ2 = integ2/integ-integ1*integ1/integ/integ;
+    *int1=integ2;
+    fprintf(stderr,"Shim integrals: %f\n",*int1);
     return 1;
-  }
+
+  
 }
 
 

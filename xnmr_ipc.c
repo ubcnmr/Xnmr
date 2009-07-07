@@ -221,7 +221,7 @@ int xnmr_init_shm()
   
   //  data_shm->ui_pid = getpid();
 
-  strncpy( data_shm->parameters,  "dummy_int = 7\ndummy_float = 5.3\n" ,PARAMETER_LEN);
+  strncpy( data_shm->parameters,  "\ndummy_int = 7\ndummy_float = 5.3\n" ,PARAMETER_LEN);
   data_shm->parameter_count = 2;
   
   data_shm->mode = NO_MODE;

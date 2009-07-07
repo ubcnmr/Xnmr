@@ -33,7 +33,7 @@ int sfetch_float( char* params, char* name, float* var, unsigned int acqn_2d )
   char result = -1;
   char *breaker, *match;
 
-
+  if ( params[0] != '\n') printf("sfetch, params doesn't start with nl\n");
   //  strncpy(nname,name,PARAM_NAME_LEN);
   //  strcat(nname," ="); //safe - for end, not for start.
   snprintf(nname,PARAM_NAME_LEN+3,"\n%s =",name); // safe!
@@ -69,6 +69,7 @@ int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
 
   // both text double and true doubles come here...
 
+  if ( params[0] != '\n') printf("sfetch, params doesn't start with nl\n");
   //  strncpy(nname,name,PARAM_NAME_LEN);
   //  strcat(nname," ="); //safe
   snprintf(nname,PARAM_NAME_LEN+3,"\n%s =",name); // safe!
@@ -112,6 +113,7 @@ int sfetch_int( char* params, char* name, int* var, unsigned int acqn_2d )
   char result = -1;
   char *match, *breaker;
 
+  if ( params[0] != '\n') printf("sfetch, params doesn't start with nl\n");
   start = params;
   i=0;
   //  strncpy(nname,name,PARAM_NAME_LEN);
@@ -149,6 +151,7 @@ int sfetch_text( char* params, char* name, char* var, unsigned int acqn_2d )
   start = params;
   i=0;
 
+  if ( params[0] != '\n') printf("sfetch, params doesn't start with nl\n");
   //  strncpy(nname,name,PARAM_NAME_LEN);
   //  strcat(nname," ="); //safe
 
@@ -190,10 +193,11 @@ int is_2d_param( char* params, char* name )
 
   start = strstr( params, PARAMETER_2D_BREAK );
   
-  start = start -1; // start looking at the line break.
 
   if( start == NULL )  // if no 2d break exists, its not a 2d param
     return 0;
+
+  start = start -1; // start looking at the line break.
 
   if( strstr( start, compstring ) == NULL ) // if no substring match, its not a 2d param
     return 0;
@@ -213,7 +217,7 @@ int make_param_string( const parameter_set_t* p_set, char* dest )
   int max_useful_records=0;
 
 
-  strcpy( p, "" );
+  strcpy( p, "\n" );
 
   //do the simple parameters first
 

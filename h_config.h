@@ -25,6 +25,8 @@
 #define NUM_CHIPS 21
 #define CLOCK_SPEED 20000000
 #define DEFAULT_RCVR_CLK 60000000.
+///CLOCK
+//#define DEFAULT_RCVR_CLK 50000000.
 #define MAX_CLOCK_CYCLES 4294967295UL
 /*
  * This is the configuration format which must be followed

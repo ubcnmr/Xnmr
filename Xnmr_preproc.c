@@ -117,9 +117,11 @@ int deal(char *lbuff, FILE *infile, FILE *outfile){
       
       is_float = 0;
 
-      if((strstr(tok,"PHASE") != NULL ) || (strstr(tok,"GRAD") != NULL))
+      if(strstr(tok,"PHASE") != NULL )
 	is_float = 1;
 
+      if ((strstr(tok,"GRAD") != NULL) && (strstr(tok,"GRAD_ON") == NULL))
+	   is_float=1;
       // treat AMP separately, because _AMP devices are the actual integer devices.
       if((strstr(tok,"AMP") != NULL) && (strstr(tok,"_AMP") == NULL))
 	is_float = 1;

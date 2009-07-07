@@ -5,18 +5,18 @@
 //
 
 
-#define NOHARDWARE
+//#define NOHARDWARE
 //#define NO_RT_SCHED
 
-//#define OLD_PORT_INTERRUPT 
+#define OLD_PORT_INTERRUPT 
 
 //#define RTAI_INTERRUPT
 
 // we should read the first two of these out of /proc/pci
 
-#define PULSE_PORT 0xb000
+#define PULSE_PORT 0x0378
 #define DSP_PORT 0xb400
-#define AD9850_PORT 0x378
+#define AD9850_PORT 0xb000
 
 
 
@@ -945,6 +945,8 @@ else{
 
   //  ok, set up the DSP
 
+  //  freq = 21093750.;
+  ///CLOCK - ok - same number
   freq = 21093750.;
   //    freq = 20999999.99;
 

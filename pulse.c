@@ -574,9 +574,9 @@ int write_device_wrap( int start_event_no,int end_event_no ,int device_id, int i
 
 
  if (device_id >= RF_OFFSET){ 
-   //       fprintf(stderr,"translating device: %i ",device_id);
+   //   fprintf(stderr,"translating device: %i ",device_id);
    device_id = tran_table[device_id-RF_OFFSET];
-   //       fprintf(stderr,"to device: %i\n",device_id);
+   //   fprintf(stderr,"to device: %i\n",device_id);
  }
  
  if ( device_id == PP_OVER ) prog_shm->got_ppo = 1; // to ensure there is a ppo 
@@ -1753,8 +1753,8 @@ int lookup_amp(float fval)
   int val;
   if (fval > 1.0) fval = 1.0;
   if (fval < -1.0) fval = -1.0;
-  val = (int)( (fval+1.0)*511.);
-  //  fprintf(stderr,"lookup_amp: %f %i\n",fval,val);
+  val = (int)( (fval+1.0)*1023/2.);
+    //    fprintf(stderr,"lookup_amp: %f %i\n",fval,val);
   return ( val);
 
 		   
