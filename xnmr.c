@@ -972,8 +972,8 @@ white set up below  */
 
   /* first the phase dialog */
   phase_dialog = gtk_dialog_new();
-  phase0_ad=gtk_adjustment_new(0.0,-180.0,181.0,.1,.1,1);
-  phase1_ad=gtk_adjustment_new(0.0,-180.0,181.0,.1,.1,1);
+  phase0_ad=gtk_adjustment_new(0.0,-180.0,181.0,.1,.1,0);
+  phase1_ad=gtk_adjustment_new(0.0,-180.0,181.0,.1,.1,0);
 
   hbox=gtk_hbox_new(FALSE,1);
   button=gtk_button_new_with_label("-360");

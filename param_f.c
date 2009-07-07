@@ -1306,7 +1306,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
         case 'i': 
 	  strncat( s, param_set->parameter[i].name,PARAM_NAME_LEN-1); 
 	  param_button[i].adj = gtk_adjustment_new( param_set->parameter[i].i_val, param_set->parameter[i].i_min, param_set->parameter[i].i_max, 
-						    param_set->parameter[i].i_step, param_set->parameter[i].i_page, 1 ); 
+						    param_set->parameter[i].i_step, param_set->parameter[i].i_page, 0 ); 
 	  param_button[i].button = gtk_spin_button_new( GTK_ADJUSTMENT( param_button[i].adj ), 0.5, 0 ); 
 	  g_signal_connect (G_OBJECT (param_button[i].adj), "value_changed", G_CALLBACK (update_param), &param_set->parameter[i] ); 
 	  gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( param_button[i].button ), GTK_UPDATE_IF_VALID ); 
@@ -1328,7 +1328,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	  strncat( s, ")",1 ); 
 	 	  
 	  param_button[i].adj = gtk_adjustment_new( param_set->parameter[i].f_val, param_set->parameter[i].f_min, param_set->parameter[i].f_max, 
-						    param_set->parameter[i].f_step, param_set->parameter[i].f_page, 1 ); 
+						    param_set->parameter[i].f_step, param_set->parameter[i].f_page, 0 ); 
 	  param_button[i].button = gtk_spin_button_new( GTK_ADJUSTMENT( param_button[i].adj ), 0.5, param_set->parameter[i].f_digits ); 
 	  g_signal_connect (G_OBJECT (param_button[i].adj), "value_changed", G_CALLBACK (update_param), &param_set->parameter[i] ); 
 	  gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( param_button[i].button ), GTK_UPDATE_IF_VALID ); 
@@ -1425,12 +1425,12 @@ gint update_paths( GtkWidget* widget, gpointer data )
   	{ 
   	case 'i': 
   	case 'I': 
-  	  new_adj[i] = gtk_adjustment_new(  popup_data.param->i_val, popup_data.param->i_min,  popup_data.param->i_max, popup_data.param->i_step, popup_data.param->i_page, 1 ); 
+  	  new_adj[i] = gtk_adjustment_new(  popup_data.param->i_val, popup_data.param->i_min,  popup_data.param->i_max, popup_data.param->i_step, popup_data.param->i_page, 0 ); 
   	  new_spb[i] = gtk_spin_button_new( GTK_ADJUSTMENT( new_adj[i] ),  0.5, 0 ); 
   	  break; 
   	case 'f': 
   	case 'F':  
-  	  new_adj[i] = gtk_adjustment_new(  popup_data.param->f_val, popup_data.param->f_min, popup_data.param->f_max, popup_data.param->f_step, popup_data.param->f_page, 1 ); 
+  	  new_adj[i] = gtk_adjustment_new(  popup_data.param->f_val, popup_data.param->f_min, popup_data.param->f_max, popup_data.param->f_step, popup_data.param->f_page, 0 ); 
   	  new_spb[i] = gtk_spin_button_new( GTK_ADJUSTMENT( new_adj[i] ),  0.5, popup_data.param->f_digits ); 
   	  break; 
   	default: 

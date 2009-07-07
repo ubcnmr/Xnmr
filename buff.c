@@ -1806,10 +1806,10 @@ void user_scales(GtkAction *action,dbuff *buff){
   Update= gtk_button_new_with_label("Update Scales");
   //    fprintf(stderr,"%i\n",(int)buff->disp.xx1);
   
-  spinner_adj1 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx1, 0.0, 1.0, .02, 0.1, 0.1);
-  spinner_adj2 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx2, 0.0, 1.0, .02, 0.1, 0.1);
-  spinner_adj3 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.yy1, 0.0, 1.0, .02, 0.1, 0.1);
-  spinner_adj4 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.yy2, 0.0, 1.0, .02, 0.1, 0.1);
+  spinner_adj1 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx1, 0.0, 1.0, .02, 0.1, 0);
+  spinner_adj2 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.xx2, 0.0, 1.0, .02, 0.1, 0);
+  spinner_adj3 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.yy1, 0.0, 1.0, .02, 0.1, 0);
+  spinner_adj4 = (GtkAdjustment *) gtk_adjustment_new(buff->disp.yy2, 0.0, 1.0, .02, 0.1, 0);
   
   entry1 = gtk_spin_button_new (spinner_adj1, 10.0, 5);
   entry2 = gtk_spin_button_new (spinner_adj2, 10.0, 5);

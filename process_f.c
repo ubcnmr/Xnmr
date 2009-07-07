@@ -1200,7 +1200,7 @@ GtkWidget* create_process_frame()
    *  Gaussian Mult
    */
   nu=GM;
-  process_button[nu].adj= gtk_adjustment_new( 0, -1e6, 1e6, 1, 10, 1 );
+  process_button[nu].adj= gtk_adjustment_new( 0, -1e6, 1e6, 1, 10, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu );
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
