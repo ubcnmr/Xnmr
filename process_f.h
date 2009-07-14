@@ -109,8 +109,8 @@ gint do_ft_2d_and_display(GtkWidget *widget, double *spare);
 gint do_mag_2d(GtkWidget *widget, double *spare);
 gint do_mag_2d_and_display(GtkWidget *widget, double *spare);
 
-gint unwind_2d(GtkWidget *widget, double *spare);
-gint unwind_2d_and_display(GtkWidget *widget, double *spare);
+gint unscramble_2d(GtkWidget *widget, double *spare);
+gint unscramble_2d_and_display(GtkWidget *widget, double *spare);
 
 
 

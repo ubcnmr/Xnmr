@@ -2038,19 +2038,19 @@ GtkWidget* create_process_frame_2d()
   gtk_widget_show(button);
 
   /*
-   * UNWIND 
+   * UNSCRAMBLE 
    */
 
 
-  nu=UNWIND;
+  nu=UNSCRAMBLE;
   process_button[nu].button = gtk_check_button_new();
   gtk_table_attach_defaults(GTK_TABLE(table),process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
   g_signal_connect(G_OBJECT(process_button[nu].button),"toggled",G_CALLBACK(process_button_toggle),  (void*) nu);
   gtk_widget_show(process_button[nu].button);
-  button = gtk_button_new_with_label( "Unwind phase" );
+  button = gtk_button_new_with_label( "Unscramble 2D" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(unwind_2d_and_display), NULL);
-  process_button[nu].func = unwind_2d;
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(unscramble_2d_and_display), NULL);
+  process_button[nu].func = unscramble_2d;
   gtk_widget_show(button);
 
 
@@ -2260,7 +2260,7 @@ gint do_zero_fill_2d_and_display(GtkWidget * widget,double *val)
 
 //un
 
-gint unwind_2d_and_display( GtkWidget *widget, double *unused )
+gint unscramble_2d_and_display( GtkWidget *widget, double *unused )
 {
   dbuff *buff;
   gint result;
@@ -2270,23 +2270,24 @@ gint unwind_2d_and_display( GtkWidget *widget, double *unused )
   else 
     buff = buffp[ current ];
 
-  result = unwind_2d( widget, unused );
+  result = unscramble_2d( widget, unused );
 
   draw_canvas( buff );
    return result;
 }
 
-gint unwind_2d(GtkWidget *widget, double *unused)
+gint unscramble_2d(GtkWidget *widget, double *unused)
 
 {
-  /* unwind some phase from the second dimension 
-     for crackpot autoshimming feature. */
+  /* unscramble the different pieces of the data for Varian 2D n-type data
+     (eg gHMQC data 
+     for Varian's ft2d(1,0,1,0,0,1,0,-1)
+
+     makes the data set a true complex set.
+*/
 
   dbuff *buff;
   int i,j;
-  float re,im,freq,phase;
-  float mag,ph;
-  double tau;
   int npts,npts2;
 
   if( widget == NULL ) {
@@ -2298,57 +2299,22 @@ gint unwind_2d(GtkWidget *widget, double *unused)
     // fprintf(stderr,"do_ft- on buffer %i\n",current );
   }
   if (buff == NULL){
-    popup_msg("unwind_2d panic! buff is null!",TRUE);
+    popup_msg("unscramble! buff is null!",TRUE);
     return 0;
   }
-  
-   
-  if (buff->is_hyper == FALSE){
-    popup_msg("Not hyper, can't unwind phase",TRUE);
-    return TRUE;
-  }
-  
-  // need to find a tau in the parameter set.
+  npts= buff->npts;
+  npts2=buff->npts2;
 
-  i = pfetch_float(&buff->param_set,"tau",&tau,0);
-  if (i == 0) {
-    popup_msg("no parameter tau found for phase unwind",TRUE);
-    return TRUE;
-  }
-  fprintf(stderr,"got tau: %lf\n",tau);
-  
-  npts = buff->npts;
-  npts2 = buff->npts2;
-  
-  for (i=0;i<npts;i++){
-    // what's the freq at this point?
-    freq = - ( (double) i * 1./buff->param_set.dwell*1e6/npts
-	       - (double) 1./buff->param_set.dwell*1e6/2.);
-    // so the phase to unwind is:
-    phase = freq*tau*2*M_PI;
-    
+  for(i=0;i<npts;i++){
     for(j=0;j<npts2/2;j++){
-      re = buff->data[(2*j)*npts*2+2*i];
-      im = buff->data[(2*j+1)*npts*2+2*i];
-      mag = sqrt(re*re+im*im);
-      ph = atan2(im,re);
-      ph = ph-phase;
-      buff->data[(2*j)*npts*2+2*i] = mag*cos(ph);
-      buff->data[(2*j+1)*npts*2+2*i] = mag*sin(ph);
-      
-      re = buff->data[(2*j)*npts*2+2*i+1];
-      im = buff->data[(2*j+1)*npts*2+2*i+1];
-      mag = sqrt(re*re+im*im);
-      ph = atan2(im,re);
-      ph = ph-phase;
-      buff->data[(2*j)*npts*2+2*i+1] = mag*cos(ph);
-      buff->data[(2*j+1)*npts*2+2*i+1] = mag*sin(ph);
-      
-      
-      
-      
+      buff->data[2*i+j*npts*2] = buff->data[2*i+(2*j)*(npts*2)]+ 
+	buff->data[2*i+(2*j+1)*(npts*2)];
+      buff->data[2*i+j*npts*2+1] = buff->data[2*i+(2*j)*(npts*2)+1]- 
+	buff->data[2*i+(2*j+1)*(npts*2)+1];
     }
   }
+  buff_resize(buff,npts,buff->npts2/2);
+
   
   
   return TRUE;
