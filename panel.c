@@ -70,31 +70,6 @@ int  setup_channels(){
 
 
 
-gint noacq_kill_button_press(GtkWidget *widget, gpointer *data)
-{
-  popup_msg("Can't kill in noacq mode",TRUE);
-  return 0;
-}
-
-gint noacq_button_press(GtkWidget *widget, gpointer *data)
-{
-
-  // this routine is only connected if we're in noacq mode
-  static char norecur = 0;
-
-  if (norecur == 1) {
-    norecur = 0;
-    return 0;
-  }
-  popup_msg("Can't Acquire in noacq mode",TRUE);
-
-  norecur = 1;
-  gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( widget ), FALSE );
-  return 0;
-
-
-}
-
 
 gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 {
@@ -538,7 +513,8 @@ GtkWidget* create_panels()
     g_signal_connect(G_OBJECT(start_button),"toggled",G_CALLBACK(start_button_toggled), NULL);
   }
   else
-    g_signal_connect (G_OBJECT(start_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
+    gtk_widget_set_sensitive(GTK_WIDGET(start_button),FALSE);
+    //    g_signal_connect (G_OBJECT(start_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
   gtk_box_pack_start(GTK_BOX(panvbox),start_button,TRUE,TRUE,0);
 
 
@@ -554,7 +530,8 @@ GtkWidget* create_panels()
     g_signal_connect(G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(start_button_toggled),NULL);
   }
   else
-    g_signal_connect (G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(noacq_button_press),NULL);
+    gtk_widget_set_sensitive(GTK_WIDGET(start_button_nosave),FALSE);
+  //    g_signal_connect (G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(noacq_button_press),NULL);
   gtk_box_pack_start(GTK_BOX(panvbox),start_button_nosave,TRUE,TRUE,0);
     
 
@@ -571,7 +548,8 @@ GtkWidget* create_panels()
     g_signal_connect(G_OBJECT(repeat_button),"toggled",G_CALLBACK(repeat_button_toggled), NULL);
   }
   else
-    g_signal_connect (G_OBJECT(repeat_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
+    gtk_widget_set_sensitive(GTK_WIDGET(repeat_button),FALSE);
+  //    g_signal_connect (G_OBJECT(repeat_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
 
   gtk_box_pack_start(GTK_BOX(panvbox),repeat_button,TRUE,TRUE,0);
 
@@ -589,7 +567,8 @@ GtkWidget* create_panels()
     g_signal_connect(G_OBJECT(repeat_p_button),"toggled",G_CALLBACK(repeat_p_button_toggled), NULL);
   }
   else
-    g_signal_connect (G_OBJECT(repeat_p_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
+    gtk_widget_set_sensitive(GTK_WIDGET(repeat_p_button),FALSE);
+    //    g_signal_connect (G_OBJECT(repeat_p_button),"toggled",G_CALLBACK(noacq_button_press),NULL);
   gtk_box_pack_start(GTK_BOX(panvbox),repeat_p_button,TRUE,TRUE,0);
 
   button = gtk_button_new_with_label("Reload");
@@ -602,7 +581,8 @@ GtkWidget* create_panels()
   g_signal_connect( G_OBJECT( button ), "clicked", G_CALLBACK( kill_button_clicked ), NULL );
   }
   else
-    g_signal_connect(G_OBJECT(button),"clicked", G_CALLBACK(noacq_kill_button_press), NULL);
+    gtk_widget_set_sensitive(GTK_WIDGET(button),FALSE);
+  //    g_signal_connect(G_OBJECT(button),"clicked", G_CALLBACK(noacq_kill_button_press), NULL);
   gtk_box_pack_start(GTK_BOX(panvbox),button,TRUE,TRUE,0);
 
 
