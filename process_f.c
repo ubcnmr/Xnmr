@@ -1096,7 +1096,7 @@ GtkWidget* create_process_frame()
   button = gtk_button_new_with_label( "Baseline Correct" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_offset_cal_a_and_display), NULL);
-  process_button[nu].func = do_offset_cal;
+  process_button[nu].func = do_offset_cal_a;
   gtk_widget_show(button);
 
   //
