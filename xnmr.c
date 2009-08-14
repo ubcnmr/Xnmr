@@ -228,6 +228,16 @@ int main(int argc,char *argv[])
   // mutex to ensure that routines added with idle_add don't collide.
   gtk_init(&argc, &argv);
 
+
+  // see if /dev/PP_irq0 exists.  if not, then imply noacq.
+  {
+    struct stat sstat;
+    if (stat("/dev/PP_irq0",&sstat) == -1){
+      no_acq = TRUE;
+      printf("couldn't find /dev/PP_irq0, forcing noacq\n");
+    }
+  }
+
   /* look for command line arguments  that gtk didn't want*/
   do{
     ar=getopt_long(argc,argv,"n",cmds,&longindex);
