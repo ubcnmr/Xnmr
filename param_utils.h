@@ -85,6 +85,7 @@ int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
 
 // pfetch routines defined in xnmr_types because this file is *always* read in before dbuff is defined
 int pfetch_float( parameter_set_t *param_set, char* name, double* var, unsigned int acqn_2d );
+int pfetch_int( parameter_set_t *param_set, char* name, int* var, unsigned int acqn_2d );
 
 int is_2d_param( char* params, char* name );
 //returns 1 if parameter is 2d, 0 if not

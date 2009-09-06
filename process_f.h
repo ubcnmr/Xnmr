@@ -112,6 +112,12 @@ gint do_mag_2d_and_display(GtkWidget *widget, double *spare);
 gint unscramble_2d(GtkWidget *widget, double *spare);
 gint unscramble_2d_and_display(GtkWidget *widget, double *spare);
 
+gint do_hadamard1(GtkWidget *widget, double *spare);
+gint do_hadamard1_and_display(GtkWidget *widget, double *spare);
+
+gint do_hayashi1(GtkWidget *widget, double *spare);
+gint do_hayashi1_and_display(GtkWidget *widget, double *spare);
+
 
 
 gchar psrb(int bits,int init);

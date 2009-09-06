@@ -475,6 +475,45 @@ int pfetch_float( parameter_set_t *param_set, char* name, double* var, unsigned 
 return FALSE;
 }
 
+int pfetch_int( parameter_set_t *param_set, char* name, int* var, unsigned int acqn_2d )
+
+{
+
+  unsigned int i;
+
+  // first see if we have a parameter name match
+
+  for (i=0;i< param_set->num_parameters;i++){
+    if (strcmp(name,param_set->parameter[i].name)==0) {
+      //      fprintf(stderr,"in pfetch, found a match to: %s\n",param_set->parameter[i].name);
+      
+      // if it's a 1d float we're golden
+      
+      if (param_set->parameter[i].type == 'i'){
+	*var = param_set->parameter[i].i_val;
+	//	fprintf(stderr,"its a 1-d float value returned: %f\n",*var);
+	return TRUE;
+      }
+      if (param_set->parameter[i].type != 'I'){
+	//	fprintf(stderr,"param is of type: %i\n",param_set->parameter[i].type);
+	return 0;
+      }
+      
+      // ok so its 2d.
+      if ( param_set->parameter[i].size >= acqn_2d)
+	*var = param_set->parameter[i].i_val_2d[acqn_2d];
+      
+      else 
+	*var = param_set->parameter[i].i_val_2d[param_set->parameter[i].size];
+      return TRUE;
+    }
+
+  }
+  // should never get here
+
+return FALSE;
+}
+
 
 void path_strcat(char *dest, char *source){
   // routine assumes that the dest string is of length PATH_LENGTH.

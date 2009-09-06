@@ -2115,6 +2115,35 @@ GtkWidget* create_process_frame_2d()
   process_button[nu].func = do_phase_2d_wrapper;
   gtk_widget_show(button);
 
+  /*
+   *  hadamard transform of the rows.
+   */
+  nu=HAD1;
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT( process_button[nu].button ), "toggled", G_CALLBACK( process_button_toggle ),  (void*) nu);
+  gtk_widget_show( process_button[nu].button );
+  button = gtk_button_new_with_label( "Hadamard1" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK( do_hadamard1_and_display ), NULL);
+  process_button[nu].func = do_hadamard1;
+  gtk_widget_show(button);
+
+  /*
+   * decode Hayashi/chu sequence
+   */
+
+  nu=HAY1;
+  process_button[nu].button = gtk_check_button_new();
+  gtk_table_attach_defaults(GTK_TABLE( table ), process_button[nu].button,0,1,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT( process_button[nu].button ), "toggled", G_CALLBACK( process_button_toggle ),  (void*) nu);
+  gtk_widget_show( process_button[nu].button );
+  button = gtk_button_new_with_label( "Hayashi1" );
+  gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK( do_hayashi1_and_display ), NULL);
+  process_button[nu].func = do_hayashi1;
+  gtk_widget_show(button);
+
 
 
 
@@ -2166,8 +2195,6 @@ GtkWidget* create_process_frame_2d()
 
   return frame;
 }
-
-
 
 gint do_zero_fill_2d(GtkWidget * widget,double *val)
 {
@@ -2224,12 +2251,8 @@ gint do_zero_fill_2d(GtkWidget * widget,double *val)
 
   }
 
-
-
       
   cursor_normal(buff);
-
-
 
   // fprintf(stderr,"do_zero_fill: got factor: %f, rounding to: %i\n",factor,new_npts);
 
@@ -2259,6 +2282,7 @@ gint do_zero_fill_2d_and_display(GtkWidget * widget,double *val)
 
 
 //un
+
 
 gint unscramble_2d_and_display( GtkWidget *widget, double *unused )
 {
@@ -2324,6 +2348,298 @@ gint unscramble_2d(GtkWidget *widget, double *unused)
 
 
 
+gint do_hadamard1_and_display( GtkWidget *widget, double *unused )
+{
+  dbuff *buff;
+  gint result;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  result = do_hadamard1( widget, unused );
+
+  draw_canvas( buff );
+   return result;
+}
+
+void hadamard(char *had_mat,int order){
+  char *mat1,dim;
+  int i,j,k,nm,om;
+
+  mat1= malloc(sizeof(char)*(1<<order)*(1<<order));
+  dim = 1<<order;
+
+
+  mat1[0]=1;
+  for (k=0;k<order;k++){
+    nm = 1<<(k+1);
+    om = 1<<k;
+    printf("building matrix dim: %i from %i\n",nm,om);
+
+    for(i=0;i<om;i++)
+      for(j=0;j<om;j++){
+	had_mat[i+dim*j]=mat1[i+dim*j];
+	had_mat[i+om+dim*j]=mat1[i+dim*j];
+	had_mat[i+dim*(j+om)]=mat1[i+dim*j];
+	had_mat[i+om+dim*(j+om)]=-1*mat1[i+dim*j];
+      }
+
+    for(i=0;i<nm;i++){
+      for(j=0;j<nm;j++){
+	mat1[i+dim*j]=had_mat[i+dim*j];
+	//	printf("%2i ",mat1[i+dim*j]);
+      }
+      //      printf("\n");
+    }
+  }
+  free(mat1);   
+}
+
+
+gint do_hadamard1(GtkWidget *widget, double *unused)
+
+{
+  /* do hadamard unscramble for imaging. */
+
+  dbuff *buff;
+  int i,j,k,np2d,order;
+  float *new_data;
+  char *had_mat;
+  if( widget == NULL ) {
+    buff = buffp[ upload_buff ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
+  }
+  else {
+    buff = buffp[ current ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",current );
+  }
+  if (buff == NULL){
+    popup_msg("do_ft_2d panic! buff is null!",TRUE);
+    return FALSE;
+  }
+
+  cursor_busy(buff);
+
+  // want a hadmard matrix that is acqn2d x acqn2d
+  np2d =  buff->npts2;
+  order=0;
+  for(i=1;i<10;i++){
+    if ((1<<i) == np2d){
+      printf("we have a winner! Hadmard matrix is %i on a side, order: %i\n",np2d,order);
+      order=i;
+    }
+  }
+  if (order == 0){
+    printf("couldn't build hadamard matrix\n");
+    return 0;
+  }
+  had_mat = malloc(sizeof(char)*np2d*np2d);
+  new_data = malloc(sizeof(float)*np2d*2*buff->npts);
+  hadamard(had_mat,order);
+
+  // copy data over
+  for(i=0;i<np2d*buff->npts*2;i++)
+    new_data[i] = buff->data[i];
+  
+  // zero our old memory
+  memset(buff->data,0,buff->npts*2*np2d*sizeof(float));
+  // do the matrix multiplication
+  for(i=0;i<buff->npts;i++)
+    for(j=0;j<np2d;j++)
+      for(k=0;k<np2d;k++){
+	buff->data[2*i + buff->npts*2*j] += had_mat[j+np2d*k]*new_data[2*i + buff->npts*2*k];
+	buff->data[2*i+1 + buff->npts*2*j] += had_mat[j+np2d*k]*new_data[2*i+1 + buff->npts*2*k];
+      }
+
+
+
+
+  free(new_data);
+  free(had_mat);
+  cursor_normal(buff);
+  return TRUE;
+}
+
+
+
+///
+gint do_hayashi1_and_display( GtkWidget *widget, double *unused )
+{
+  dbuff *buff;
+  gint result;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  result = do_hayashi1( widget, unused );
+
+  draw_canvas( buff );
+   return result;
+}
+
+void generate_hayashi_seq(float *seqs,int n, int k){
+
+  int *a, *b,r,j;
+  float *chuseq;
+  int chulen;
+  int seqlen,seqnum,nseqs;
+  float *seqst;
+  chulen=(2*k+1)*(2*n+1);
+  seqlen=4*chulen;
+  nseqs=4*n+2;
+  seqst=malloc(sizeof(float)*seqlen*nseqs);
+  memset(seqst,0,sizeof(float)*seqlen*nseqs);
+
+  chuseq = malloc(sizeof(float)*chulen);
+  a=malloc(sizeof(int)*(2*n+1));
+  b=malloc(sizeof(int)*(2*n+1));
+
+
+  // get the chu seq:
+  get_chu_seq(-1); // reset the chu seq.
+  for(j=0;j<chulen;j++)
+    chuseq[j]=get_chu_seq(chulen);
+  // build the indicies
+  for(r=0;r<2*n+1;r++){
+    a[r]=(2*k+1)*((r+n)%(2*n+1))+k;
+    b[r] = (2*k+1)*r;
+  }
+  
+  // now build the sequences
+  for(r=0;r<(2*n+1);r++){
+    for(j=0;j<2*(2*k+1)*(2*n+1);j++){
+      seqnum=2*r;
+      // Hayashi's f^0
+      seqst[seqnum*seqlen+2*j] = chuseq[(a[r]+j)%chulen];
+      seqst[seqnum*seqlen+2*j+1] = chuseq[(b[r]+j)%chulen];
+
+      seqnum = 2*r+1;
+      seqst[seqnum*seqlen+2*j] = chuseq[(a[r]+j)%chulen];
+      //      seqst[seqnum*seqlen+2*j+1] = -chuseq[(b[r]+j)%chulen];
+      seqst[seqnum*seqlen+2*j+1] = chuseq[(b[r]+j)%chulen]+180.;
+
+      // Hayashi's f^1
+      seqnum=2*r;
+      seqs[seqnum*seqlen+2*j] = seqst[(2*r)*seqlen+j];
+      seqs[seqnum*seqlen+2*j+1] = seqst[(2*r+1)*seqlen+j];
+
+      seqnum = 2*r+1;
+      seqs[seqnum*seqlen+2*j] = seqst[(2*r)*seqlen+j];
+      //      seqs[seqnum*seqlen+2*j+1] = -seqst[(2*r+1)*seqlen+j];
+      seqs[seqnum*seqlen+2*j+1] = seqst[(2*r+1)*seqlen+j]+180.;
+    }
+  }
+
+  free(a);
+  free(b);
+  free(chuseq);
+  free(seqst);
+}
+
+
+gint do_hayashi1(GtkWidget *widget, double *unused)
+
+{
+
+  /* unscramble a single 1D data set into the records using hayashi/chu sequences 
+   */
+
+  dbuff *buff;
+  int i,j,k,seqlen,n,chulen,echolen,nseqs;
+  float *new_data;
+  float *seqs;
+  float *my_seq;
+  if( widget == NULL ) {
+    buff = buffp[ upload_buff ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
+  }
+  else {
+    buff = buffp[ current ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",current );
+  }
+  if (buff == NULL){
+    popup_msg("do_ft_2d panic! buff is null!",TRUE);
+    return FALSE;
+  }
+
+  cursor_busy(buff);
+
+  // get the n and k parameters from the panel.
+  n=0;
+  k=0;
+  i = pfetch_int(&buff->param_set,"n",&n,0);
+  i = pfetch_int(&buff->param_set,"k",&k,0);
+  if (n == 0 || k == 0 ){
+    popup_msg("Couldn't find n or k in the panel, can't do Hayashi decode",TRUE);
+    return FALSE;
+  }
+  printf("got: n = %i, k= %i\n",n,k);
+  seqlen = 4*(2*n+1)*(2*k+1);
+  nseqs = 4*n+2;
+  chulen = (2*n+1)*(2*k+1);
+  echolen = 4*k+2;
+
+  // check to make sure there are enough points
+  if (buff->npts < seqlen+echolen){
+    popup_msg("there don't seem to be enough data points for the Hayashi decode",TRUE);
+    return FALSE;
+  }
+
+
+  seqs = malloc(sizeof(float)*seqlen*nseqs); // these are angles in degrees
+  my_seq=malloc(sizeof(float)*seqlen*2); // these are the sines and cosines for cross corr.
+  new_data = malloc(sizeof(float)*buff->npts*2*buff->npts2);
+  memset(seqs,0,sizeof(float)*seqlen*nseqs);
+
+  printf("process_f: about to generate hayashi, with n: %i, k: %i, seqs allocated: %i\n",n,k,seqlen*nseqs);
+  generate_hayashi_seq(seqs,n,k);
+  
+  // we're only going to use the first sequence for the time being.  Maybe later we'll use them all.
+  // any one gives the same thing as all the others, just reorganized.
+
+  for(i=0;i<seqlen;i++){
+    my_seq[2*i] = cos(seqs[i]*M_PI/180.);
+    my_seq[2*i+1] = sin(seqs[i]*M_PI/180.);
+  }
+  
+  // copy data over old data to new spot.
+  for(i=0;i<buff->npts2*buff->npts*2;i++)
+    new_data[i] = buff->data[i];
+  
+  // zero our old memory
+  memset(buff->data,0,buff->npts*2*buff->npts2*sizeof(float));
+
+  //  printf("seqlen: %i, echolen: %i\n",seqlen,echolen);
+  
+  // do the cross correlation
+  for(k=0;k<buff->npts2;k++){ 
+    for (i=0;i<seqlen;i++){
+      for(j=0;j<seqlen;j++){
+	buff->data[k*buff->npts*2+2*i] += new_data[2*((i+j)%seqlen+echolen)+k*buff->npts*2]*my_seq[2*((j+echolen)%seqlen)]
+	  +new_data[2*((i+j)%seqlen+echolen)+1+k*buff->npts*2]*my_seq[2*((j+echolen)%seqlen)+1];
+	buff->data[k*buff->npts*2+2*i+1] += new_data[2*((i+j)%seqlen+echolen)+k*buff->npts*2]*my_seq[2*((j+echolen)%seqlen)+1]
+	  -new_data[2*((i+j)%seqlen+echolen)+1+k*buff->npts*2]*my_seq[2*((j+echolen)%seqlen)];
+      }
+    }
+  }
+
+
+  free(new_data);
+  free(seqs);
+  free(my_seq);
+
+  cursor_normal(buff);
+  return TRUE;
+}
+
+
+
+
+/////
 gint do_ft_2d_and_display( GtkWidget *widget, double *unused )
 {
   dbuff *buff;

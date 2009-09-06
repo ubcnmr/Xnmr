@@ -163,6 +163,8 @@ typedef struct {
 #define MAG2D 19
 #define BC2D2 20
 #define PH2D 21
+#define HAD1 22
+#define HAY1 23
 
 #endif
 
