@@ -2307,12 +2307,17 @@ gint unscramble_2d(GtkWidget *widget, double *unused)
      (eg gHMQC data 
      for Varian's ft2d(1,0,1,0,0,1,0,-1)
 
-     makes the data set a true complex set.
+     makes the data set a true complex set  - no don't do this
+     make into hypercomplex instead
+
+     either is fine, but with hyper complex you can phase in both dimensions
+     after the ft.
 */
 
   dbuff *buff;
   int i,j;
   int npts,npts2;
+  float *nbuff;
 
   if( widget == NULL ) {
     buff = buffp[ upload_buff ];
@@ -2329,21 +2334,39 @@ gint unscramble_2d(GtkWidget *widget, double *unused)
   npts= buff->npts;
   npts2=buff->npts2;
 
+  nbuff = (float *)malloc(sizeof(float)*2*npts*npts2);
+  for (i=0;i<npts*2*npts2;i++)
+    nbuff[i]=buff->data[i];
   for(i=0;i<npts;i++){
     for(j=0;j<npts2/2;j++){
-      buff->data[2*i+j*npts*2] = buff->data[2*i+(2*j)*(npts*2)]+ 
-	buff->data[2*i+(2*j+1)*(npts*2)];
-      buff->data[2*i+j*npts*2+1] = buff->data[2*i+(2*j)*(npts*2)+1]- 
-	buff->data[2*i+(2*j+1)*(npts*2)+1];
+      /*      buff->data[2*i+j*npts*2] = nbuff[2*i+(2*j)*(npts*2)]+ 
+	nbuff[2*i+(2*j+1)*(npts*2)];
+
+      buff->data[2*i+j*npts*2+1] = nbuff[2*i+(2*j)*(npts*2)+1]- 
+        nbuff[2*i+(2*j+1)*(npts*2)+1]; */
+      buff->data[2*i+2*j*npts*2] = nbuff[2*i+(2*j)*(npts*2)]+ 
+	nbuff[2*i+(2*j+1)*(npts*2)];
+      buff->data[2*i+2*j*npts*2+1]=nbuff[2*i+(2*j)*(npts*2)+1]+ 
+	nbuff[2*i+(2*j+1)*(npts*2)+1];
+
+      buff->data[2*i+(2*j+1)*npts*2] = nbuff[2*i+(2*j)*(npts*2)+1]- 
+	nbuff[2*i+(2*j+1)*(npts*2)+1];
+      buff->data[2*i+(2*j+1)*npts*2+1]=-nbuff[2*i+(2*j)*(npts*2)]+ 
+	nbuff[2*i+(2*j+1)*(npts*2)];
     }
   }
-  buff_resize(buff,npts,buff->npts2/2);
+  //  buff_resize(buff,npts,buff->npts2/2);
+  free(nbuff);
 
-  
-  
+  // now turn on true complex flag, and ensure the hypercomplex is off  
+  // no - backwards
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),TRUE);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.true_complex),FALSE);
+
   return TRUE;
   
 }
+
 
 
 
@@ -2452,9 +2475,6 @@ gint do_hadamard1(GtkWidget *widget, double *unused)
 	buff->data[2*i + buff->npts*2*j] += had_mat[j+np2d*k]*new_data[2*i + buff->npts*2*k];
 	buff->data[2*i+1 + buff->npts*2*j] += had_mat[j+np2d*k]*new_data[2*i+1 + buff->npts*2*k];
       }
-
-
-
 
   free(new_data);
   free(had_mat);
