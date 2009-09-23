@@ -750,7 +750,7 @@ gint do_left_shift_2d(GtkWidget * widget,double *val)
     }
   }
     else{ //right shifting.  resize buffer to keep all the data
-      buff_resize(buff,buff->npts,buff->npts2-shift*(1+buff->is_hyper));
+      //      buff_resize(buff,buff->npts,buff->npts2-shift*(1+buff->is_hyper));
       for (i=0;i<2*buff->npts;i++){
 	for (j=buff->npts2-1;j>=-shift*(1+buff->is_hyper);j--)
 	  buff->data[i+j*2*buff->npts] 
