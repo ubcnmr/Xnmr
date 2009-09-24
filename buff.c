@@ -2376,7 +2376,7 @@ void integrateold(GtkAction *action, dbuff *buff)
 
 void integrate_from_file( dbuff *buff, int action, GtkWidget *widget )
 {
-   int i_pt1,i_pt2;
+  int i_pt1,i_pt2,eo;
    FILE *f_int;
    char filename[PATH_LENGTH];
 
@@ -2389,12 +2389,12 @@ void integrate_from_file( dbuff *buff, int action, GtkWidget *widget )
     return;
    }
 
-   fscanf(f_int,"%i",&i_pt1);
+   eo= fscanf(f_int,"%i",&i_pt1);
  
-   fscanf(f_int,"%i",&i_pt2);
+   eo=fscanf(f_int,"%i",&i_pt2);
    fclose(f_int);
-
-   do_integrate(i_pt1,i_pt2,buff);
+   if (eo == 1)
+     do_integrate(i_pt1,i_pt2,buff);
 }
 
 
@@ -4581,15 +4581,19 @@ void file_export_magnitude_image(GtkAction *action,dbuff *buff)
 
     ny = (j2-j1)/(1+buff->is_hyper)+1;
     
-    max = buff->data[j1*2*npts+2*i1]*buff->data[j1*2*npts+2*i1];
+    max = sqrt(buff->data[j1*2*npts+2*i1]*buff->data[j1*2*npts+2*i1]+
+	       buff->data[j1*2*npts+2*i1+1]*buff->data[j1*2*npts+2*i1+1]);
 
     for(j=j1;j<=j2;j+=1+buff->is_hyper){
       for (i=i1;i<=i2;i++){
-	if (buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i] > max) max = buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i];
+	if (sqrt(buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i]+
+		 buff->data[2*j*npts+2*i+1]*buff->data[2*j*npts+2*i+1]) > max) 
+	  max = sqrt(buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i] +
+		  buff->data[2*j*npts+2*i+1]*buff->data[2*j*npts+2*i+1]   );
       }
     }
 
-    max=sqrt(max);
+    //    max=sqrt(max);
     // generate a pgm file.
     fprintf(fstream,"P5\n");
     fprintf(fstream,"#magnitude mode, 255 is max: %f \n",max);
@@ -4597,7 +4601,8 @@ void file_export_magnitude_image(GtkAction *action,dbuff *buff)
     fprintf(fstream,"255\n");
     for(j=j1;j<=j2;j+=1+buff->is_hyper){
       for (i=i1;i<=i2;i++)
-	fputc((char) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i])/max*255.99999),fstream);
+	fputc((char) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i]+
+			   buff->data[j*2*npts+2*i+1]*buff->data[2*j*npts+2*i+1])/max*255.99999),fstream);
 	//	fprintf(fstream,"%i ",(int) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i])/max*255.99999));
       //  fprintf(fstream,"\n");
     }      
