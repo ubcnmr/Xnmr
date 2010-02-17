@@ -136,6 +136,7 @@ dbuff *create_buff(int num){
     { "Export Binary",NULL,"Export _Binary",NULL,"Export binary",G_CALLBACK(file_export_binary)},
     { "Export Image",NULL,"Export _Image",NULL,"Export image",G_CALLBACK(file_export_image)},
     { "Export Magnitude Image",NULL,"Export _Magnitude",NULL,"Export Magnitude",G_CALLBACK(file_export_magnitude_image)},
+    { "Import Text"       ,NULL,"Import _Text",    NULL,"Import Text",     G_CALLBACK(file_import_text)},
     { "Close",GTK_STOCK_CLOSE,"_Close",NULL,"Close Buffer",G_CALLBACK(file_close)},
     { "Exit",GTK_STOCK_QUIT,"E_xit",NULL,"Exit Xnmr",G_CALLBACK(file_exit)},
     { "Real",NULL,"_Real","<alt>R","Show Real trace",G_CALLBACK(toggle_real)},
@@ -180,6 +181,7 @@ dbuff *create_buff(int num){
    "    <menuitem action='Export Binary'/>"
    "    <menuitem action='Export Image'/>"
    "    <menuitem action='Export Magnitude Image'/>"
+   "    <menuitem action='Import Text'/>"
    "    <separator/>"
    "    <menuitem action='Close'/>"
    "    <menuitem action='Exit'/>"
@@ -4528,7 +4530,89 @@ void file_export_image(GtkAction *action,dbuff *buff)
 
 }
 
+void file_import_text(GtkAction *action,dbuff *buff){
+  GtkWidget *filew;
+  FILE *infile;
+  int i,counter;
+  char linebuff[200],eof;
+  float num1,num2;
 
+
+  if (allowed_to_change(buff->buffnum) == FALSE){
+    popup_msg("Can't open while Acquisition is running or queued\n",TRUE);
+    return;
+  }
+
+  CHECK_ACTIVE(buff);
+
+  filew = gtk_file_chooser_dialog_new("Open File",NULL,
+				     GTK_FILE_CHOOSER_ACTION_OPEN,
+				     GTK_STOCK_CANCEL,GTK_RESPONSE_CANCEL,
+				     GTK_STOCK_OPEN,-GTK_RESPONSE_ACCEPT,NULL);
+
+
+  gtk_window_set_keep_above(GTK_WINDOW(filew),TRUE);
+  gtk_file_chooser_set_local_only(GTK_FILE_CHOOSER(filew),TRUE);
+
+  if (gtk_dialog_run(GTK_DIALOG(filew)) == -GTK_RESPONSE_ACCEPT) {
+    char *filename;
+    filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filew));
+    //    fprintf(stderr,"got filename: %s\n",filename);
+    
+    
+    if (buff != NULL){
+      
+      // here we need to strip out a potential trailing /
+      if (filename[strlen(filename)-1] == '/' ) filename[strlen(filename)-1] = 0;
+      //      fprintf(stderr,"path is: %s\n",filename);
+      
+      //      do_load( buff, filename,0);
+
+      printf("going to try to import: %s\n",filename);
+      // plan: try to open it, scan through looking for two columns, point number and real value.  
+      // really only use the real value for now.
+      // then set up buffer size appropriately, re-read the file.
+      infile = fopen(filename,"r");
+      if (infile == NULL)
+	popup_msg("Couldn't open file",TRUE);
+      else{
+	  counter = 0;
+	do{
+	  linebuff[0]=0;
+	  eof=fgets(linebuff,200,infile);
+	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
+	  if (eof == 2) counter += 1;
+	}while (eof == 2);
+	printf("will try to load in: %i lines, real part only.\n",counter);
+	rewind(infile);
+	buff_resize(buff,counter,1);
+	for(i=0;i<counter;i++){
+	  eof=fgets(linebuff,200,infile);
+	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
+	  buff->data[2*i] = num2;
+	  buff->data[2*i+1] = 0.;
+	}
+	update_npts(counter);
+	update_npts2(1);
+	draw_canvas(buff);
+	fclose(infile);
+	buff->flags =0;
+
+      }
+
+    }
+    else popup_msg("buffer was destroyed, can't open",TRUE);
+    g_free(filename);
+    
+  }
+  else { 
+    fprintf(stderr,"got no filename\n");
+  }
+  gtk_widget_destroy(filew);
+
+  return;
+
+}
 void file_export_magnitude_image(GtkAction *action,dbuff *buff)
 {
   int i1,i2,j1,j2,i,j,npts,ny,npts2;
