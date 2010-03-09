@@ -4579,7 +4579,10 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	  counter = 0;
 	do{
 	  linebuff[0]=0;
-	  eof=fgets(linebuff,200,infile);
+	  // throw away lines that start with #
+	  do{
+	    eof=fgets(linebuff,200,infile);
+	  }while(linebuff[0] == '#');
 	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
 	  if (eof == 2) counter += 1;
 	}while (eof == 2);
@@ -4587,7 +4590,9 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	rewind(infile);
 	buff_resize(buff,counter,1);
 	for(i=0;i<counter;i++){
-	  eof=fgets(linebuff,200,infile);
+	  do{
+	    eof=fgets(linebuff,200,infile);
+	  }while(linebuff[0] == '#');
 	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
 	  buff->data[2*i] = num2;
 	  buff->data[2*i+1] = 0.;
