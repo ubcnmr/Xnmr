@@ -4537,7 +4537,6 @@ void file_import_text(GtkAction *action,dbuff *buff){
   char linebuff[200],eof;
   float num1,num2;
 
-
   if (allowed_to_change(buff->buffnum) == FALSE){
     popup_msg("Can't open while Acquisition is running or queued\n",TRUE);
     return;
@@ -4558,8 +4557,7 @@ void file_import_text(GtkAction *action,dbuff *buff){
     char *filename;
     filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filew));
     //    fprintf(stderr,"got filename: %s\n",filename);
-    
-    
+   
     if (buff != NULL){
       
       // here we need to strip out a potential trailing /
@@ -4603,8 +4601,12 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	fclose(infile);
 	buff->flags =0;
 
+	// save filename for later.
+	put_name_in_buff(buff,filename);
+	path_strcpy(buff->path_for_reload,filename);
+	set_window_title(buff);
+ 
       }
-
     }
     else popup_msg("buffer was destroyed, can't open",TRUE);
     g_free(filename);
@@ -6400,6 +6402,7 @@ gint hide_add_sub(GtkWidget *widget,gpointer data){
 }
 
 
+
 void fitting(GtkAction *action,dbuff *buff){
 
   CHECK_ACTIVE(buff);
@@ -6434,6 +6437,7 @@ void dummy(){}
 void n2f_(int *n,int *p,float *x,void (*calc_spectrum_residuals),int *iv,int *liv,int *lv,float *v,
      int *ui,float *ur,void (*dummy));
 void  ivset_(int *kind,int *iv, int *liv,int *lv,float *v);
+float x_scale_parms[MAX_FIT*5];
 
 #define OUT_STRING_MAX 5000
 void fitting_buttons(GtkWidget *widget, gpointer data ){
@@ -6549,13 +6553,6 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	return;
       }
 
-      // check order of magnitude of amplitudes?
-      fit_data.amp_scale = 0;
-      for (i=0;i<fit_data.num_components;i++)
-	fit_data.amp_scale += gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.amplitude[i]));
-
-      fit_data.amp_scale /= fit_data.num_components*1000.;
-
 
       // ok, need to organize our parameters:
       // they are: freq, ((amp gaus, amp lorentz) or total amp), gauss width, lorentz width
@@ -6565,20 +6562,23 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
 	if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE
 	   || gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE){
-
-	  x[pnum]=gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.center[i]));
+	  
+	  x[pnum] = 1.0;
+	  x_scale_parms[pnum]=gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.center[i]));
 	  pnum ++;
 
-	  x[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.amplitude[i]))
-	    / fit_data.amp_scale;
+	  x[pnum]= 1.0;
+	  x_scale_parms[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.amplitude[i]));
 	  pnum++;
 
 	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE){
-	    x[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[i]));
+	    x[pnum]=1.0;
+	    x_scale_parms[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[i]));
 	    pnum++;
 	  }
 	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE){
-	    x[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[i]));
+	    x[pnum] = 1.0;
+	    x_scale_parms[pnum] = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[i]));
 	    pnum++;
 	  }
 	}
@@ -6684,16 +6684,16 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
 	    if (out_len < max_len)
 	      out_len += snprintf(&out_string[out_len],max_len-out_len," %2i  % 9.2f \302\261 %-8.2f % 8g \302\261 %-8g",i+1,
-				  x[pnum],stddev[pnum],x[pnum+1]*fit_data.amp_scale,stddev[pnum+1]*fit_data.amp_scale) ;
+				  x[pnum]*x_scale_parms[pnum],stddev[pnum]*x_scale_parms[pnum],x[pnum+1]*x_scale_parms[pnum+1],stddev[pnum+1]*x_scale_parms[pnum+1]) ;
 	    pnum+=2;
 	    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE && out_len < max_len){
-	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %-8.2f",x[pnum],stddev[pnum]) ;
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %-8.2f",x[pnum]*x_scale_parms[pnum],stddev[pnum]*x_scale_parms[pnum]) ;
 	      pnum +=1 ;
 	    }
 	    else if (out_len < max_len)
 	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %-8.2f",0.,0.)-1;
 	    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE && out_len < max_len){
-	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %- 8.2f",x[pnum],stddev[pnum]);
+	      out_len += snprintf( &out_string[out_len],max_len-out_len," % 8.2f \302\261 %- 8.2f",x[pnum]*x_scale_parms[pnum],stddev[pnum]*x_scale_parms[pnum]);
 	      pnum +=1 ;
 	    }
 	    else if (out_len < max_len)
@@ -6858,17 +6858,20 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
 
     if(do_gauss == TRUE && do_lorentz == TRUE){
       //      fprintf(stderr,"line %i, doing both only\n",i);
-      add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],x[pnum+3],ur,npts,buffp[sbnum]->param_set.dwell/1e6);
+      add_gauss_lorentz_line(x[pnum]*x_scale_parms[pnum],x[pnum+1]*x_scale_parms[pnum+1],
+			     x[pnum+2]*x_scale_parms[pnum+2],x[pnum+3]*x_scale_parms[pnum+3],ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 4;
       }
     else if (do_gauss == TRUE){
       //      fprintf(stderr,"line %i, doing gauss only\n",i);
-      add_gauss_lorentz_line(x[pnum],x[pnum+1],x[pnum+2],0.,ur,npts,buffp[sbnum]->param_set.dwell/1e6);
+      add_gauss_lorentz_line(x[pnum]*x_scale_parms[pnum],x[pnum+1]*x_scale_parms[pnum+1],
+			     x[pnum+2]*x_scale_parms[pnum+2],0.,ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 3;
       }
     else if (do_lorentz == TRUE){
       //      fprintf(stderr,"line %i, doing lorentz only\n",i);
-      add_gauss_lorentz_line(x[pnum],x[pnum+1],0.,x[pnum+2],ur,npts,buffp[sbnum]->param_set.dwell/1e6);
+      add_gauss_lorentz_line(x[pnum]*x_scale_parms[pnum],x[pnum+1]*x_scale_parms[pnum+1],0.
+			     ,x[pnum+2]*x_scale_parms[pnum+2],ur,npts,buffp[sbnum]->param_set.dwell/1e6);
       pnum += 3;
     }
     else fprintf(stderr,"for line: %i, didn't add a line\n",i);
@@ -6938,8 +6941,7 @@ void add_gauss_lorentz_line(float center,float amp,float gauss_wid,float lorentz
   //  fprintf(stderr,"add_lorentz_line: center: %f, amp: %f, width: %f, dwell %f\n",center,amp,wid,dwell);
 
   for(i=0;i<np;i++){
-    prefactor = amp*exp(-i*dwell*M_PI*lorentz_wid)*exp(-i*dwell*M_PI*gauss_wid/1.6651*i*dwell*M_PI*gauss_wid/1.6651) 
-      *fit_data.amp_scale; 
+    prefactor = amp*exp(-i*dwell*M_PI*lorentz_wid)*exp(-i*dwell*M_PI*gauss_wid/1.6651*i*dwell*M_PI*gauss_wid/1.6651); 
     spect[2*i] += prefactor * cos(-center*2*M_PI*dwell*i);
     spect[2*i+1] += prefactor * sin(-center*2*M_PI*dwell*i);
   }

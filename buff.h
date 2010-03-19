@@ -67,7 +67,6 @@ typedef struct{
     *start_clicking,*end_clicking,*run_fit,*run_fit_range,*precalc,*close,*enable_proc_broad,*store_fit,
   *center[MAX_FIT],*amplitude[MAX_FIT],*gauss_wid[MAX_FIT],
     *lorentz_wid[MAX_FIT],*enable_gauss[MAX_FIT],*enable_lorentz[MAX_FIT],*hbox[MAX_FIT];
-  float amp_scale; // need to scale amplitudes so they have the same order of magnitudes as other variables.
   int shown,num_components,s_rec,d_rec;
 } fitting_struct;
 
