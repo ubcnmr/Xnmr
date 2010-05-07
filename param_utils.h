@@ -16,7 +16,7 @@
 
 // these three are also defined in xnmr_types ?
 #define MAX_PARAMETERS 100
-#define PATH_LENGTH 200
+#define PATH_LENGTH 800
 #define UTIL_LEN 40
 
 #define VERSION_LEN 30

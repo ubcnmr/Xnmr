@@ -4605,7 +4605,13 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	put_name_in_buff(buff,filename);
 	path_strcpy(buff->path_for_reload,filename);
 	set_window_title(buff);
- 
+
+
+	// set phase applied to 0. 
+	buff->phase0_app=0.;
+	buff->phase1_app=0.;
+	buff->phase20_app=0.;
+	buff->phase21_app=0.;
       }
     }
     else popup_msg("buffer was destroyed, can't open",TRUE);

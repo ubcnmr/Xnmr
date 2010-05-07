@@ -18,7 +18,7 @@
 
 // these three also defined in param_utils.h - ick
 #define MAX_PARAMETERS 100
-#define PATH_LENGTH 200
+#define PATH_LENGTH 800
 #define UTIL_LEN 40
 
 

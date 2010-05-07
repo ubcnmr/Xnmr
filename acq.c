@@ -5,10 +5,10 @@
 //
 
 
-//#define NOHARDWARE
-//#define NO_RT_SCHED
+#define NOHARDWARE
+#define NO_RT_SCHED
 
-#define OLD_PORT_INTERRUPT 
+//#define OLD_PORT_INTERRUPT 
 
 //#define RTAI_INTERRUPT
 
@@ -1256,10 +1256,22 @@ else{
 	
 	// last program is now sent to hardware, fix up variables to go calculate the next one.
 #ifdef NOHARDWARE
+	/*
 	for (i=0;i<data_shm->npts*2;i++) buffer[i]=0;
 	i = data_shm->acqn + data_shm->acqn_2d*data_shm->num_acqs;
 	if (i >= data_shm->npts) i = i% data_shm->npts;
 	buffer[i*2] = data_shm->acqn+data_shm->acqn_2d*data_shm->num_acqs+4;
+	*/
+	printf("giving bogus data2 for step: %i\n",data_shm->last_acqn_2d);
+	for(i=0;i<data_shm->npts;i++){
+	  // phase modulated:
+	  buffer[2*i]=10000*(cos(i/10.)*exp(-i/80.) + cos((i+data_shm->last_acqn_2d)/5.)*exp(-i/80.))*exp(data_shm->last_acqn_2d/(-80.));
+	  buffer[2*i+1]=10000*(sin(i/10.)*exp(-i/80.) + sin((i+data_shm->last_acqn_2d)/5.)*exp(-i/80.))*exp(data_shm->last_acqn_2d/(-80.));
+      // amplitude modulated:
+      //	  buffer[2*i]=10000*(cos(i/10.)*exp(-i/80.) + cos((i)/5.)*exp(-i/80.)*cos(data_shm->last_acqn_2d/5.)*exp(data_shm->last_acqn_2d/(-80.)));
+      //	  buffer[2*i+1]=10000*(sin(i/10.)*exp(-i/80.) + sin((i)/5.)*exp(-i/80.)*cos(data_shm->last_acqn_2d/5.)*exp(data_shm->last_acqn_2d/(-80.)));
+	}
+
 #endif
 	
 	data_shm->acqn++;
@@ -1733,16 +1745,8 @@ else{
 	
 
 
-	  
+ 
 	
-#ifdef NOHARDWARE
-	// gives some bogus data if we're not talking to hardware
-	    for (i=0;i<data_shm->npts*2;i++) buffer[i]=0;
-	    i = data_shm->acqn+data_shm->last_acqn_2d*data_shm->num_acqs;
-	    if (i >= data_shm->npts) i = i% data_shm->npts;
-	    buffer[i*2] = data_shm->acqn+data_shm->last_acqn_2d*data_shm->num_acqs+4;
-	    
-#endif
 
 	// Figure out where we are in the 1d loop, will we restart or not?
 	
