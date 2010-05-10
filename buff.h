@@ -267,6 +267,10 @@ gint do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3);
 void scale_data(dbuff *buff,int pt,float scale);
 void first_point_auto_phase();
 
+
+void zero_points(GtkAction *action,dbuff *buff);
+void zero_points_handler(dbuff *buff, GdkEventButton * action, GtkWidget *widget);
+
 #endif
 
 

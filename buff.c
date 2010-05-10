@@ -162,6 +162,7 @@ dbuff *create_buff(int num){
     { "dospline",NULL,"Do Spline",NULL,"Apply spline fit to data",G_CALLBACK(do_spline)},
     { "undospline",NULL,"Undo Spline",NULL,"Undo the last spline",G_CALLBACK(undo_spline)},
     { "clearspline",NULL,"Clear Spline Points",NULL,"Clear the spline points",G_CALLBACK(clear_spline)},
+    { "zeropoints",NULL,"Zero Points",NULL,"Zero Points",G_CALLBACK(zero_points)},
     { "queueexpt",NULL,"Queue _Experiment",NULL,"Queue this experiment",G_CALLBACK(queue_expt)},
     { "queuewindow",NULL,"Queue _Window",NULL,"Display the queue window",G_CALLBACK(queue_window)},
     { "readscript",NULL,"Read from stdin",NULL,"Read from stdin",G_CALLBACK(readscript)},
@@ -211,6 +212,7 @@ dbuff *create_buff(int num){
    "     <menuitem action='RMS'/>"
    "     <menuitem action='AddSubtract'/>"
    "     <menuitem action='Fitting'/>"
+   "    <menuitem action='zeropoints'/>"
    "   </menu>"
    "   <menu action='BaselineMenu'>"
    "    <menuitem action='picksplinepoints'/>"
@@ -8137,3 +8139,135 @@ void first_point_auto_phase(){
 
 
 }
+
+
+int zero_buff=-1;
+GtkWidget *zero_dialog;
+
+void zero_points(GtkAction *action,dbuff *buff){
+ 
+
+  CHECK_ACTIVE(buff);
+  if (zero_buff != -1) {
+    gdk_window_raise(base.dialog->window);
+    fprintf(stderr,"already picking zeros\n");
+    return;
+  }
+  if (buff->win.press_pend != 0){
+    popup_msg("There's already a press pending\n(maybe Expand or Offset?)",TRUE);
+    return;
+  }
+
+  if (buff->disp.dispstyle != SLICE_ROW){
+    popup_msg("zero points only works on rows for now",TRUE);
+    return;
+  }
+
+      
+      
+  /* open up a window that we click ok in when we're done */
+  zero_dialog = gtk_message_dialog_new(GTK_WINDOW(panwindow),
+				  GTK_DIALOG_DESTROY_WITH_PARENT,GTK_MESSAGE_INFO,
+					    GTK_BUTTONS_OK,"Hit ok when zero points are done");
+
+  /* also need to catch when we get a close signal from the wm */
+  g_signal_connect(G_OBJECT (zero_dialog),"response",G_CALLBACK (zero_points_handler),G_OBJECT( zero_dialog ));
+  gtk_widget_show_all (zero_dialog);
+  
+
+  zero_buff = buff->buffnum;
+  printf("set zero_buff to: %i\n",zero_buff);
+
+  g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+				  G_CALLBACK (press_in_win_event),
+				  buff);
+  // connect our event
+  g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+		    G_CALLBACK(zero_points_handler), buff);
+  buff->win.press_pend=1;
+  
+  
+  //      fprintf(stderr,"pick spline points\n");
+  
+  
+  
+}
+
+
+void zero_points_handler(dbuff *buff, GdkEventButton * action, GtkWidget *widget)
+{
+
+  GdkEventButton *event;
+  float xval;
+  int xvali;
+  int offset;
+  /* this routine is a callback for the zero points menu item.
+
+     It is also a callback for responses internally.  In that case, the buff that comes in won't be right... */
+
+  if (zero_buff == -1){
+    popup_msg("in zero_points_handler with no buffer?",TRUE);
+    return;
+  }
+
+
+  /* First:  if we get a point */
+
+  if ((void *) buff == (void *) buffp[zero_buff]->win.canvas){ // then we've come from selecting a point.
+      event = (GdkEventButton *) action;
+
+      if (buffp[zero_buff]->disp.dispstyle==SLICE_ROW){
+	xval= (event->x-1.)/(buffp[zero_buff]->win.sizex-1) *
+	  (buffp[zero_buff]->disp.xx2-buffp[zero_buff]->disp.xx1)
+	  +buffp[zero_buff]->disp.xx1;
+
+	//	fprintf(stderr,"got x val: %f\n",xval);
+
+
+	// set the real and imag parts to 0
+
+	xvali = ((int) (xval*(buffp[zero_buff]->npts-1)+0.5) ) ;
+
+	offset = buffp[zero_buff]->npts * 2 * buffp[zero_buff]->disp.record;
+	buffp[zero_buff]->data[2*xvali + offset] = 0.;
+	buffp[zero_buff]->data[2*xvali +1 + offset] = 0.;
+	//redraw:
+	draw_canvas(buffp[zero_buff]);
+	
+
+
+      }
+      return;
+  } // end of press event
+    
+
+
+  /* Otherwise, we're here because user said they're done picking points */
+    
+    if ((void *) buff == (void *) zero_dialog){ 
+      //           fprintf(stderr,"buff is dialog!\n");
+      gtk_object_destroy(GTK_OBJECT(zero_dialog));
+      
+      if ( buffp[zero_buff] == NULL){ // our buffer destroyed while we were open...
+	fprintf(stderr,"zero_points: buffer was destroyed while we were open\n");
+      }
+      else{
+	buffp[zero_buff]->win.press_pend = 0;
+	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[zero_buff]->win.canvas), 
+					      G_CALLBACK( zero_points_handler), buffp[zero_buff]);
+	
+	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[zero_buff]->win.canvas),
+					  G_CALLBACK (press_in_win_event),
+					  buffp[zero_buff]);
+      }
+      
+      //      fprintf(stderr,"got a total of: %i points for spline\n",base.num_spline_points);
+      draw_canvas(buffp[zero_buff]);
+      zero_buff = -1;
+
+      return;
+    }
+
+    else fprintf(stderr,"zero_points_handler got unknown action: \n");
+  }
+
