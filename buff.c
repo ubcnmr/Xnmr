@@ -6445,7 +6445,7 @@ void dummy(){}
 void n2f_(int *n,int *p,float *x,void (*calc_spectrum_residuals),int *iv,int *liv,int *lv,float *v,
      int *ui,float *ur,void (*dummy));
 void  ivset_(int *kind,int *iv, int *liv,int *lv,float *v);
-float x_scale_parms[MAX_FIT*5];
+float x_scale_parms[MAX_FIT*5],yscale;
 
 #define OUT_STRING_MAX 5000
 void fitting_buttons(GtkWidget *widget, gpointer data ){
@@ -6592,6 +6592,30 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	}
       } // that's all i components
 
+      // next, get the y scale.  From the initial guesses, we take the biggest peak's average point value, and
+      // set yscale so that it is 1.
+      yscale = 1;
+      {
+	float max_amp=0,my_amp,my_width;
+	for(i=0;i<fit_data.num_components;i++){
+	  my_width=0;
+	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_gauss[i])) == TRUE){
+	    my_width += gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[i]));
+	  }
+	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.enable_lorentz[i])) == TRUE){
+	    my_width += gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.lorentz_wid[i]));
+	  }
+	  my_amp = gtk_spin_button_get_value(GTK_SPIN_BUTTON(fit_data.amplitude[i]));
+	  // want the width in points
+	  my_width = my_width/ buffp[sbnum]->param_set.sw* buffp[sbnum]->npts;
+	  if(my_width > 0){
+	    my_amp = my_amp/my_width; 
+	    if (my_amp > max_amp) max_amp=my_amp;
+	  }
+	}
+	yscale = max_amp;
+	printf("using scale factor of %g for amplitudes in fit\n",yscale);
+      }
 
       if (pnum == 0){
 	popup_msg("No Active components to fit!",TRUE);
@@ -6937,6 +6961,7 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
   for (i=0; i<*n ;i++){
     r[i] = ur[i+2*i1] - buffp[sbnum]->data[i+2*i1+
       2*npts*gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record))];
+    r[i] /= yscale;
   }
 
 }
