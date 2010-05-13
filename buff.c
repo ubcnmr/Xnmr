@@ -6685,6 +6685,14 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	iv[13] = 1; //printf just covariance matrix.  0=neither, 2 is just diagnotic, 3 = both
 
 	cursor_busy(buffp[sbnum]);
+
+	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.include_imag)) == FALSE){
+	    n=n/2;
+	    printf("not including imaginary in fit\n");
+	  }
+	  else
+	    printf("including imaginary in fit\n");
+
 	
 	n2f_(&n,&p,x,&calc_spectrum_residuals,iv,&liv,&lv,v,ui,spect,&dummy);
 	cursor_normal(buffp[sbnum]);
@@ -6742,7 +6750,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	chi2 = 0.;
 	for (i=i1*2;i<=i2*2;i++)
 	  chi2 += v[i]*v[i];
-	chi2 = sqrt(chi2/(i2-i1+1)/2.);
+	chi2 = yscale*sqrt(chi2/(i2-i1+1)/2.);
 
 	if (out_len > 0)
 	  out_len += snprintf(&out_string[out_len],max_len-out_len,"\nGoodness of fit: Sqrt(Chi^2/N): %f (compare to noise)\n",chi2);
@@ -6867,10 +6875,15 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
   // ur is a float pointer passed through put our calc'd spectrum there.
   // and uf is a user function passed through.
 
-  int i,pnum,sbnum,do_gauss,do_lorentz,i1,npts;
+  int i,pnum,sbnum,do_gauss,do_lorentz,i1,npts,include_imag;
   float scale,spare;
   //  fprintf(stderr,"in calc_spectrum_residuals, got %i data points and %i parameters\n",*n,*p);
   
+  // are we including the imaginary in the fit?
+  include_imag = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.include_imag));
+
+
+
   // need the source buffer
   i = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff));
   sbnum = add_sub.index[i];
@@ -6952,18 +6965,26 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
   // here we'll have to change when we only look at what's viewed.
 
   
-  if ( *n != npts*2){// then we're doing a fit range
+  if ( *n != npts*(1+include_imag)){// then we're doing a fit range
     i1 = (int) (buffp[sbnum]->disp.xx1*(npts-1)+0.5);
   }
   else i1 = 0;
   //  fprintf(stderr,"in calc spectrum residuals, starting at point %i\n",i1);
-
-  for (i=0; i<*n ;i++){
-    r[i] = ur[i+2*i1] - buffp[sbnum]->data[i+2*i1+
-      2*npts*gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record))];
-    r[i] /= yscale;
+  
+  if (include_imag){
+    for (i=0; i<*n ;i++){
+      r[i] = ur[i+2*i1] - buffp[sbnum]->data[i+2*i1+
+	     2*npts*gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record))];
+      r[i] /= yscale;
+    }
   }
-
+  else{
+    for(i=0;i < *n ;i++){
+      r[i] = ur[2*i+2*i1] - buffp[sbnum]->data[2*i+2*i1+
+	    2*npts*gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record))];
+      r[i] /= yscale;
+    }
+  }
 }
 
 

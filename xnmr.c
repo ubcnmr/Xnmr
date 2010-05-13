@@ -610,7 +610,7 @@ int main(int argc,char *argv[])
   label=gtk_label_new("Best Fit Destination");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  label=gtk_label_new("Store best fit?");
+  label=gtk_label_new("  \t");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
 
@@ -637,6 +637,9 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.d_buff,FALSE,FALSE,2);
 
   gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_buff),"New");
+
+  label=gtk_label_new("Store best fit?");
+  gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
   fit_data.store_fit = gtk_check_button_new();
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.store_fit,FALSE,FALSE,2);
@@ -670,8 +673,12 @@ int main(int argc,char *argv[])
 		   G_CALLBACK(fit_data_changed),NULL);
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.d_record,FALSE,FALSE,2);
 
-  label=gtk_label_new("  \t");
+  label=gtk_label_new("Include imaginary?");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
+
+  fit_data.include_imag = gtk_check_button_new();
+  gtk_box_pack_start(GTK_BOX(hbox),fit_data.include_imag,FALSE,FALSE,2);
+
 
 
 
