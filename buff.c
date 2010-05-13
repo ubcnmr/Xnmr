@@ -6445,7 +6445,7 @@ void dummy(){}
 void n2f_(int *n,int *p,float *x,void (*calc_spectrum_residuals),int *iv,int *liv,int *lv,float *v,
      int *ui,float *ur,void (*dummy));
 void  ivset_(int *kind,int *iv, int *liv,int *lv,float *v);
-float x_scale_parms[MAX_FIT*5],yscale;
+float x_scale_parms[MAX_FIT*5],yscale=1.;
 
 #define OUT_STRING_MAX 5000
 void fitting_buttons(GtkWidget *widget, gpointer data ){
@@ -6654,6 +6654,12 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
 
       iv[0] = 0; // uses defaults for iv and v
+      if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.include_imag)) == FALSE){
+	n=n/2;
+	printf("not including imaginary in fit\n");
+      }
+      else
+	printf("including imaginary in fit\n");
       
       // that should do it, go do the fit.
       if ( widget == fit_data.run_fit || widget == fit_data.run_fit_range){ // only actually do the fit if we want it done.
@@ -6686,12 +6692,6 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
 	cursor_busy(buffp[sbnum]);
 
-	  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.include_imag)) == FALSE){
-	    n=n/2;
-	    printf("not including imaginary in fit\n");
-	  }
-	  else
-	    printf("including imaginary in fit\n");
 
 	
 	n2f_(&n,&p,x,&calc_spectrum_residuals,iv,&liv,&lv,v,ui,spect,&dummy);
@@ -6744,7 +6744,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	}
 
 	// now figure out the goodness of fit.
-
+	// the n here does the right thing vis a vis including imaginary or not - we only want the residuals used in the fit
 	calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);	
 
 	chi2 = 0.;
@@ -6963,7 +6963,7 @@ void calc_spectrum_residuals(int *n,int *p,float *x,int *nf, float *r,int *ui,fl
   
   // then subtract off the experiment
   // here we'll have to change when we only look at what's viewed.
-
+  
   
   if ( *n != npts*(1+include_imag)){// then we're doing a fit range
     i1 = (int) (buffp[sbnum]->disp.xx1*(npts-1)+0.5);
