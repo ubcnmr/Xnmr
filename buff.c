@@ -6454,7 +6454,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
   float stddev[MAX_FIT*4],chi2;
   char out_string[OUT_STRING_MAX];
   int out_len=0,max_len=OUT_STRING_MAX;
-  int i1,i2;
+  int i1,i2,include_imag;
 
   if (widget  == fit_data.close){ //close button
     gtk_widget_hide(fit_data.dialog);
@@ -6655,11 +6655,14 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
       iv[0] = 0; // uses defaults for iv and v
       if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fit_data.include_imag)) == FALSE){
+	include_imag = 0;
 	n=n/2;
 	printf("not including imaginary in fit\n");
       }
-      else
+      else{
+	include_imag = 1;
 	printf("including imaginary in fit\n");
+      }
       
       // that should do it, go do the fit.
       if ( widget == fit_data.run_fit || widget == fit_data.run_fit_range){ // only actually do the fit if we want it done.
@@ -6748,9 +6751,9 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);	
 
 	chi2 = 0.;
-	for (i=i1*2;i<=i2*2;i++)
+	for (i=i1*(1+include_imag);i<=i2*(1+include_imag);i++)
 	  chi2 += v[i]*v[i];
-	chi2 = yscale*sqrt(chi2/(i2-i1+1)/2.);
+	chi2 = yscale*sqrt(chi2/(i2-i1+1.)/(1.+include_imag));
 
 	if (out_len > 0)
 	  out_len += snprintf(&out_string[out_len],max_len-out_len,"\nGoodness of fit: Sqrt(Chi^2/N): %f (compare to noise)\n",chi2);
