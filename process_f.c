@@ -2789,11 +2789,27 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
 
-    // copy out
     for(i=0;i<buff->npts*2  ;i++){
-      for(j=0;j<buff->npts2/2;j++){
-	new_data[j*2] = buff->data[j*buff->npts*2+i];
-	new_data[j*2+1] = 0.;
+
+      if (is_symm){
+	// copy out from center 1/2.
+	for(j=0;j<buff->npts2/2;j++){
+	  new_data[j*2] = buff->data[(j+buff->npts2/4)*buff->npts*2+i];
+	  new_data[j*2+1] = 0.;
+	}
+	//unscramble.
+	for(j=0;j<buff->npts2/2;j++){
+	  spare=new_data[j]/scale;
+	  new_data[j]=new_data[j+buff->npts2/2]/scale;
+	  new_data[j+buff->npts2/2]=spare;
+	}
+      }
+      else{
+	// copy out
+	for(j=0;j<buff->npts2/2;j++){
+	  new_data[j*2] = buff->data[j*buff->npts*2+i];
+	  new_data[j*2+1] = 0.;
+	}
       }
       // do the ft
 
@@ -2803,15 +2819,8 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       //	new_data[0] /= 2.;
       // naw dont.  Not doing this only ever introduces a baseline offset.
 
-      if (is_symm)
-	for(j=0;j<buff->npts2/2;j++){
-	  spare=new_data[j]/scale;
-	  new_data[j]=new_data[j+buff->npts2/2]/scale;
-	  new_data[j+buff->npts2/2]=spare;
-	}
-
       four1(new_data-1,buff->npts2/2,1);
-
+	
       // descramble
       for(j=0;j<buff->npts2/2;j++){
 	spare=new_data[j]/scale;

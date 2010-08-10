@@ -452,6 +452,7 @@ dbuff *create_buff(int num){
     {
       float fr;
       float ii=0.5;
+      ii=0.;
       fr = 6.75/buff->npts;
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->npts;i++){ // should initialize to 0 
@@ -6751,7 +6752,12 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);	
 
 	chi2 = 0.;
+<<<<<<< buff.c
+
 	for (i=i1*(1+include_imag);i<=i2*(1+include_imag);i++)
+=======
+	for (i=i1*(1+include_imag);i<=i2*(1+include_imag);i++)
+>>>>>>> 1.81
 	  chi2 += v[i]*v[i];
 	chi2 = yscale*sqrt(chi2/(i2-i1+1.)/(1.+include_imag));
 
