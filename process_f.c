@@ -2732,7 +2732,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   else
     spared=2.0;
   do_zero_fill_2d(widget,&spared);
-
+ 
     //  fprintf(stderr,"in 2dft just did zero fill\n");
   cursor_busy(buff);
 
@@ -2833,10 +2833,11 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 	buff->data[2*j*buff->npts*2+i] = new_data[2*j];
 	buff->data[(2*j+1)*buff->npts*2+i] = new_data[2*j+1];
       }
-      // turn on the is_hyper_flag!
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),TRUE);
+
     }
       
+    // turn on the is_hyper_flag!
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),TRUE);
 
   }
   else {// is hypercomplex

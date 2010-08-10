@@ -1,4 +1,4 @@
-#define GTK_DISABLE_DEPRECATED
+//#define GTK_DISABLE_DEPRECATED
 /* buff.c
  *
  * window buffer implementation for the Xnmr project
@@ -6752,8 +6752,12 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);	
 
 	chi2 = 0.;
+<<<<<<< buff.c
+	for (i=i1*(1+include_imag);i<=i2*(1+include_imag);i++)
+=======
 
 	for (i=i1*(1+include_imag);i<=i2*(1+include_imag);i++)
+>>>>>>> 1.84
 	  chi2 += v[i]*v[i];
 	chi2 = yscale*sqrt(chi2/(i2-i1+1.)/(1.+include_imag));
 
