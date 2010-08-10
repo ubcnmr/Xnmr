@@ -854,7 +854,7 @@ gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff)
   */
 
   gdk_draw_drawable(widget->window,
-		    widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+		    widget->style->fg_gc[gtk_widget_get_state(widget)],
 		    buff->win.pixmap,
 		    event->area.x, event->area.y,
 		    event->area.x, event->area.y,
