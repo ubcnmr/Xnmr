@@ -142,6 +142,7 @@ dbuff *create_buff(int num){
     { "Real",NULL,"_Real","<alt>R","Show Real trace",G_CALLBACK(toggle_real)},
     { "Imaginary",NULL,"_Imaginary","<alt>I","Show Real trace",G_CALLBACK(toggle_imag)},
     { "Magnitude",NULL,"_Magnitude","<alt>M","Show Real trace",G_CALLBACK(toggle_mag)},
+    { "Points",NULL,"_Points","<alt>P","Show Points",G_CALLBACK(toggle_points)},
     { "Baseline",NULL,"_Baseline","<alt>J","Show Real trace",G_CALLBACK(toggle_base)},
     { "StoreScales",NULL,"_Store Scales",NULL,"Show Real trace",G_CALLBACK(store_scales)},
     { "ApplyScales",NULL,"_Apply Scales",NULL,"Show Real trace",G_CALLBACK(apply_scales)},
@@ -192,6 +193,7 @@ dbuff *create_buff(int num){
    "     <menuitem action='Imaginary'/>"
    "     <menuitem action='Magnitude'/>"
    "     <menuitem action='Baseline'/>"
+   "     <menuitem action='Points'/>"
    "     <separator/>"
    "     <menuitem action='StoreScales'/>"
    "     <menuitem action='ApplyScales'/>"
@@ -1070,6 +1072,43 @@ void draw_raster(dbuff *buff)
 }
 
 
+void draw_points(GdkDrawable *pixmap,GdkGC *gc, GdkPoint *dpoints,gint ndpoints){
+  // puts black points in at vertices?  9 pixels!
+  int i;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  for (i=0;i<ndpoints;i++)
+    dpoints[i].x +=1;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  for (i=0;i<ndpoints;i++)
+    dpoints[i].y +=1;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  for (i=0;i<ndpoints;i++)
+    dpoints[i].x -= 1;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  for (i=0;i<ndpoints;i++)
+    dpoints[i].x -= 1;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  for (i=0;i<ndpoints;i++)
+    dpoints[i].y -= 1;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  for (i=0;i<ndpoints;i++)
+	dpoints[i].y -= 1;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  for (i=0;i<ndpoints;i++)
+    dpoints[i].x += 1;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  for (i=0;i<ndpoints;i++)
+    dpoints[i].x += 1;
+  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
+  
+  // restore point positions
+  for (i=0;i<ndpoints;i++){
+    dpoints[i].y += 1;
+    dpoints[i].x -= 1;
+  }
+  
+
+}
 
 void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
 		    ,float *data,int npts, GdkColor *col,int ri){
@@ -1149,7 +1188,11 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
  }
  gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,
 		   i2-i1+1);
+ if (i2-i1+1 < 128 && buff->disp.points){
+   draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
+	       i2-i1+1);
 
+ }
 
 }
 
@@ -1273,7 +1316,12 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       ndpoints += 1;
     }
     gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,
+		   ndpoints);
+
+    if (ndpoints < 128 && buff->disp.points){ 
+      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
 		  ndpoints);
+    }
   }
   if(buff->disp.imag && buff->is_hyper){
     
@@ -1304,6 +1352,11 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     }
     gdk_draw_lines(buff->win.pixmap,colourgc,dpoints
 		    ,ndpoints);
+    if (ndpoints < 128 && buff->disp.points){ 
+      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
+		  ndpoints);
+    }
+
    } 
    if(buff->disp.mag && buff->is_hyper){
     x= 1;
@@ -1337,6 +1390,11 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       ndpoints += 1;
     }
     gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,ndpoints);
+    if (ndpoints < 128 && buff->disp.points){ 
+      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
+		  ndpoints);
+    }
+
    } 
    if(buff->disp.imag && true_complex){
 
@@ -1366,8 +1424,12 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       ndpoints += 1;
     }
     gdk_draw_lines(buff->win.pixmap,colourgc,dpoints
-		    ,ndpoints);
-   } 
+		   ,ndpoints);
+    if (ndpoints < 128 && buff->disp.points){ 
+      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
+		  ndpoints);
+    }
+   }
    if(buff->disp.mag && true_complex){
     x= 1;
     y=(int) -((sqrt((data[recadd*i1+2*buff->disp.record2])
@@ -1400,8 +1462,12 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       ndpoints += 1;
     }
     gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,ndpoints);
+    if (ndpoints < 128 && buff-> disp.points){ 
+      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
+		  ndpoints);
+    }
    } 
-
+   
   if(buff->disp.base){
     y=-buff->disp.yoffset*buff->win.sizey*buff->disp.yscale/2.
       +buff->win.sizey/2.+1.5;
@@ -1922,6 +1988,13 @@ void toggle_base(GtkAction *action,dbuff *buff)
   CHECK_ACTIVE(buff);
   if(buff->disp.base)  buff->disp.base=0;
   else buff->disp.base=1; 
+  draw_canvas(buff);
+}
+void toggle_points(GtkAction *action,dbuff *buff)
+{
+  CHECK_ACTIVE(buff);
+  if(buff->disp.points)  buff->disp.points=0;
+  else buff->disp.points=1; 
   draw_canvas(buff);
 }
 void toggle_mag(GtkAction *action,dbuff *buff)

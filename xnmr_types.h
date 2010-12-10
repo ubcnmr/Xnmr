@@ -108,7 +108,7 @@ typedef struct {
     float xx1,xx2;  /* limits of spectrum 0 -> 1 */
     float yy1,yy2; /* limits of spectrum for 2d */
     float yscale,yoffset;
-    char real,imag,mag,base; /* toggles whether or not they are displayed */
+    char real,imag,mag,base,points; /* toggles whether or not they are displayed */
     char dispstyle; /* slice,raster, stacked, contour */
     int record,record2;
   } disp;

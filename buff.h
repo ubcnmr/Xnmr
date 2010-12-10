@@ -137,6 +137,7 @@ void toggle_real(GtkAction *action,dbuff *buff);
 void toggle_imag(GtkAction *action,dbuff *buff);
 void toggle_mag(GtkAction *action,dbuff *buff);
 void toggle_base(GtkAction *action,dbuff *buff);
+void toggle_points(GtkAction *action,dbuff *buff);
 
 gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff);
 gint configure_event(GtkWidget *widget,GdkEventConfigure *event,
