@@ -14,9 +14,9 @@
 
 // we should read the first two of these out of /proc/pci
 
-#define PULSE_PORT 0x0378
-#define DSP_PORT 0xb400
-#define AD9850_PORT 0xb000
+#define PULSE_PORT 0xb000
+#define DSP_PORT 0x0x378
+#define AD9850_PORT 0xb400
 
 
 
