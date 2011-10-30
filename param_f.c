@@ -564,7 +564,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	  printf("about to call show_parameter_frame_mutex_wrap - npts may be wrong!!!\n");
 	  current_param_set->tnpts = buffp[current]->npts; */
 
-	g_idle_add ((GtkFunction) show_parameter_frame_mutex_wrap, current_param_set) ; 
+	g_idle_add ((GSourceFunc) show_parameter_frame_mutex_wrap, current_param_set) ; 
 
 
 	/*
@@ -1002,7 +1002,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
       fs = fopen( s, "r" ); 
       if( fs == NULL){
 	if (buffp[current] == NULL) // if the buffer doesn't exist yet, delay the popup
-	  g_idle_add ((GtkFunction) popup_msg_mutex_wrap,"Can't find pulse program");
+	  g_idle_add ((GSourceFunc) popup_msg_mutex_wrap,"Can't find pulse program");
 	else
 	  popup_msg("Can't find pulse program",TRUE);
 	//	fprintf(stderr, "Can't open parameter file %s\n", fileN ); 

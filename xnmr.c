@@ -44,6 +44,9 @@ Dependencies:
   to add flags -lf2c -lm.
 
 
+Oct 24, 2011
+- GtkFunction ->GSourceFunc
+
 */
 /*
   files that go where:
@@ -283,7 +286,7 @@ int main(int argc,char *argv[])
 	ic = system(command); // returns zero when it finds something, 256 if nothing?
 	if (ic == 0 ) { // Xnmr is still running
 	  no_acq = TRUE; 
-	  g_idle_add((GtkFunction) popup_msg_mutex_wrap,"There appears to be another living Xnmr, started noacq");
+	  g_idle_add((GSourceFunc) popup_msg_mutex_wrap,"There appears to be another living Xnmr, started noacq");
 	  // shmdt((char *)data_shm);  if we don't detach, then we should be able to clone from acq.
 	  // not detaching does cause one problem - if we quit the active Xnmr after a second has attached,
 	  // can't restart an active session because the shm exists.
@@ -295,7 +298,7 @@ int main(int argc,char *argv[])
 	  ic = system(command); // returns zero when it finds something, 256 if nothing?
 	  if (ic == 0 ) { // Xnmr is still running
 	    no_acq = TRUE; 
-	    g_idle_add((GtkFunction) popup_msg_mutex_wrap,"There appears to be another living Xnmr, started noacq");
+	    g_idle_add((GSourceFunc) popup_msg_mutex_wrap,"There appears to be another living Xnmr, started noacq");
 	  }
 	}
       }
@@ -319,7 +322,7 @@ int main(int argc,char *argv[])
       //      fprintf(stderr,"using command: %s\n",command);
       ic = system(command); // returns zero when it finds something, 256 if nothing?
       if (ic == 0 ) { //acq is still alive
-	g_idle_add((GtkFunction) popup_msg_mutex_wrap,"There appears to be a running acq");
+	g_idle_add((GSourceFunc) popup_msg_mutex_wrap,"There appears to be a running acq");
       }
     }
     if (data_shm->acq_pid <1 || ic != 0){ 
@@ -332,7 +335,7 @@ int main(int argc,char *argv[])
 	start_acq();
 	/*	if ( wait_for_acq() != ACQ_LAUNCHED ){
 	  fprintf(stderr,"Acq not launched successfully???\n");
-	  g_idle_add((GtkFunction) popup_msg_mutex_wrap,"Trouble starting up acq: started noacq");
+	  g_idle_add((GSourceFunc) popup_msg_mutex_wrap,"Trouble starting up acq: started noacq");
 	  no_acq = TRUE;
 	  } */
     }
@@ -1145,7 +1148,7 @@ white set up below  */
 
   // add a timeout for debugging...
 
-  //  timeout_tag = gtk_timeout_add(2000,(GtkFunction) check_for_overrun_timeout,timeout_data);
+  //  timeout_tag = gtk_timeout_add(2000,(GSourceFunc) check_for_overrun_timeout,timeout_data);
   gdk_threads_enter();
   gtk_main();
   gdk_threads_leave();

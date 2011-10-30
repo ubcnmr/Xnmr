@@ -88,7 +88,7 @@ void *sig_handler_thread_routine(void *dummy)
     else if (sig == SIGQUIT || sig == SIGTERM || sig == SIGINT){
       fprintf(stderr,"signal thread, got a QUIT TERM or INT\n");
       data_shm->ui_pid = -1; // also done elsewhere but what the heck
-      g_idle_add((GtkFunction)do_destroy_all_mutex_wrap,NULL);
+      g_idle_add((GSourceFunc)do_destroy_all_mutex_wrap,NULL);
     }
     gdk_threads_leave();
   }
@@ -586,62 +586,62 @@ void acq_signal_handler()
   switch( sig )
     {
     case  PPROG_ALREADY_RUNNING:
-      g_idle_add( (GtkFunction) popup_msg_mutex_wrap,"Acq says it was already running.  This should never happen.  You'll probably have to quit Xnmr, kill acq if it is still running and restart.");
+      g_idle_add( (GSourceFunc) popup_msg_mutex_wrap,"Acq says it was already running.  This should never happen.  You'll probably have to quit Xnmr, kill acq if it is still running and restart.");
       break;
     case ACQ_ERROR:
-      g_idle_add( (GtkFunction) popup_msg_mutex_wrap,"Acq wasn't able to create the file");
+      g_idle_add( (GSourceFunc) popup_msg_mutex_wrap,"Acq wasn't able to create the file");
       break;
     case P_PROGRAM_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Pulse Program Error" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program Error" );
       break;
     case P_PROGRAM_INTERNAL_TIMEOUT:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Pulse Program internal timeout - probably there's an infinte loop in it, or the syntax is wrong" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program internal timeout - probably there's an infinte loop in it, or the syntax is wrong" );
       break;
     case P_PROGRAM_ACQ_TIMEOUT:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Pulse Program acq timeout - pulse program didn't start up properly");
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program acq timeout - pulse program didn't start up properly");
       break;
     case P_PROGRAM_PARAM_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Pulse Program Parameter Error - couldn't find a parameter value");
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program Parameter Error - couldn't find a parameter value");
       break;
     case P_PROGRAM_RECOMPILE:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Recompile Error\ntry recompiling your pulse program, else acq/Xnmr version mismatch");
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Recompile Error\ntry recompiling your pulse program, else acq/Xnmr version mismatch");
       break;
 
     case TTC_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "TTC Error" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "TTC Error" );
       break;
 
     case DSP_FILE_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Couldn't find filter file for dsp" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Couldn't find filter file for dsp" );
       break;
 
     case DSP_INIT_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Error: Couldn't init dsp\nacq not suid?" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Error: Couldn't init dsp\nacq not suid?" );
       break;
     case FIFO_READ_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Error reading data from fifo" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Error reading data from fifo" );
       break;
     case FIFO_ZERO_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Got all zeros from Receiver" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Got all zeros from Receiver" );
       break;
     case DSP_DGAIN_OVERFLOW:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "dgain setting too high" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "dgain setting too high" );
       break;
     case ACQ_FILE_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "acq couldn't open a file to save in" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "acq couldn't open a file to save in" );
       break;
 
     case PULSE_PP_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Pulse Programmer Parallel port error\nMaybe acq isn't suid?" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Programmer Parallel port error\nMaybe acq isn't suid?" );
       break;
     case EVENT_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Pulse Program Event Error" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program Event Error" );
       break;
     case PPO_ERROR:
-      g_idle_add ( (GtkFunction) popup_msg_mutex_wrap, "Pulse Program No PPO error" );
+      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program No PPO error" );
       break;
     case PERMISSION_ERROR:
-      g_idle_add( (GtkFunction) popup_msg_mutex_wrap, "Acq failed on iopl\nprobably doesn't have root permissions");
+      g_idle_add( (GSourceFunc) popup_msg_mutex_wrap, "Acq failed on iopl\nprobably doesn't have root permissions");
 
     default:
       break;
@@ -683,10 +683,10 @@ void acq_signal_handler()
 	redraw = 1;
 	
 	if( acq_in_progress == ACQ_REPEATING_AND_PROCESSING ) {
-	  g_idle_add((GtkFunction) upload_and_draw_canvas_with_process_mutex_wrap, buffp[ upload_buff ] );
+	  g_idle_add((GSourceFunc) upload_and_draw_canvas_with_process_mutex_wrap, buffp[ upload_buff ] );
 	}
 	else{
-	  g_idle_add((GtkFunction) upload_and_draw_canvas_mutex_wrap,buffp[ upload_buff ] );
+	  g_idle_add((GSourceFunc) upload_and_draw_canvas_mutex_wrap,buffp[ upload_buff ] );
 	}
       }
 
@@ -702,14 +702,14 @@ void acq_signal_handler()
       switch( acq_in_progress ) {
   
       case ACQ_REPEATING_AND_PROCESSING:
-	g_idle_add((GtkFunction) upload_and_draw_canvas_with_process_mutex_wrap,buffp[ upload_buff ] );
+	g_idle_add((GSourceFunc) upload_and_draw_canvas_with_process_mutex_wrap,buffp[ upload_buff ] );
 	break;
       case ACQ_REPEATING:
-	g_idle_add((GtkFunction) upload_and_draw_canvas_mutex_wrap,buffp[ upload_buff ] );
+	g_idle_add((GSourceFunc) upload_and_draw_canvas_mutex_wrap,buffp[ upload_buff ] );
 	break;
       case ACQ_RUNNING:    
-	g_idle_add((GtkFunction) reload_wrapper, buffp[ upload_buff ] );
-	g_idle_add((GtkFunction) set_acqn_labels_mutex_wrap,NULL);
+	g_idle_add((GSourceFunc) reload_wrapper, buffp[ upload_buff ] );
+	g_idle_add((GSourceFunc) set_acqn_labels_mutex_wrap,NULL);
 
 	path_strcpy(buffp[upload_buff]->path_for_reload,data_shm->save_data_path);
 	// provide user a bell so they know we're done.
@@ -757,26 +757,26 @@ void acq_signal_handler()
 
 	case ACQ_RUNNING:
 	  if (data_shm->mode == NORMAL_MODE){
-	    g_idle_add( (GtkFunction) idle_button_up, start_button );
+	    g_idle_add( (GSourceFunc) idle_button_up, start_button );
 	    //	    fprintf(stderr,"calling idle button up for acq and save\n");
 	  }
 	  else{
-	    g_idle_add( (GtkFunction) idle_button_up, start_button_nosave );
+	    g_idle_add( (GSourceFunc) idle_button_up, start_button_nosave );
 	    //	    fprintf(stderr,"calling idle_button up for acq nosave\n");
 	  }
 	  //	  data_shm->mode = NO_MODE; // do this when the button comes up
 
 	  // if there's experiments in the queue, deal with them in the main thread.
 	  if (queue.num_queued > 0) // the low is to ensure that we're last (after the button up)
-	    g_idle_add_full(G_PRIORITY_LOW, (GtkFunction) idle_queue,NULL,NULL);
+	    g_idle_add_full(G_PRIORITY_LOW, (GSourceFunc) idle_queue,NULL,NULL);
 	  
 	  break;
 	case ACQ_REPEATING:
-	  g_idle_add( (GtkFunction) idle_button_up, repeat_button );
+	  g_idle_add( (GSourceFunc) idle_button_up, repeat_button );
 	  //	  data_shm->mode = NO_MODE;
 	  break;
 	case ACQ_REPEATING_AND_PROCESSING:
-	  g_idle_add( (GtkFunction) idle_button_up, repeat_p_button );
+	  g_idle_add( (GSourceFunc) idle_button_up, repeat_p_button );
 	  //	  data_shm->mode = NO_MODE;
 	  break;
 	default:
