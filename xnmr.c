@@ -1,4 +1,4 @@
-#define GTK_DISABLE_DEPRECATED
+//#define GTK_DISABLE_DEPRECATED
 /* Xnmr.c
  *
  * X windows NMR Control center - main program
@@ -1790,7 +1790,7 @@ gint popup_msg( char* msg ,char modal)
 
   if (modal == TRUE){
     dialog = gtk_message_dialog_new(GTK_WINDOW(buffp[current]->win.window),GTK_DIALOG_DESTROY_WITH_PARENT,
-				  GTK_MESSAGE_INFO,GTK_BUTTONS_CLOSE,msg);
+				    GTK_MESSAGE_INFO,GTK_BUTTONS_CLOSE,"%s",msg);
     gtk_window_set_modal( GTK_WINDOW( dialog ), TRUE );
     g_signal_connect_swapped(dialog,"response",G_CALLBACK(gtk_widget_destroy),dialog);
     gtk_widget_show_all(dialog);

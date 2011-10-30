@@ -2017,7 +2017,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     no_update_open = 1; 
 
     dialog=gtk_message_dialog_new(GTK_WINDOW(panwindow),GTK_DIALOG_DESTROY_WITH_PARENT,
-				  GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,msg);
+				  GTK_MESSAGE_ERROR,GTK_BUTTONS_CLOSE,"%s",msg);
     gtk_widget_show(dialog);
     g_signal_connect_swapped(dialog,"response",G_CALLBACK(popup_no_update_ok),dialog);
   

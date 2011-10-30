@@ -539,7 +539,8 @@ int start_pprog()
       // if it fails, oh well.
       // if it fails, we should try to do .c instead of .x
 
-      execl( s, NULL, NULL );
+      //      execl( s, NULL, NULL );
+      execl( s, s, (char *) NULL );
     }
 
     // shouldn't return from here
@@ -2304,7 +2305,7 @@ FILE *fstream;
 	  (1./data_shm->dwell*1000000),data_shm->dwell,data_shm->ct);
  fprintf( fstream,"ch1 = %c\nch2 = %c\n",data_shm->ch1,data_shm->ch2);
 
- fprintf( fstream, data_shm->parameters );
+ fprintf( fstream, "%s",data_shm->parameters );
  fclose( fstream );
 
 return 0;

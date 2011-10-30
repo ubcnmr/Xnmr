@@ -3942,7 +3942,7 @@ gint do_save( dbuff* buff, char* path )
   make_param_string( &buff->param_set, s );
   buff->param_set.num_acqs_2d=temp_npts2;
 
-  fprintf( fstream, s+1); // +1 to remove the \n at the start.
+  fprintf( fstream, "%s",s+1); // +1 to remove the \n at the start.
   fclose( fstream );
 
   // save proc params
@@ -4656,7 +4656,7 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	  linebuff[0]=0;
 	  // throw away lines that start with #
 	  do{
-	    eof=fgets(linebuff,200,infile);
+	    fgets(linebuff,200,infile);
 	  }while(linebuff[0] == '#');
 	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
 	  if (eof == 2) counter += 1;
@@ -4666,7 +4666,7 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	buff_resize(buff,counter,1);
 	for(i=0;i<counter;i++){
 	  do{
-	    eof=fgets(linebuff,200,infile);
+	    fgets(linebuff,200,infile);
 	  }while(linebuff[0] == '#');
 	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
 	  buff->data[2*i] = num2;

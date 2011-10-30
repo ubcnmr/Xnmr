@@ -261,7 +261,7 @@ void start_acq()
       setpgid(0,0);
 
       
-      execl( "/usr/local/bin/acq", NULL,NULL );
+      execl( "/usr/local/bin/acq", "/usr/local/bin/acq",(char *) NULL );
       // reaching here meant that launching acq failed
       // we can't pop up a dialog because we're a new program...
       {
@@ -278,7 +278,7 @@ void start_acq()
 	fprintf(stderr,"*                                           *\n");
 	fprintf(stderr,"*********************************************\n");
 	for(i=0;i<5;i++){
-	  fprintf(stderr,mystr);
+	  fprintf(stderr,"%s",mystr);
 	  fflush(stdout);
 	  sleep(1);
 	}
