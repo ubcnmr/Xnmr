@@ -1042,15 +1042,15 @@ gint update_paths( GtkWidget* widget, gpointer data )
     i = 0; 
 
     while( !feof( fs ) ) { 
-
+      s[0] = 0; // this prevents us from reading the last line twice if the file ends with a single carriage return after the last record.
       fgets( s, 200, fs ); 
 
       //Check to see if this line is a comment or not 
 
       if( s[0] != '#' ) { 
         result = sscanf( s, PARAMETER_FILE_FORMAT, param_set->parameter[i].name, &type ); 
-
-
+	printf("line is: %s\n",s);
+	printf("result is: %i, name is: %s\n",result,param_set->parameter[i].name);
         // in here we need to see if each new one has the same name and type as an old one, and if so, keep it 
         if( result == 2 ) {  //This indicates a valid format 
   	switch( type ) 

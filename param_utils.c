@@ -46,13 +46,13 @@ int sfetch_float( char* params, char* name, float* var, unsigned int acqn_2d )
       breaker = &params[ strlen(params)-1 ]; // if there's no 2d break, look to end 
       i = acqn_2d;
     }
-    else breaker += 2;
+    else breaker += 1;
     match = strstr ( start , nname); 
     if (match < breaker && match != NULL){
       sscanf( match+1, PARAMETER_FORMAT_FLOAT , s , var);
       result = 0;
     }
-    start = breaker-1;
+    start = breaker;
   }
   //  fprintf(stderr,"returning: %s, %f\n",name,*var);
 
@@ -68,7 +68,7 @@ int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
   char *match, *breaker;
 
   // both text double and true doubles come here...
-
+  //  printf("coming into sfetch_double for %s, %i\n",name,acqn_2d);
   if ( params[0] != '\n') printf("sfetch, params doesn't start with nl\n");
   //  strncpy(nname,name,PARAM_NAME_LEN);
   //  strcat(nname," ="); //safe
@@ -85,21 +85,24 @@ int sfetch_double( char* params, char* name, double* var, unsigned int acqn_2d )
       breaker = &params[ strlen(params)-1 ]; // if there's no 2d break, look to end 
       i = acqn_2d;
     }
-    else breaker += 2;
+    else breaker += 1;
     match = strstr ( start ,nname); 
-    if (match < breaker && match != NULL){
+    if ((match < breaker) && (match != NULL)){
+      //      printf("found match: %s\n",match);
       match += 1; // get past the \n
       if (match[strlen(nname)+1] == '\''){ // this is to deal with old text-style doubles
 	sscanf(match,PARAMETER_FORMAT_DOUBLET, s , var);
       }
-      else
+      else{
 	sscanf( match, PARAMETER_FORMAT_DOUBLE , s , var);
+	//	printf("just put %lf in var\n",*var);
+      }
       result = 0;
     }
-    start = breaker-1;
+    start = breaker;
   }
 
-  //  fprintf(stderr,"returning %s, %f\n",name,*var);
+  //  fprintf(stderr,"for record: %i returning %s, %f\n",acqn_2d,name,*var);
 
   return result;
 }
@@ -165,7 +168,7 @@ int sfetch_text( char* params, char* name, char* var, unsigned int acqn_2d )
       breaker = &params[ strlen(params)-1 ]; // if there's no 2d break, look to end 
       i = acqn_2d;
     }
-    else breaker += 2;
+    else breaker += 1;
     match = strstr ( start , nname); 
     if (match < breaker && match != NULL){
       if (sscanf( match+1, PARAMETER_FORMAT_TEXT_S , s , var) < 2){
@@ -175,7 +178,7 @@ int sfetch_text( char* params, char* name, char* var, unsigned int acqn_2d )
       if (var[0] == '\'') var[0] = 0;
       result = 0;
     }
-    start = breaker - 1;
+    start = breaker;
   }
   //  fprintf(stderr,"returning: %s, %s\n",name,var);
 
