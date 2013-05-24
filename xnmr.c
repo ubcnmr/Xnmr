@@ -234,10 +234,9 @@ int main(int argc,char *argv[])
 
   /* initialize the gtk stuff */
 
-  //  g_thread_init(NULL); // we don't really use threads, except to catch signals
-  gdk_threads_init();
+  //    gdk_threads_init();
   // mutex to ensure that routines added with idle_add don't collide.
-  gtk_init(&argc, &argv);
+    gtk_init(&argc, &argv);
 
 
   // see if /dev/PP_irq0 exists.  if not, then imply noacq.
@@ -337,7 +336,7 @@ int main(int argc,char *argv[])
 	ic = system(command); // returns zero when it finds something, 256 if nothing?
 	if (ic == 0 ) { // Xnmr is still running
 	  no_acq = TRUE; 
-	  g_idle_add((GSourceFunc) popup_msg_mutex_wrap,"There appears to be another living Xnmr, started noacq");
+	  g_idle_add((GSourceFunc) popup_msg_wrap,"There appears to be another living Xnmr, started noacq");
 	  // shmdt((char *)data_shm);  if we don't detach, then we should be able to clone from acq.
 	  // not detaching does cause one problem - if we quit the active Xnmr after a second has attached,
 	  // can't restart an active session because the shm exists.
@@ -349,7 +348,7 @@ int main(int argc,char *argv[])
 	  ic = system(command); // returns zero when it finds something, 256 if nothing?
 	  if (ic == 0 ) { // Xnmr is still running
 	    no_acq = TRUE; 
-	    g_idle_add((GSourceFunc) popup_msg_mutex_wrap,"There appears to be another living Xnmr, started noacq");
+	    g_idle_add((GSourceFunc) popup_msg_wrap,"There appears to be another living Xnmr, started noacq");
 	  }
 	}
       }
@@ -373,7 +372,7 @@ int main(int argc,char *argv[])
       //      fprintf(stderr,"using command: %s\n",command);
       ic = system(command); // returns zero when it finds something, 256 if nothing?
       if (ic == 0 ) { //acq is still alive
-	g_idle_add((GSourceFunc) popup_msg_mutex_wrap,"There appears to be a running acq");
+	g_idle_add((GSourceFunc) popup_msg_wrap,"There appears to be a running acq");
       }
     }
     if (data_shm->acq_pid <1 || ic != 0){ 
@@ -386,7 +385,7 @@ int main(int argc,char *argv[])
 	start_acq();
 	/*	if ( wait_for_acq() != ACQ_LAUNCHED ){
 	  fprintf(stderr,"Acq not launched successfully???\n");
-	  g_idle_add((GSourceFunc) popup_msg_mutex_wrap,"Trouble starting up acq: started noacq");
+	  g_idle_add((GSourceFunc) popup_msg_wrap,"Trouble starting up acq: started noacq");
 	  no_acq = TRUE;
 	  } */
     }
@@ -1051,8 +1050,8 @@ white set up below  */
 
   /* first the phase dialog */
   phase_dialog = gtk_dialog_new();
-  phase0_ad= (GtkAdjustment *) gtk_adjustment_new(0.0,-180.0,180.0,.1,.1,0);
-  phase1_ad= (GtkAdjustment *) gtk_adjustment_new(0.0,-180.0,180.0,.1,.1,0);
+  phase0_ad= (GtkAdjustment *) gtk_adjustment_new(0.0,-180.0,180.0,.1,1.,0);
+  phase1_ad= (GtkAdjustment *) gtk_adjustment_new(0.0,-180.0,180.0,.1,1.,0);
 
   hbox=gtk_hbox_new_wrap(FALSE,1);
   button=gtk_button_new_with_label("-360");
@@ -1216,9 +1215,9 @@ white set up below  */
   // add a timeout for debugging...
 
   //  timeout_tag = gtk_timeout_add(2000,(GSourceFunc) check_for_overrun_timeout,timeout_data);
-  gdk_threads_enter();
+  //  gdk_threads_enter();
   gtk_main();
-  gdk_threads_leave();
+  //  gdk_threads_leave();
   //  fprintf(stderr,"out of gtk_main\n");
   /* post main - clean up */
   // fprintf(stderr,"post main cleanup\n");
@@ -1882,10 +1881,10 @@ gint popup_msg( char* msg ,char modal)
   return FALSE;
 }
 
-gint popup_msg_mutex_wrap(char *msg){
-  gdk_threads_enter();
+gint popup_msg_wrap(char *msg){
+  //  gdk_threads_enter();
   popup_msg(msg,TRUE);
-  gdk_threads_leave();
+  //  gdk_threads_leave();
   return FALSE;
 }
 

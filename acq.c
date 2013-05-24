@@ -2084,7 +2084,7 @@ void shut_down()
    
 
     if( c > 0 ) {
-      fprintf(stderr, "acq: attempting to shut down pprog\n" );
+      //      fprintf(stderr, "acq: attempting to shut down pprog\n" );
       kill( c, SIGKILL );
       //      fprintf(stderr,"acq: about to wait for child(2)\n");
       wait( NULL );
@@ -2281,7 +2281,7 @@ void tell_xnmr_fail(){
   fprintf(stderr,"acq: ui_pid is: %i\n",pid);
   data_shm->acq_sig_ui_meaning = ACQ_LAUNCH_FAIL;
   if( pid > 0 ) {
-    fprintf(stderr,"acq: sending fail signal put: %i into sig\n",data_shm->acq_sig_ui_meaning);
+    //    fprintf(stderr,"acq: sending fail signal put: %i into sig\n",data_shm->acq_sig_ui_meaning);
     kill( data_shm->ui_pid, SIG_UI_ACQ );
   }
 

@@ -44,16 +44,6 @@ struct timeval last_time, current_time;
 
 
 
-gint do_destroy_all_mutex_wrap(){
-  //  fprintf(stderr,"in do_destroy_all_mutex_wrap\n");
-  gdk_threads_enter();
-  //  fprintf(stderr,"about to call do_destroy_all()\n");
-  do_destroy_all();
-  //  fprintf(stderr,"about to call gdk_threads_leave()\n");
-  gdk_threads_leave();
-  //  fprintf(stderr,"about to leave do_destroy_all_mutex_wrap()\n");
-  return FALSE;
-}
 
 
 void *sig_handler_thread_routine(void *dummy)
@@ -80,16 +70,16 @@ void *sig_handler_thread_routine(void *dummy)
   do{
     //    fprintf(stderr,"xnmr_ipc: about to wait for signal\n");
     sigwait(&sigset,&sig);
-    //    fprintf(stderr,"xnmr_ipc: calling acq_signal_handler\n");
-    gdk_threads_enter();
+    //    fprintf(stderr,"xnmr_ipc: got a signal\n");
+    //    gdk_threads_enter();
     if (sig == SIG_UI_ACQ)
-      acq_signal_handler();
+      g_idle_add((GSourceFunc) acq_signal_handler,NULL);
     else if (sig == SIGQUIT || sig == SIGTERM || sig == SIGINT){
       fprintf(stderr,"signal thread, got a QUIT TERM or INT\n");
       data_shm->ui_pid = -1; // also done elsewhere but what the heck
-      g_idle_add((GSourceFunc)do_destroy_all_mutex_wrap,NULL);
+      g_idle_add((GSourceFunc)do_destroy_all,NULL);
     }
-    gdk_threads_leave();
+    //    gdk_threads_leave();
   }
     while(TRUE);
   return dummy;
@@ -289,7 +279,7 @@ void start_acq()
   }
 
   else {
-    //fprintf(stderr, "Xnmr_ipc: acq already launched on pid %d\n", pid );
+    fprintf(stderr, "Xnmr_ipc: acq already launched on pid %d\n", pid );
   }
   return;
 }
@@ -434,23 +424,9 @@ void set_acqn_labels(int start)
 
 }
 
-gint set_acqn_labels_mutex_wrap(){
-  gdk_threads_enter();
-  //  fprintf(stderr,"in set_acqn_labels_mutex_wrap\n");
-  set_acqn_labels(0);
-  gdk_threads_leave();
-  return FALSE;
-}
 
 
 
-
-gint upload_and_draw_canvas_with_process_mutex_wrap( dbuff *buff ){
-  gdk_threads_enter();
-  upload_and_draw_canvas_with_process(buff);
-  gdk_threads_leave();
-  return FALSE;
-}
 
 gint upload_and_draw_canvas_with_process( dbuff *buff )
 {
@@ -467,14 +443,6 @@ gint upload_and_draw_canvas_with_process( dbuff *buff )
     last_draw();
   }
   return FALSE;
-}
-
-gint upload_and_draw_canvas_mutex_wrap( dbuff *buff ){
-  gint retval;
-  gdk_threads_enter();
-  retval=upload_and_draw_canvas(buff);
-  gdk_threads_leave();
-  return retval;
 }
 
 
@@ -498,11 +466,11 @@ gint upload_and_draw_canvas( dbuff *buff )
 gint idle_button_up( GtkWidget *button )
 
 {
-  gdk_threads_enter();
+  //  gdk_threads_enter();
   //fprintf(stderr, "in idle_button_up\n" );
   gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( button ), FALSE );
   //fprintf(stderr,"leaving idle_button up\n");
-  gdk_threads_leave();
+  //  gdk_threads_leave();
   return FALSE;
 }
 
@@ -510,7 +478,7 @@ gint idle_queue( GtkWidget *button )
 
 {
   int valid,bnum;
-  gdk_threads_enter();
+  //  gdk_threads_enter();
 
   //  fprintf(stderr,"in idle_queue\n");
   if (queue.num_queued ==0){
@@ -538,13 +506,13 @@ gint idle_queue( GtkWidget *button )
     
     gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), TRUE );
   }
-  gdk_threads_leave();
+  //  gdk_threads_leave();
   return FALSE;
 }
 
 gint reload_wrapper( gpointer data )
 {
-  gdk_threads_enter();
+  //  gdk_threads_enter();
   reload( NULL, NULL );
   redraw = 0;
   last_draw();
@@ -566,12 +534,12 @@ gint reload_wrapper( gpointer data )
     }
   }
   */
-  gdk_threads_leave();
+  //  gdk_threads_leave();
   return FALSE;
 }
 
 
-void acq_signal_handler()
+gint acq_signal_handler()
 
 {
   char sig;
@@ -584,62 +552,62 @@ void acq_signal_handler()
   switch( sig )
     {
     case  PPROG_ALREADY_RUNNING:
-      g_idle_add( (GSourceFunc) popup_msg_mutex_wrap,"Acq says it was already running.  This should never happen.  You'll probably have to quit Xnmr, kill acq if it is still running and restart.");
+      popup_msg("Acq says it was already running.  This should never happen.  You'll probably have to quit Xnmr, kill acq if it is still running and restart.",TRUE);
       break;
     case ACQ_ERROR:
-      g_idle_add( (GSourceFunc) popup_msg_mutex_wrap,"Acq wasn't able to create the file");
+      popup_msg("Acq wasn't able to create the file",TRUE);
       break;
     case P_PROGRAM_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program Error" );
+      popup_msg("Pulse Program Error",TRUE);
       break;
     case P_PROGRAM_INTERNAL_TIMEOUT:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program internal timeout - probably there's an infinte loop in it, or the syntax is wrong" );
+      popup_msg("Pulse Program internal timeout - probably there's an infinte loop in it, or the syntax is wrong" ,TRUE);
       break;
     case P_PROGRAM_ACQ_TIMEOUT:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program acq timeout - pulse program didn't start up properly");
+      popup_msg("Pulse Program acq timeout - pulse program didn't start up properly",TRUE);
       break;
     case P_PROGRAM_PARAM_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program Parameter Error - couldn't find a parameter value");
+      popup_msg( "Pulse Program Parameter Error - couldn't find a parameter value",TRUE);
       break;
     case P_PROGRAM_RECOMPILE:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Recompile Error\ntry recompiling your pulse program, else acq/Xnmr version mismatch");
+      popup_msg("Recompile Error\ntry recompiling your pulse program, else acq/Xnmr version mismatch",TRUE);
       break;
 
     case TTC_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "TTC Error" );
+      popup_msg( "TTC Error",TRUE );
       break;
 
     case DSP_FILE_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Couldn't find filter file for dsp" );
+      popup_msg("Couldn't find filter file for dsp",TRUE );
       break;
 
     case DSP_INIT_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Error: Couldn't init dsp\nacq not suid?" );
+      popup_msg("Error: Couldn't init dsp\nacq not suid?" ,TRUE);
       break;
     case FIFO_READ_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Error reading data from fifo" );
+      popup_msg("Error reading data from fifo",TRUE );
       break;
     case FIFO_ZERO_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Got all zeros from Receiver" );
+      popup_msg( "Got all zeros from Receiver" ,TRUE);
       break;
     case DSP_DGAIN_OVERFLOW:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "dgain setting too high" );
+      popup_msg("dgain setting too high",TRUE );
       break;
     case ACQ_FILE_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "acq couldn't open a file to save in" );
+      popup_msg( "acq couldn't open a file to save in",TRUE );
       break;
 
     case PULSE_PP_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Programmer Parallel port error\nMaybe acq isn't suid?" );
+      popup_msg( "Pulse Programmer Parallel port error\nMaybe acq isn't suid?",TRUE );
       break;
     case EVENT_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program Event Error" );
+      popup_msg("Pulse Program Event Error",TRUE );
       break;
     case PPO_ERROR:
-      g_idle_add ( (GSourceFunc) popup_msg_mutex_wrap, "Pulse Program No PPO error" );
+      popup_msg("Pulse Program No PPO error",TRUE );
       break;
     case PERMISSION_ERROR:
-      g_idle_add( (GSourceFunc) popup_msg_mutex_wrap, "Acq failed on iopl\nprobably doesn't have root permissions");
+      popup_msg("Acq failed on iopl\nprobably doesn't have root permissions",TRUE);
 
     default:
       break;
@@ -681,14 +649,14 @@ void acq_signal_handler()
 	redraw = 1;
 	
 	if( acq_in_progress == ACQ_REPEATING_AND_PROCESSING ) {
-	  g_idle_add((GSourceFunc) upload_and_draw_canvas_with_process_mutex_wrap, buffp[ upload_buff ] );
+	  upload_and_draw_canvas_with_process(buffp[upload_buff]);
 	}
 	else{
-	  g_idle_add((GSourceFunc) upload_and_draw_canvas_mutex_wrap,buffp[ upload_buff ] );
+	  upload_and_draw_canvas(buffp[upload_buff]);
 	}
       }
 
-      return;
+      return FALSE;
       break;
     
     
@@ -700,14 +668,14 @@ void acq_signal_handler()
       switch( acq_in_progress ) {
   
       case ACQ_REPEATING_AND_PROCESSING:
-	g_idle_add((GSourceFunc) upload_and_draw_canvas_with_process_mutex_wrap,buffp[ upload_buff ] );
+	upload_and_draw_canvas_with_process(buffp[ upload_buff ]);
 	break;
       case ACQ_REPEATING:
-	g_idle_add((GSourceFunc) upload_and_draw_canvas_mutex_wrap,buffp[ upload_buff ] );
+	upload_and_draw_canvas(buffp[ upload_buff ] );
 	break;
       case ACQ_RUNNING:    
-	g_idle_add((GSourceFunc) reload_wrapper, buffp[ upload_buff ] );
-	g_idle_add((GSourceFunc) set_acqn_labels_mutex_wrap,NULL);
+	reload_wrapper( buffp[ upload_buff ] );
+	set_acqn_labels(0);
 
 	path_strcpy(buffp[upload_buff]->path_for_reload,data_shm->save_data_path);
 	// provide user a bell so they know we're done.
@@ -755,11 +723,13 @@ void acq_signal_handler()
 
 	case ACQ_RUNNING:
 	  if (data_shm->mode == NORMAL_MODE){
-	    g_idle_add( (GSourceFunc) idle_button_up, start_button );
+	    gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), FALSE );
+	    // idle_button_up(start_button);
 	    //	    fprintf(stderr,"calling idle button up for acq and save\n");
 	  }
 	  else{
-	    g_idle_add( (GSourceFunc) idle_button_up, start_button_nosave );
+	    gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button_nosave ), FALSE );
+	    //	    idle_button_up(start_button_nosave );
 	    //	    fprintf(stderr,"calling idle_button up for acq nosave\n");
 	  }
 	  //	  data_shm->mode = NO_MODE; // do this when the button comes up
@@ -770,22 +740,24 @@ void acq_signal_handler()
 	  
 	  break;
 	case ACQ_REPEATING:
-	  g_idle_add( (GSourceFunc) idle_button_up, repeat_button );
+	  gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( repeat_button ), FALSE );
+	  //idle_button_up( repeat_button );
 	  //	  data_shm->mode = NO_MODE;
 	  break;
 	case ACQ_REPEATING_AND_PROCESSING:
-	  g_idle_add( (GSourceFunc) idle_button_up, repeat_p_button );
+	    gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( repeat_p_button ), FALSE );
+	    //	  idle_button_up(repeat_p_button );
 	  //	  data_shm->mode = NO_MODE;
 	  break;
 	default:
 	  break;
 	}
-      return;
+      return FALSE;
       break;
     case NO_SIGNAL:
       // this happens (I think) if we get queued by acq a second time before we're done with the first.
       //      fprintf(stderr,"xnmr_ipc: got NO_SIGNAL\n");
-      return;
+      return FALSE;
       break;
     default:
       break;
@@ -798,7 +770,7 @@ void acq_signal_handler()
     data_shm->acq_sig_ui_meaning = NO_SIGNAL;
   }
 
-  return;
+  return FALSE;
 }
 
 int upload_data( dbuff* buff )    //uploads the shm data to the active buffer, replacing existing data

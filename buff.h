@@ -12,6 +12,7 @@
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <math.h>
+#include <semaphore.h>
 
 #include "param_f.h"
 #include "process_f.h"
@@ -87,6 +88,15 @@ enum
     N_COLUMNS,
   };
 
+
+typedef struct{
+  char iline[200];
+  char oline[200];
+  unsigned char source;
+  unsigned char rval;
+  sem_t sem;
+  int bnum;
+} script_data;
 /* global variables */
 
 extern int current;
@@ -263,7 +273,8 @@ void set_queue_label();
 void readscript(GtkAction *action,dbuff *buff);
 void *readscript_thread_routine(void *buff);
 void *readsocket_thread_routine(void *buff);
-int script_handler(char *input,char *output,int source,int *bnum);
+//int script_handler(char *input,char *output,int source,int *bnum);
+void script_handler(script_data *myscript_data);
 gint script_notify_acq_complete();
 void socket_script(GtkAction *action,dbuff *buff);
 

@@ -404,20 +404,20 @@ void update_acqs(int acqs){
 
 
 
-int show_parameter_frame_mutex_wrap( parameter_set_t *current_param_set )
+int show_parameter_frame_wrap( parameter_set_t *current_param_set )
 {
 
   // this is used just to to show the parameter frame  if we loaded a new pulse program in update_paths.
   // need this in case we destroy a widget that has the focus.
 
   if (  current_param_set != &buffp[current]->param_set)
-    printf("show_parameter_frame_mutex_wrap - npts may be wrong in here!!!\n");
+    printf("show_parameter_frame_wrap - npts may be wrong in here!!!\n");
 
-  gdk_threads_enter();
+  //  gdk_threads_enter();
   //  fprintf(stderr,"showing parameter frame in mutex wrap\n");
   show_parameter_frame(current_param_set,buffp[current]->npts);
   
-  gdk_threads_leave();
+  //  gdk_threads_leave();
   return FALSE;
 }
 
@@ -563,7 +563,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	  printf("about to call show_parameter_frame_mutex_wrap - npts may be wrong!!!\n");
 	  current_param_set->tnpts = buffp[current]->npts; */
 
-	g_idle_add ((GSourceFunc) show_parameter_frame_mutex_wrap, current_param_set) ; 
+	g_idle_add ((GSourceFunc) show_parameter_frame_wrap, current_param_set) ; 
 
 
 	/*
@@ -1001,7 +1001,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
       fs = fopen( s, "r" ); 
       if( fs == NULL){
 	if (buffp[current] == NULL) // if the buffer doesn't exist yet, delay the popup
-	  g_idle_add ((GSourceFunc) popup_msg_mutex_wrap,"Can't find pulse program");
+	  g_idle_add ((GSourceFunc) popup_msg_wrap,"Can't find pulse program");
 	else
 	  popup_msg("Can't find pulse program",TRUE);
 	//	fprintf(stderr, "Can't open parameter file %s\n", fileN ); 

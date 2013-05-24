@@ -48,6 +48,7 @@ reload wrapper                             (from end of acquisition)
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <semaphore.h>
 
 #include "buff.h"
 #include "xnmr.h"
@@ -94,7 +95,7 @@ char doing_s2n=0;
 char doing_int=0;
 GtkWidget *setsf1dialog;
 
- 
+script_data socketscript_data,readscript_data;
 
 
 /*need a pivot point on phase change */
@@ -5463,7 +5464,7 @@ void check_for_overrun_timeout(gpointer data){
   //  fprintf(stderr,"in check for overrun_timeout\n"); 
   if (bug == 1) return;  // already reported.
 
-  gdk_threads_enter();
+  //  gdk_threads_enter();
   for (i=0;i<MAX_BUFFERS;i++){
     if (buffp[i] != NULL){
       count +=1;
@@ -5491,7 +5492,7 @@ void check_for_overrun_timeout(gpointer data){
     
   } 
   if (bug == 1) bug_found();
-  gdk_threads_leave();
+  //  gdk_threads_leave();
 }
 
 gint channel_button_change(GtkWidget *widget,dbuff *buff){
@@ -7462,8 +7463,6 @@ void readscript(GtkAction *action,dbuff *buff){
 
 
 void *readscript_thread_routine(void *buff){
-  char iline[200],oline[200];
-  int bnum;
   int rval;
 
   // this signal stuff shouldn't be necessary here... done in xnmr.c right at beginning.
@@ -7478,25 +7477,32 @@ void *readscript_thread_routine(void *buff){
   pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 
 
-  bnum = ((dbuff *)buff)->buffnum; // changes only if set by script.
+  readscript_data.bnum = ((dbuff *)buff)->buffnum; // changes only if set by script.
 
-  fprintf(stderr,"in readscript, waiting for input\n");
-  
+  sem_init(&readscript_data.sem,0,0);
+  readscript_data.source = 1; // tells it that we're from stdin
   do{
-    fgets(iline,200,stdin);
-    fprintf(stderr,"got input: %s",iline);
-    gdk_threads_enter();
-    rval = script_handler(iline,oline,1,&bnum);
-    gdk_threads_leave();
+    fprintf(stderr,"in readscript, waiting for input\n");
+    fgets(readscript_data.iline,200,stdin);
+    fprintf(stderr,"got input: %s",readscript_data.iline);
+    //    gdk_threads_enter();
+    g_idle_add((GSourceFunc) script_handler,&readscript_data);
+    fprintf(stderr,"calling sem_wait\n");
+    sem_wait(&readscript_data.sem);
+    rval = readscript_data.rval;
+      
+    //    script_handler(iline,oline,1,&bnum);
+    //    gdk_threads_leave();
 
     if (rval == 0){ // the 1 is to tell is we're from stdin
-      fprintf(stderr,"%s\n",oline);
+      fprintf(stderr,"%s\n",readscript_data.oline);
       fprintf(stderr,"readscript_thread_routine exiting\n");
       interactive_thread_open = 0;
-      buffp[bnum]->script_open = 0;
+      buffp[readscript_data.bnum]->script_open = 0;
+      sem_destroy(&readscript_data.sem);
       pthread_exit(NULL);
     } 
-    fprintf(stderr,"%s\n",oline);
+    fprintf(stderr,"%s\n",readscript_data.oline);
   }while ( 1 );
 
 }
@@ -7593,9 +7599,8 @@ void socket_script(GtkAction *action, dbuff *buff){
 }
 
 void *readsocket_thread_routine(void *buff){
-  char iline[PATH_LENGTH],oline[PATH_LENGTH];
-  unsigned int fromlen,rlen;
-  int bnum,rval;
+  unsigned int rlen;
+  int rval;
 
   // this signal stuff shouldn't be necessary - signals blocked in xnmr.c before threads
   // created.
@@ -7610,55 +7615,74 @@ void *readsocket_thread_routine(void *buff){
   pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 
 
-  bnum = ((dbuff *)buff)->buffnum;
+  socketscript_data.bnum = ((dbuff *)buff)->buffnum;
+  sem_init(&socketscript_data.sem,0,0);
+  socketscript_data.source = 2; // tells it that we're from socket
 
   do{
-    fromlen = 108;
-    rlen = recvfrom(fds,iline,PATH_LENGTH,0,(struct sockaddr *)&from,&fromlen);
-    iline[rlen] = 0;
+    rlen = recvfrom(fds,socketscript_data.iline,200,0,NULL,0);
+    socketscript_data.iline[rlen] = 0;
 
-    fprintf(stderr,"got input: %s",iline);
+    fprintf(stderr,"got input: %s",socketscript_data.iline);
 
-    gdk_threads_enter();
-    rval = script_handler(iline,oline,2,&bnum); // the 2 says we're from a socket
-    gdk_threads_leave();
-
+    //    gdk_threads_enter();
+    //    rval = script_handler(iline,oline,2,&bnum); // the 2 says we're from a socket
+    //    gdk_threads_leave();
+    g_idle_add((GSourceFunc) script_handler,&socketscript_data);
+    sem_wait(&socketscript_data.sem);
+    rval = socketscript_data.rval;
     if (rval == 0){ 
-      sendto(fds,oline,strnlen(oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
-      fprintf(stderr,"%s\n",oline);
+      sendto(fds,socketscript_data.oline,strnlen(socketscript_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
+      fprintf(stderr,"%s\n",socketscript_data.oline);
       fprintf(stderr,"readsocket_thread_routine exiting\n");
 
       unlink(my_addr.sun_path);
       socket_thread_open = 0;
-      buffp[bnum]->script_open = 0;
+      buffp[socketscript_data.bnum]->script_open = 0;
+      sem_destroy(&socketscript_data.sem);
       pthread_exit(NULL);
     }
-    sendto(fds,oline,strnlen(oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
-    fprintf(stderr,"%s\n",oline);
+    sendto(fds,socketscript_data.oline,strnlen(socketscript_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
+    fprintf(stderr,"%s\n",socketscript_data.oline);
 
   }while (1);
 
 
 }
 
-int script_handler(char *input,char *output, int source,int *bnum){
 
+void script_return(script_data *myscript_data,int rval){
+  myscript_data->rval = rval;
+  sem_post(&myscript_data->sem);
+  return;
+}
+
+//int script_handler(char *input,char *output, int source,int *bnum){
+void script_handler(script_data *myscript_data){
   int eo;
-  if (strncmp("EXIT",input,4)==0) return 0;
+  char *input;
+  int bnum;
+  input = myscript_data->iline;
+  bnum = myscript_data->bnum;
+  if (strncmp("EXIT",input,4)==0){
+    script_return(myscript_data,0);
+    return;
+  }
 
 
   // handles  events for the various remote control mechanisms
   // assumes that we're already inside a gdk_threads_enter / leave pair.
 
 
-  fprintf(stderr,"in script handler for buffer: %i\n",*bnum);
+  fprintf(stderr,"in script handler for buffer: %i\n",bnum);
 
-  if (buffp[*bnum] == NULL){
-    strcpy(output,"BUFFER NO LONGER EXISTS");
-    return 0;
+  if (buffp[bnum] == NULL){
+    strcpy(myscript_data->oline,"BUFFER NO LONGER EXISTS");
+    script_return(myscript_data,0);
+    return;
   }
   else
-    CHECK_ACTIVE(buffp[*bnum]);
+    CHECK_ACTIVE(buffp[bnum]);
 /*
   Here are the commands that can be used in scripting:
     if (strncmp("PROCESS",input,7)==0){
@@ -7714,24 +7738,28 @@ int script_handler(char *input,char *output, int source,int *bnum){
       fprintf(stderr,"processing\n");
       gtk_button_clicked(GTK_BUTTON(script_widgets.process_button));
       fprintf(stderr,"done\n");
-      strcpy(output,"OK");
-      return 1;
+      strcpy(myscript_data->oline,"OK");
+      script_return(myscript_data,1);
+      return;
     }
     
     if (strncmp("ACQUIRE",input,7) == 0){
       if (acq_in_progress != ACQ_STOPPED){
-	strcpy(output,"ACQ_BUSY");
-	return 0;
+	strcpy(myscript_data->oline,"ACQ_BUSY");
+	script_return(myscript_data,0);
+	return;
       }
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(script_widgets.acquire_button),TRUE);
       if (acq_in_progress == ACQ_STOPPED){
 	fprintf(stderr,"said start, but stopped\n");
-	strcpy(output,"ACQ NOT STARTED");
-	return 0;
+	strcpy(myscript_data->oline,"ACQ NOT STARTED");
+	script_return(myscript_data,0);
+	return;
       }
-      strcpy(output,"ACQ STARTED");
-      script_widgets.acquire_notify = source; // one for stdout, will be 2 for socket.
-      return 1;
+      strcpy(myscript_data->oline,"ACQ STARTED");
+      script_widgets.acquire_notify = myscript_data->source; // one for stdout, will be 2 for socket.
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("LOAD ",input,5) == 0){
       // remove trailing \n, replace with 0
@@ -7743,8 +7771,9 @@ int script_handler(char *input,char *output, int source,int *bnum){
       }
 
       if (strnlen(input,200) < 6){
-	strcpy(output,"NO FILENAME");
-	return 0;
+	strcpy(myscript_data->oline,"NO FILENAME");
+	script_return(myscript_data,0);
+	return;
       }
       if (input[5] != '/'){
 	char s3[PATH_LENGTH];
@@ -7760,11 +7789,13 @@ int script_handler(char *input,char *output, int source,int *bnum){
       eo = do_load(buffp[current],input+5,0);
 
       if (eo == -1){
-	strcpy(output,"FILE NOT LOADED");
-	return 0;
+	strcpy(myscript_data->oline,"FILE NOT LOADED");
+	script_return(myscript_data,0);
+	return;
       }
-      strcpy(output,"FILE LOADED");
-      return 1;
+      strcpy(myscript_data->oline,"FILE LOADED");
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("SAVE ",input,5) == 0){
       char *s2;
@@ -7775,8 +7806,9 @@ int script_handler(char *input,char *output, int source,int *bnum){
       }
       
       if (strnlen(input,200) < 6){
-	strcpy(output,"NO FILENAME");
-	return 0;
+	strcpy(myscript_data->oline,"NO FILENAME");
+	script_return(myscript_data,0);
+	return;
       }
 
       if (input[5] != '/'){
@@ -7792,52 +7824,61 @@ int script_handler(char *input,char *output, int source,int *bnum){
       /* we have to make the directory */
       if( mkdir( input+5, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
 	if( errno != EEXIST ) {
-	  strcpy(output,"CANT MKDIR");
-	  return 0 ;
+	  strcpy(myscript_data->oline,"CANT MKDIR");
+	  script_return(myscript_data,0);
+	  return ;
 	}
       }
 
       eo=do_save(buffp[current],input+5);
       if (eo == 0){
-	strcpy(output,"NOT SAVED");
-	return 0;
+	strcpy(myscript_data->oline,"NOT SAVED");
+	script_return(myscript_data,0);
+	return;
       }
 
-      strcpy(output,"FILE SAVED");
-      return 1;
+      strcpy(myscript_data->oline,"FILE SAVED");
+      script_return(myscript_data,1);
+      return;
     }
 
 
     if (strncmp("APPEND",input,6) == 0){
       eo=file_append(NULL,buffp[current]);
       if (eo == 0){
-	strcpy(output,"APPEND FAILED");
-	return 0;
+	strcpy(myscript_data->oline,"APPEND FAILED");
+	script_return(myscript_data,0);
+	return;
       }
-      strcpy(output,"APPENDED");
-      return 1;
+      strcpy(myscript_data->oline,"APPENDED");
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("SET NPTS2 ",input,10) == 0){
       int ns,i;
       i=sscanf(input+10,"%i",&ns);
       if (i != 1){
-	strcpy(output,"FAILED");
-	return 0;
+	strcpy(myscript_data->oline,"FAILED");
+	script_return(myscript_data,0);
+	return;
       }
       update_npts2(ns);
-      strcpy(output,"OK");
-      return 1;
+      strcpy(myscript_data->oline,"OK");
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("SET NSCANS ",input,11) == 0){
       int ns,i;
       i=sscanf(input+11,"%i",&ns);
       if (i != 1){
-	strcpy(output,"FAILED");
-	return 0;
+	strcpy(myscript_data->oline,"FAILED");
+	script_return(myscript_data,0);
+	return;
       }
       update_acqs(ns);
-      strcpy(output,"OK");
-      return 1;
+      strcpy(myscript_data->oline,"OK");
+      script_return(myscript_data,1);
+      return;
     }
 
     if (strncmp("PARAM ",input,6) == 0){
@@ -7873,15 +7914,17 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	    ret = sscanf(input,"PARAM %s %i\n",pname,&ival);
 	    if (ret != 2){
 	      //	      fprintf(stderr,"didn't match an integer?, ret = %i, ival is %i\n",ret,ival);
-	      strcpy(output,"NO INTEGER FOUND");
-	      return 0;
+	      strcpy(myscript_data->oline,"NO INTEGER FOUND");
+	      script_return(myscript_data,0);
+	      return;
 	    }
 	    gtk_adjustment_set_value( param_button[i].adj, (double) ival);
 	    //buffp[current]->param_set.parameter[i].i_val = ival;
 	    //	    show_parameter_frame( &buffp[current]->param_set ,buffp[current]->npts);
 	    //	    fprintf(stderr,"updated param %s to %i\n",pname,ival);
-	    strcpy(output,"PARAM updated");
-	    return 1;
+	    strcpy(myscript_data->oline,"PARAM updated");
+	    script_return(myscript_data,1);
+	    return;
 	  }
 	  else
 	  if (buffp[current]->param_set.parameter[i].type == 'f'){ 
@@ -7890,51 +7933,60 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	    ret = sscanf(input,"PARAM %s %lf\n",pname,&fval);
 	    if (ret != 2){
 	      //	      fprintf(stderr,"didn't match a float?,ret is %i, fval is %lf\n",ret,fval);
-	      strcpy(output,"NO FLOAT FOUND");
-	      return 0;
+	      strcpy(myscript_data->oline,"NO FLOAT FOUND");
+	      script_return(myscript_data,0);
+	      return;
 	    }
 	   
 	    gtk_adjustment_set_value( param_button[i].adj, (double) fval);
 	    //	    buffp[current]->param_set.parameter[i].f_val = fval;
 	    //      show_parameter_frame( &buffp[current]->param_set ,buffp[current]->npts);
 	    //	    fprintf(stderr,"updated param %s to %lf\n",pname,fval);
-	    strcpy(output,"PARAM updated");
-	    return 1;	    
+	    strcpy(myscript_data->oline,"PARAM updated");
+	    script_return(myscript_data,1);
+	    return;	    
 	  }
 	  else{
 	    //	    fprintf(stderr,"parameter wasn't a float or int\n");
-	    strcpy(output,"INVALID PARAMETER");
-	    return 0;
+	    strcpy(myscript_data->oline,"INVALID PARAMETER");
+	    script_return(myscript_data,0);
+	    return;
 	  }
 	}      
       }
-      strcpy(output,"NO SUCH PARAM");
-      return 0;
+      strcpy(myscript_data->oline,"NO SUCH PARAM");
+      script_return(myscript_data,0);
+      return ;
     }
 
     if (strncmp("BUFFER ",input,7) == 0){
       // change to buffer #...
       int ibnum;
       if (sscanf(input+7,"%i",&ibnum) != 1){
-	strcpy(output,"COULDN'T FIND BUFFER NUMBER");
-	return 0;
+	strcpy(myscript_data->oline,"COULDN'T FIND BUFFER NUMBER");
+	script_return(myscript_data,0);
+	return;
       }
       if (buffp[ibnum] == NULL){
-	strcpy(output,"REQUEST BUFFER DOESNT EXIST");
-	return 0;
+	strcpy(myscript_data->oline,"REQUEST BUFFER DOESNT EXIST");
+	script_return(myscript_data,0);
+	return;
       }
       if (buffp[ibnum]->script_open != 0){
-	strcpy(output,"REQUEST BUFFER ALREADY HAS HANDLER");
-	return 0;
+	strcpy(myscript_data->oline,"REQUEST BUFFER ALREADY HAS HANDLER");
+	script_return(myscript_data,0);
+	return;
       }
       fprintf(stderr,"making buff %i active\n",ibnum);
       CHECK_ACTIVE(buffp[ibnum]);
       
-      buffp[*bnum]->script_open = 0;
-      *bnum = ibnum;
-      buffp[*bnum]->script_open = 1;
-      strcpy(output,"OK");
-      return 1;
+      buffp[bnum]->script_open = 0;
+      bnum = ibnum;
+      myscript_data->bnum = bnum;
+      buffp[bnum]->script_open = 1;
+      strcpy(myscript_data->oline,"OK");
+      script_return(myscript_data,1);
+      return;
 
     }
     if (strncmp("NEW",input,3) == 0){
@@ -7942,14 +7994,16 @@ int script_handler(char *input,char *output, int source,int *bnum){
       old_current = current;
       file_new(NULL,NULL);
       if (current == old_current){
-	strcpy(output,"FAILED");
-	return 0;
+	strcpy(myscript_data->oline,"FAILED");
+	script_return(myscript_data,0);
+	return;
       }
-      *bnum = current;
+      bnum = current;
       buffp[old_current]->script_open = 0;
       buffp[current]->script_open = 1;
-      sprintf(output,"OK %i",current);
-      return 1;
+      sprintf(myscript_data->oline,"OK %i",current);
+      script_return(myscript_data,1);
+      return;
     }
 
     if (strncmp("CLOSE ",input,6) == 0){
@@ -7959,54 +8013,65 @@ int script_handler(char *input,char *output, int source,int *bnum){
       if (inum < MAX_BUFFERS && inum >= 0){
 	if (buffp[inum]->script_open == 0){
 	  file_close(NULL,buffp[inum]);
-	  strcpy(output,"OK");
-	  return 1;
+	  strcpy(myscript_data->oline,"OK");
+	  script_return(myscript_data,1);
+	  return;
       }
-      strcpy(output,"HAS SCRIPT OPEN");
-      return 0;
+      strcpy(myscript_data->oline,"HAS SCRIPT OPEN");
+      script_return(myscript_data,0);
+      return;
       }
-      strcpy(output,"INVALID BNUM");
-      return 0;
+      strcpy(myscript_data->oline,"INVALID BNUM");
+      script_return(myscript_data,0);
+      return;
     }
 
     if(strncmp("GET BUFFER",input,10)==0){
-      sprintf(output,"BUFFER %i",current);
-      return 1;
+      sprintf(myscript_data->oline,"BUFFER %i",current);
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("SHIM_INT",input,8) == 0){
       double int1,int2,int3;
-      do_shim_integrate(buffp[*bnum],&int1,&int2,&int3);
+      do_shim_integrate(buffp[bnum],&int1,&int2,&int3);
       
-      sprintf(output,"INTEGRALS: %f %f %f",int1,int2,int3);
-      return 1;
+      sprintf(myscript_data->oline,"INTEGRALS: %f %f %f",int1,int2,int3);
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("HYPER ON",input,8) == 0){
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buffp[current]->win.hypercheck),TRUE);
       if (buffp[current]->is_hyper){
-	strcpy(output,"MADE HYPER");
-	return 1;
+	strcpy(myscript_data->oline,"MADE HYPER");
+	script_return(myscript_data,1);
+	return;
       }
-      strcpy(output,"FAILED");
-      return 0;      
+      strcpy(myscript_data->oline,"FAILED");
+      script_return(myscript_data,0);
+      return;      
     }
     if (strncmp("HYPER OFF",input,9) == 0){
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buffp[current]->win.hypercheck),FALSE);
       if (buffp[current]->is_hyper == 0){
-	strcpy(output,"MADE NOT HYPER");
-	return 1;
+	strcpy(myscript_data->oline,"MADE NOT HYPER");
+	script_return(myscript_data,1);
+	return;
       }
-      strcpy(output,"FAILED");
-      return 0;
+      strcpy(myscript_data->oline,"FAILED");
+      script_return(myscript_data,0);
+      return;
     }
     if (strncmp("SYMM ON",input,7) == 0){
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buffp[current]->win.symm_check),TRUE);
-      strcpy(output,"MADE SYMM");
-      return 1;      
+      strcpy(myscript_data->oline,"MADE SYMM");
+      script_return(myscript_data,1);
+      return;      
     }
     if (strncmp("SYMM OFF",input,8) == 0){
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buffp[current]->win.symm_check),FALSE);
-      strcpy(output,"MADE NOT SYMM");
-      return 1;      
+      strcpy(myscript_data->oline,"MADE NOT SYMM");
+      script_return(myscript_data,1);
+      return;      
     }
 
 
@@ -8018,12 +8083,14 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	if (add_sub.index[j] == inum){
 	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff1),j);
 	  add_sub_changed(add_sub.s_buff1,NULL);
-	  strcpy(output,"SOURCE BUFF 1 CHANGED");
-	  return 1;
+	  strcpy(myscript_data->oline,"SOURCE BUFF 1 CHANGED");
+	  script_return(myscript_data,1);
+	  return;
 	}
       }
-      strcpy(output,"BUFFER NOT FOUND");
-      return 0;
+      strcpy(myscript_data->oline,"BUFFER NOT FOUND");
+      script_return(myscript_data,0);
+      return;
     }
 
     if (strncmp("ADD_SUB SB2",input,11) == 0){
@@ -8034,12 +8101,14 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	if (add_sub.index[j] == inum){
 	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_buff2),j);
 	  add_sub_changed(add_sub.s_buff1,NULL);
-	  strcpy(output,"SOURCE BUFF 2 CHANGED");
-	  return 1;
+	  strcpy(myscript_data->oline,"SOURCE BUFF 2 CHANGED");
+	  script_return(myscript_data,1);
+	  return;
 	}
       }
-      strcpy(output,"BUFFER NOT FOUND");
-      return 0;
+      strcpy(myscript_data->oline,"BUFFER NOT FOUND");
+      script_return(myscript_data,0);
+      return;
     }
 
     if (strncmp("ADD_SUB DB",input,10) == 0){
@@ -8051,12 +8120,14 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	  fprintf(stderr,"setting db box to %i\n",j+1);
 	  gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_buff),j+1);
 	  add_sub_changed(add_sub.dest_buff,NULL);
-	  strcpy(output,"DESTINATION CHANGED");
-	  return 1;
+	  strcpy(myscript_data->oline,"DESTINATION CHANGED");
+	  script_return(myscript_data,1);
+	  return;
 	}
       }
-      strcpy(output,"BUFFER NOT FOUND");
-      return 0;
+      strcpy(myscript_data->oline,"BUFFER NOT FOUND");
+      script_return(myscript_data,0);
+      return;
     }
 
     if (strncmp("ADD_SUB SM1",input,11) == 0){
@@ -8064,8 +8135,9 @@ int script_handler(char *input,char *output, int source,int *bnum){
       float fval;
       sscanf(input+11,"%f",&fval);
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(add_sub.mult1),fval);
-      strcpy(output,"SOURCE 1 MULTIPLIER CHANGED");
-      return 1;
+      strcpy(myscript_data->oline,"SOURCE 1 MULTIPLIER CHANGED");
+      script_return(myscript_data,1);
+      return;
     }
 
     if (strncmp("ADD_SUB SM2",input,11) == 0){
@@ -8073,8 +8145,9 @@ int script_handler(char *input,char *output, int source,int *bnum){
       float fval;
       sscanf(input+11,"%f",&fval);
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(add_sub.mult2),fval);
-      strcpy(output,"SOURCE 2 MULTIPLIER CHANGED");
-      return 1;
+      strcpy(myscript_data->oline,"SOURCE 2 MULTIPLIER CHANGED");
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("ADD_SUB REC EACH",input,16) == 0){
       gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record1),0);
@@ -8083,78 +8156,89 @@ int script_handler(char *input,char *output, int source,int *bnum){
       add_sub_changed(add_sub.s_record2,NULL);
       gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),0);
       add_sub_changed(add_sub.dest_record,NULL);
-      strcpy(output,"RECORDS SET TO EACH");
-      return 1;
+      strcpy(myscript_data->oline,"RECORDS SET TO EACH");
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("ADD_SUB REC1 ",input,13) == 0){
       int recnum;
       sscanf(input+13,"%i",&recnum);
-      if (recnum >=0 && recnum < buffp[*bnum]->npts2){
+      if (recnum >=0 && recnum < buffp[bnum]->npts2){
 	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record1),recnum+2);
 	add_sub_changed(add_sub.s_record1,NULL);
-	strcpy(output,"RECORD SET");      
-	return 1;
+	strcpy(myscript_data->oline,"RECORD SET");      
+	script_return(myscript_data,1);
+	return;
       }
       else
 	{
-	  strcpy(output,"ILLEGAL RECORD");
-	  return 0;
+	  strcpy(myscript_data->oline,"ILLEGAL RECORD");
+	  script_return(myscript_data,0);
+	  return;
 	}
     }
     if (strncmp("ADD_SUB REC2 ",input,13) == 0){
       int recnum;
       sscanf(input+13,"%i",&recnum);
-      if (recnum >=0 && recnum < buffp[*bnum]->npts2){
+      if (recnum >=0 && recnum < buffp[bnum]->npts2){
 	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.s_record2),recnum+2);
 	add_sub_changed(add_sub.s_record2,NULL);
-	strcpy(output,"RECORD SET");      
-	return 1;
+	strcpy(myscript_data->oline,"RECORD SET");      
+	script_return(myscript_data,1);
+	return;
       }
       else
 	{
-	  strcpy(output,"ILLEGAL RECORD");
-	  return 0;
+	  strcpy(myscript_data->oline,"ILLEGAL RECORD");
+	  script_return(myscript_data,0);
+	  return;
 	}
     }
     if (strncmp("ADD_SUB RECD APPEND",input,19) == 0){
       gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),1);
       add_sub_changed(add_sub.dest_record,NULL);
-      strcpy(output,"RECORD SET");
-      return 1;
+      strcpy(myscript_data->oline,"RECORD SET");
+      script_return(myscript_data,1);
+      return;
     }
     if (strncmp("ADD_SUB RECD ",input,13) == 0){
       int recnum;
       sscanf(input+13,"%i",&recnum);
-      if (recnum >=0 && recnum < buffp[*bnum]->npts2){
+      if (recnum >=0 && recnum < buffp[bnum]->npts2){
 	gtk_combo_box_set_active(GTK_COMBO_BOX(add_sub.dest_record),recnum+2);
 	add_sub_changed(add_sub.dest_record,NULL);
-	strcpy(output,"RECORD SET");      
-	return 1;
+	strcpy(myscript_data->oline,"RECORD SET");      
+	script_return(myscript_data,1);
+	return;
       }
       else
 	{
-	  strcpy(output,"ILLEGAL RECORD");
-	  return 0;
+	  strcpy(myscript_data->oline,"ILLEGAL RECORD");
+	  script_return(myscript_data,0);
+	  return;
 	}
     }
     if ( strncmp("ADD_SUB APPLY",input,13) == 0){
       add_sub_buttons(add_sub.apply,NULL);
-      strcpy(output,"APPLIED");
-      return 1;
+      strcpy(myscript_data->oline,"APPLIED");
+      script_return(myscript_data,1);
+      return;
     }
 
     if (strncmp("SET REC ",input,8) == 0){
       int recnum;
       sscanf(input+8,"%i",&recnum);
-      if (recnum >=0 && recnum < buffp[*bnum]->npts2){
-	buffp[*bnum]->disp.record = recnum;
-	draw_canvas(buffp[*bnum]);
-	strcpy(output,"RECORD SET");
-	return 1;
+      if (recnum >=0 && recnum < buffp[bnum]->npts2){
+	buffp[bnum]->disp.record = recnum;
+	draw_canvas(buffp[bnum]);
+	strcpy(myscript_data->oline,"RECORD SET");
+	script_return(myscript_data,1);
+	return;
       }
       else{
-	strcpy(output,"ILLEGAL RECORD");
-	return 0;
+	strcpy(myscript_data->oline,"ILLEGAL RECORD");
+	script_return(myscript_data,0);
+	return;
       }
 	
 
@@ -8163,26 +8247,30 @@ int script_handler(char *input,char *output, int source,int *bnum){
       float scale;
       int pt;
       sscanf(input+6,"%i %f",&pt,&scale);
-      if (pt >= 0 && pt < buffp[*bnum]->npts ){
-	scale_data(buffp[*bnum],pt,scale);
-	strcpy(output,"DATA SCALED");
-	return 1;
+      if (pt >= 0 && pt < buffp[bnum]->npts ){
+	scale_data(buffp[bnum],pt,scale);
+	strcpy(myscript_data->oline,"DATA SCALED");
+	script_return(myscript_data,1);
+	return;
       }
-      strcpy(output,"INVALID POINT");
-      return 0;
+      strcpy(myscript_data->oline,"INVALID POINT");
+      script_return(myscript_data,0);
+      return;
     }
     if (strncmp("AUTOPHASE ",input,9) == 0){
 
       first_point_auto_phase();
-      strcpy(output,"OK");
-      return 1;
+      strcpy(myscript_data->oline,"OK");
+      script_return(myscript_data,1);
+      return;
 
     }
 	
     // next command here...
 
-    strcpy(output,"NOT UNDERSTOOD");
-    return 1;
+    strcpy(myscript_data->oline,"NOT UNDERSTOOD");
+    script_return(myscript_data,1);
+    return;
 
 
 

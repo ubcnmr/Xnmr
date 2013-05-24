@@ -8,7 +8,7 @@
 
 #CFLAGS = -g  -O2   -Wall  `pkg-config --cflags  gtk+-2.0`  -Wno-unused-result -DNOHARDWARE
 #CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNOHARDWARE
-CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result
+CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNOHARDWARE
 
 #O3 causes serious problems with rtai!
 
