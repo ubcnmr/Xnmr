@@ -53,7 +53,7 @@ gint do_cross_correlate_mlbs( GtkWidget *widget, double *val);
 gint do_cross_correlate_chu( GtkWidget *widget, double *val);
 gint do_cross_correlate_frank( GtkWidget *widget, double *val);
 gint do_cross_correlate( GtkWidget *widget, double *val);
-gint do_cross_correlate_and_display( GtkWidget *widget, double *val);
+gint do_cross_correlate_and_display( GtkWidget *widget, GtkAdjustment *val);
 
 gint do_zero_imag(GtkWidget *widget, double *spare);
 gint do_zero_imag_and_display(GtkWidget *widget, double *spare);
@@ -66,22 +66,22 @@ gint do_bft_and_display(GtkWidget *widget, double *spare);
 
 
 gint do_exp_mult( GtkWidget* widget, double *val);
-gint do_exp_mult_and_display( GtkWidget* widget, double *val);
+gint do_exp_mult_and_display( GtkWidget* widget, GtkAdjustment *val);
 
 gint do_gaussian_mult( GtkWidget* widget, double *val );
-gint do_gaussian_mult_and_display( GtkWidget* widget, double *val );
+gint do_gaussian_mult_and_display( GtkWidget* widget, GtkAdjustment *val );
 
 gint do_zero_fill(GtkWidget * widget,double *val);
-gint do_zero_fill_and_display(GtkWidget * widget,double *val);
+gint do_zero_fill_and_display(GtkWidget * widget,GtkAdjustment *val);
 
 gint do_left_shift(GtkWidget * widget,double *val);
-gint do_left_shift_and_display(GtkWidget * widget,double *val);
+gint do_left_shift_and_display(GtkWidget * widget,GtkAdjustment *val);
 
 gint do_left_shift_2d(GtkWidget * widget,double *val);
-gint do_left_shift_2d_and_display(GtkWidget * widget,double *val);
+gint do_left_shift_2d_and_display(GtkWidget * widget,GtkAdjustment *val);
 
 gint do_shim_filter(GtkWidget * widget,double *val);
-gint do_shim_filter_and_display(GtkWidget * widget,double *val);
+gint do_shim_filter_and_display(GtkWidget * widget,GtkWidget *val);
 
 gint do_phase_and_display_wrapper( GtkWidget* widget, double *data );
 gint do_phase_wrapper( GtkWidget* widget, double *data );
@@ -95,13 +95,13 @@ gint process_data( GtkWidget *widget, gpointer data );
 
 // 2d routines
 gint do_exp_mult_2d( GtkWidget* widget, double *val);
-gint do_exp_mult_2d_and_display( GtkWidget* widget, double *val);
+gint do_exp_mult_2d_and_display( GtkWidget* widget, GtkAdjustment *val);
 
 gint do_gaussian_mult_2d( GtkWidget* widget, double *val);
-gint do_gaussian_mult_2d_and_display( GtkWidget* widget, double *val);
+gint do_gaussian_mult_2d_and_display( GtkWidget* widget, GtkAdjustment *val);
 
 gint do_zero_fill_2d(GtkWidget * widget,double *val);
-gint do_zero_fill_2d_and_display(GtkWidget * widget,double *val);
+gint do_zero_fill_2d_and_display(GtkWidget * widget,GtkAdjustment *val);
 
 gint do_ft_2d(GtkWidget *widget, double *spare);
 gint do_ft_2d_and_display(GtkWidget *widget, double *spare);

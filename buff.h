@@ -139,7 +139,11 @@ void toggle_mag(GtkAction *action,dbuff *buff);
 void toggle_base(GtkAction *action,dbuff *buff);
 void toggle_points(GtkAction *action,dbuff *buff);
 
+#if GTK_MAJOR_VERSION == 2
 gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff);
+#else
+gint expose_event(GtkWidget *widget,cairo_t *event,dbuff *buff);
+#endif
 gint configure_event(GtkWidget *widget,GdkEventConfigure *event,
 			 dbuff *buff);
 void draw_oned(dbuff *buff,float extrayoff,float extraxoff,float *data

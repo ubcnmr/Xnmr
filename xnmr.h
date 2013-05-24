@@ -24,14 +24,13 @@
 /* global variables */
 
 extern GdkColor  colours[NUM_COLOURS+EXTRA_COLOURS];
-extern GdkGC  *colourgc;
 extern phase_data_struct  phase_data;
 extern add_sub_struct add_sub;
 extern fitting_struct fit_data;
 extern queue_struct queue;
 
 extern GtkWidget  *phase_dialog,*freq_popup,*fplab1,*fplab2,*fplab3,*fplab4,*fplab5;
-extern GtkObject  *phase0_ad,*phase1_ad;
+extern GtkAdjustment  *phase0_ad,*phase1_ad;
 extern float  phase0,phase1;
 extern float  phase20,phase21;
 extern GdkCursor  *cursorclock;
@@ -46,7 +45,7 @@ void open_phase(GtkAction *action,dbuff *buff);
 
 gint do_phase(float *source,float *dest,float phase0,float phase1,int npts);
 
-gint phase_changed(GtkObject *widget,gpointer *data);
+gint phase_changed(GtkAdjustment *widget,gpointer *data);
 
 gint pivot_set_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff);
 
@@ -64,6 +63,8 @@ gint popup_msg( char* msg,char modal);
 gint popup_msg_mutex_wrap( char* msg );
 
 void draw_vertical(dbuff *buff,GdkColor  *col, float xvalf,int xvali);
+GtkWidget * gtk_hbox_new_wrap(gboolean homo, gint spacing);
+GtkWidget * gtk_vbox_new_wrap(gboolean homo, gint spacing);
 
 #define RED NUM_COLOURS
 #define GREEN NUM_COLOURS+1

@@ -1,4 +1,3 @@
-//#define GTK_DISABLE_DEPRECATED
 /* buff.c
  *
  * window buffer implementation for the Xnmr project
@@ -68,7 +67,7 @@ reload wrapper                             (from end of acquisition)
 extern char no_acq;
 extern char connected; //from xnmr_ipc.c
 extern struct parameter_button_t param_button[ MAX_PARAMETERS ];
-extern GtkObject *acqs_2d_adj;
+extern GtkAdjustment *acqs_2d_adj;
 extern char no_update_open;
 extern struct popup_data_t popup_data; // needed to see if array is open 
 GdkPoint dpoints[MAX_DATA_NPTS]; // point list for drawing spectra
@@ -244,7 +243,7 @@ dbuff *create_buff(int num){
   GtkWidget *window;
   GtkWidget *menubar;
   GtkWidget *main_vbox,*vbox1,*hbox1,*hbox2,*hbox3,*hbox4,*hbox,*hbox5,*vbox2;
-  GtkWidget *canvas,*button;
+  GtkWidget *darea,*button;
   GtkWidget *expandb,*expandfb,*fullb,*Bbutton,*bbutton,*Sbutton,*sbutton;
   GtkWidget *autob,*autocheck,*offsetb,*arrow;
   //  GtkItemFactory *item_factory;
@@ -291,7 +290,8 @@ dbuff *create_buff(int num){
     buff->is_hyper=0;
     buff->win.sizex=800;
     buff->win.sizey=300;
-    buff->win.pixmap=NULL;
+    buff->win.surface = NULL;
+    buff->win.cr = NULL;
     buff->win.press_pend=0;
     buff->phase0=0.;
     buff->phase1=0.;
@@ -519,7 +519,7 @@ dbuff *create_buff(int num){
 
     /* the window: */
     window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_default_size(GTK_WINDOW(window),850,400);
+    gtk_window_set_default_size(GTK_WINDOW(window),1000,400);
     gtk_window_set_gravity(GTK_WINDOW(window),GDK_GRAVITY_NORTH_WEST);
     gtk_window_move(GTK_WINDOW(window),(count-1)*50,0);
 
@@ -533,7 +533,7 @@ dbuff *create_buff(int num){
 
     set_window_title(buff);
 
-    main_vbox=gtk_vbox_new(FALSE,1);
+    main_vbox=gtk_vbox_new_wrap(FALSE,1);
     //    gtk_container_border_width(GTK_CONTAINER (main_vbox),1);
     gtk_container_add(GTK_CONTAINER (window), main_vbox);
     
@@ -573,29 +573,33 @@ dbuff *create_buff(int num){
     
     /* menus done, now do canvas */
 
-    canvas=gtk_drawing_area_new();
-    buff->win.canvas=canvas;
-    /*      gtk_drawing_area_size(GTK_DRAWING_AREA (canvas),buff->win.sizex,
-	    buff->win.sizey); */
+    darea=gtk_drawing_area_new();
     
-    hbox1=gtk_hbox_new(FALSE,1);
+    buff->win.darea=darea;
     
-    gtk_box_pack_start(GTK_BOX(hbox1),canvas,TRUE,TRUE,0);
-    g_signal_connect(G_OBJECT(canvas),"expose_event",
-		       G_CALLBACK (expose_event),buff);
-    // configure event was connected in here
+    hbox1=gtk_hbox_new_wrap(FALSE,1);
+    
+    gtk_box_pack_start(GTK_BOX(hbox1),darea,TRUE,TRUE,0);
+    // in gtk 3, expose_event becomes draw!
+#if GTK_MAJOR_VERSION == 2
+    g_signal_connect(darea,"expose_event",
+		     G_CALLBACK (expose_event),buff);
+#else
+    g_signal_connect(darea,"draw",
+		     G_CALLBACK (expose_event),buff);
+#endif
 
-    g_signal_connect(G_OBJECT(canvas),"configure_event",
+    g_signal_connect(G_OBJECT(darea),"configure_event",
 		       G_CALLBACK (configure_event),buff);
 
 
-    gtk_widget_set_events(canvas,GDK_EXPOSURE_MASK
+    gtk_widget_set_events(darea,GDK_EXPOSURE_MASK
 			  |GDK_BUTTON_PRESS_MASK|GDK_BUTTON_RELEASE_MASK);
-    g_signal_connect(G_OBJECT(canvas),"button_press_event",
+    g_signal_connect(G_OBJECT(darea),"button_press_event",
 		       G_CALLBACK (press_in_win_event),buff);
-    g_signal_connect(G_OBJECT(canvas),"button_release_event",
+    g_signal_connect(G_OBJECT(darea),"button_release_event",
 		       G_CALLBACK (press_in_win_event),buff);
-    vbox1=gtk_vbox_new(FALSE,1);
+    vbox1=gtk_vbox_new_wrap(FALSE,1);
     
     expandb=gtk_toggle_button_new_with_label("Expand");
     gtk_box_pack_start(GTK_BOX(vbox1),expandb,FALSE,FALSE,0);
@@ -612,43 +616,48 @@ dbuff *create_buff(int num){
     g_signal_connect(G_OBJECT(fullb),"clicked",
 		       G_CALLBACK(full_routine),buff);
     
-    hbox2=gtk_hbox_new(FALSE,1);
+    hbox2=gtk_hbox_new_wrap(FALSE,1);
     
 
     Bbutton = gtk_button_new();
-    gtk_widget_set_size_request(Bbutton,0,25);
+    //    gtk_widget_set_size_request(Bbutton,0,25);
     arrow = gtk_arrow_new(GTK_ARROW_UP,GTK_SHADOW_OUT);
+    gtk_widget_set_name(arrow,"bigarrow");
     gtk_container_add(GTK_CONTAINER(Bbutton) , arrow);
 
 
     gtk_box_pack_start(GTK_BOX(hbox2),Bbutton,TRUE,TRUE,0);
+
     g_signal_connect(G_OBJECT(Bbutton),"clicked",
 		       G_CALLBACK(Bbutton_routine),buff);
     
     Sbutton = gtk_button_new();
-    gtk_widget_set_size_request(Sbutton,0,25);
+    //    gtk_widget_set_size_request(Sbutton,0,25);
     arrow = gtk_arrow_new(GTK_ARROW_DOWN,GTK_SHADOW_OUT);
+    gtk_widget_set_name(arrow,"bigarrow");
     gtk_container_add(GTK_CONTAINER(Sbutton),arrow);
     gtk_box_pack_start(GTK_BOX(hbox2),Sbutton,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(Sbutton),"clicked",
 		       G_CALLBACK(Sbutton_routine),buff);
     
     gtk_box_pack_start(GTK_BOX(vbox1),hbox2,FALSE,FALSE,0);
-    
+
     /* now lowercase buttons */
-    hbox3=gtk_hbox_new(FALSE,1);
+    hbox3=gtk_hbox_new_wrap(FALSE,1);
     
     bbutton=gtk_button_new();
-    gtk_widget_set_size_request(bbutton,0,25);
-    arrow = gtk_arrow_new(GTK_ARROW_UP,GTK_SHADOW_ETCHED_OUT);
+    //    gtk_widget_set_size_request(bbutton,0,25);
+    arrow = gtk_arrow_new(GTK_ARROW_UP,GTK_SHADOW_NONE);
+    gtk_widget_set_name(arrow,"littlearrow");
     gtk_container_add(GTK_CONTAINER(bbutton),arrow);
     gtk_box_pack_start(GTK_BOX(hbox3),bbutton,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(bbutton),"clicked",
 		       G_CALLBACK(bbutton_routine),buff);
     
     sbutton=gtk_button_new();
-    gtk_widget_set_size_request(sbutton,0,25);
-    arrow = gtk_arrow_new(GTK_ARROW_DOWN,GTK_SHADOW_ETCHED_IN);
+    //    gtk_widget_set_size_request(sbutton,0,25);
+    arrow = gtk_arrow_new(GTK_ARROW_DOWN,GTK_SHADOW_NONE);
+    gtk_widget_set_name(arrow,"littlearrow");
     gtk_container_add(GTK_CONTAINER(sbutton),arrow);
     gtk_box_pack_start(GTK_BOX(hbox3),sbutton,TRUE,TRUE,0);
     g_signal_connect(G_OBJECT(sbutton),"clicked",
@@ -657,7 +666,7 @@ dbuff *create_buff(int num){
     gtk_box_pack_start(GTK_BOX(vbox1),hbox3,FALSE,FALSE,0);
     
 
-    hbox4=gtk_hbox_new(FALSE,1);
+    hbox4=gtk_hbox_new_wrap(FALSE,1);
     gtk_box_pack_start(GTK_BOX(vbox1),hbox4,FALSE,FALSE,0);
     autocheck=gtk_check_button_new();
     buff->win.autocheck=autocheck;
@@ -665,7 +674,7 @@ dbuff *create_buff(int num){
     // set to auto
     if (num_buffs == 1)
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.autocheck),FALSE);
-    else   if (GTK_TOGGLE_BUTTON(buffp[current]->win.autocheck)->active)
+    else   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buffp[current]->win.autocheck)))
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.autocheck),TRUE);
 
     g_signal_connect(G_OBJECT(autocheck),"clicked",
@@ -703,7 +712,7 @@ dbuff *create_buff(int num){
     
 
 
-    hbox=gtk_hbox_new(FALSE,1);
+    hbox=gtk_hbox_new_wrap(FALSE,1);
     gtk_box_pack_start(GTK_BOX(vbox1),hbox,FALSE,FALSE,0);
 
     button=gtk_button_new_with_label("+");
@@ -752,8 +761,8 @@ dbuff *create_buff(int num){
 
 
 
-    hbox5=gtk_hbox_new(FALSE,1);
-    vbox2=gtk_vbox_new(FALSE,1);
+    hbox5=gtk_hbox_new_wrap(FALSE,1);
+    vbox2=gtk_vbox_new_wrap(FALSE,1);
 
     // move creation of channel buttons to above call to clone_from_acq 
     // so that the buttons exist before we try to set them
@@ -764,7 +773,7 @@ dbuff *create_buff(int num){
     gtk_box_pack_start(GTK_BOX(hbox5),vbox2,FALSE,FALSE,0);
     
 
-    vbox2=gtk_vbox_new(FALSE,1);
+    vbox2=gtk_vbox_new_wrap(FALSE,1);
 
     
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but2a,FALSE,FALSE,0);
@@ -780,12 +789,15 @@ dbuff *create_buff(int num){
       set_ch2(buff,get_ch2(buffp[current]));
     }
     else if (acq_in_progress != ACQ_STOPPED && num_buffs == 1){ // if we're already running.
-      GdkColor color;
-      
+#if GTK_MAJOR_VERSION == 2
+      GdkColor color;      
       gdk_color_parse("green",&color);
       gtk_widget_modify_bg(buff->win.ct_box,GTK_STATE_NORMAL,&color);
+#else
+      GdkRGBA color = {0.,1.,0.,1.};
+      gtk_widget_override_background_color(buff->win.ct_box,GTK_STATE_NORMAL,&color);
+#endif
       set_window_title(buff); // to set a * in the name
-
 
       // clone from acq already did this:
       //      set_ch1(buff,data_shm->ch1); 
@@ -830,11 +842,11 @@ dbuff *create_buff(int num){
     
     for (j=num_buffs;j>inum;j--)
 	add_sub.index[j] = add_sub.index[j-1];
-    gtk_combo_box_insert_text(GTK_COMBO_BOX(add_sub.s_buff1),inum,s);
-    gtk_combo_box_insert_text(GTK_COMBO_BOX(add_sub.s_buff2),inum,s);
-    gtk_combo_box_insert_text(GTK_COMBO_BOX(add_sub.dest_buff),inum+1,s);
-    gtk_combo_box_insert_text(GTK_COMBO_BOX(fit_data.s_buff),inum,s);
-    gtk_combo_box_insert_text(GTK_COMBO_BOX(fit_data.d_buff),inum+1,s);
+    gtk_combo_box_text_insert_text(GTK_COMBO_BOX_TEXT(add_sub.s_buff1),inum,s);
+    gtk_combo_box_text_insert_text(GTK_COMBO_BOX_TEXT(add_sub.s_buff2),inum,s);
+    gtk_combo_box_text_insert_text(GTK_COMBO_BOX_TEXT(add_sub.dest_buff),inum+1,s);
+    gtk_combo_box_text_insert_text(GTK_COMBO_BOX_TEXT(fit_data.s_buff),inum,s);
+    gtk_combo_box_text_insert_text(GTK_COMBO_BOX_TEXT(fit_data.d_buff),inum+1,s);
     
     add_sub.index[inum] = num;
     buff->flags = FT_FLAG;
@@ -845,25 +857,26 @@ dbuff *create_buff(int num){
   else return NULL;
 }
 
+//gtk3
+#if GTK_MAJOR_VERSION == 2
 gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff)
+#else
+gint expose_event(GtkWidget *widget,cairo_t *event,dbuff *buff)
+#endif
 {
-  /*
-  fprintf(stderr,"got expose event for buff %i, dont_raise says %i, current is %i\n",buff->buffnum,doing_upload_dont_raise,current);  if (buff->buffnum != current  && doing_upload_dont_raise != buff->buffnum)
-    if (gtk_window_has_toplevel_focus(GTK_WINDOW(buff->win.window))) {
-      fprintf(stderr,"raising %i, current is %i\n",buff->buffnum,current);
-      make_active(buff);
-    }
-  */
 
-  gdk_draw_drawable(widget->window,
-   //		    widget->style->fg_gc[GTK_WIDGET_STATE(widget)],
-		    widget->style->fg_gc[gtk_widget_get_state(widget)],
-		    buff->win.pixmap,
-		    event->area.x, event->area.y,
-		    event->area.x, event->area.y,
-		    event->area.width, event->area.height); 
-  // do this later when we're finished to avoid looping
-
+  //copy surface onto drawing area
+#if GTK_MAJOR_VERSION == 2  // this actually works in both:
+  cairo_t *crd=gdk_cairo_create(gtk_widget_get_window(widget)); //widget is our drawing area
+  cairo_set_source_surface(crd,buff->win.surface,0,0);
+  cairo_rectangle(crd,event->area.x,event->area.y,event->area.width,event->area.height);
+  cairo_paint(crd);
+  cairo_destroy(crd);
+#else  // this only work in gtk3
+  cairo_set_source_surface(event,buff->win.surface,0,0);
+  cairo_paint(event);
+#endif
+  
 return FALSE; 
 }
 
@@ -873,23 +886,40 @@ gint configure_event(GtkWidget *widget,GdkEventConfigure *event,
 {
 
   int sizex,sizey;
-  //fprintf(stderr,"in configure\n");
+  //  fprintf(stderr,"in configure\n");
   /* get the size of the drawing area */
-  sizex=widget->allocation.width-2;
-  sizey=widget->allocation.height-2;
+  /*
+   FOR GTK 3 - could use these
+  sizex=gtk_widget_get_allocated_width(widget)-2;
+  sizey=gtk_widget_get_allocated_height(widget)-2;
+  */
+  GtkAllocation alloc;
+  gtk_widget_get_allocation(widget,&alloc);
+  sizex = alloc.width-2;
+  sizey = alloc.height-2;
   
-  /* release old pixmap if there is one */
-  if (buff->win.pixmap)
-    gdk_drawable_unref(buff->win.pixmap);
-  
-  /* get new pixmap */
-  buff->win.pixmap=gdk_pixmap_new(widget->window,sizex+2,sizey+2,-1);
+
+  if (buff->win.surface)
+    cairo_surface_destroy(buff->win.surface);
+
+  if (buff->win.cr)
+    cairo_destroy(buff->win.cr);
+
+
+    
+
+  /* get new surface for offscreen drawing */
+  //  printf("in configure event\n");
+  buff->win.surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,sizex+2,sizey+2);
+  buff->win.cr = cairo_create(buff->win.surface);
+  cairo_set_line_width(buff->win.cr,1);
+    
   buff->win.sizex=sizex;
   buff->win.sizey=sizey;
   
   /* redraw the canvas */
   draw_canvas(buff);
-  show_active_border();
+  //  show_active_border(); // draw_canvas does enough of this...
   return TRUE;
 }
 
@@ -897,12 +927,9 @@ void draw_canvas(dbuff *buff)
 {
  GdkRectangle rect;
 
-
-
-
  // fprintf(stderr, "drawing canvas\n");
 
-
+ 
  /* clear the canvas */
  rect.x=1;
  rect.y=1;
@@ -911,17 +938,17 @@ void draw_canvas(dbuff *buff)
 
  // fprintf(stderr,"doing draw canvas\n");
  cursor_busy(buff);
- gdk_draw_rectangle(buff->win.pixmap,buff->win.canvas->style->white_gc,TRUE,
-		    rect.x,rect.y,rect.width,rect.height);
+ cairo_set_source_rgb(buff->win.cr,1.,1.,1.); // draw in white!
+ cairo_rectangle(buff->win.cr,rect.x,rect.y,rect.width,rect.height);
+ cairo_fill(buff->win.cr); 
+
+ // gdk_draw_rectangle(buff->win.pixmap,buff->win.canvas->style->white_gc,TRUE,
+ //		    rect.x,rect.y,rect.width,rect.height);
 
 
- if (colourgc == NULL){
-   //fprintf(stderr,"in draw_canvas, gc is NULL\n");
-   return;
- }
 
  if(buff->disp.dispstyle==SLICE_ROW){
-   if (GTK_TOGGLE_BUTTON(buff->win.autocheck)->active)
+   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.autocheck)))
      do_auto(buff);
    //   else
    draw_oned(buff,0.,0.,&buff->data[buff->disp.record*2*buff->npts],
@@ -930,7 +957,7 @@ void draw_canvas(dbuff *buff)
 
  }
  else if(buff->disp.dispstyle==SLICE_COL){
-   if(GTK_TOGGLE_BUTTON(buff->win.autocheck)->active)
+   if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.autocheck)))
      do_auto2(buff);
    draw_oned2(buff,0.,0.);
 
@@ -940,7 +967,7 @@ void draw_canvas(dbuff *buff)
    draw_raster(buff);
 
  
- gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
+ gtk_widget_queue_draw_area(buff->win.darea,rect.x,rect.y,rect.width,rect.height);
  cursor_normal(buff);
 
 
@@ -1030,12 +1057,17 @@ void draw_raster(dbuff *buff)
 	else
 	  ci=(int) floor((da-min)/(max-min)*(NUM_COLOURS-1e-12));
 	ci=NUM_COLOURS-ci;
+
+	cairo_set_source_rgb(buff->win.cr,colours[ci-1].red,colours[ci-1].green,colours[ci-1].blue);
+	cairo_rectangle(buff->win.cr,xp1,yp2,xp2-xp1,yp1-yp2);
+	cairo_fill(buff->win.cr);
+
 	
-	gdk_gc_set_foreground(colourgc,&colours[ci-1]);
+	//	gdk_gc_set_foreground(colourgc,&colours[ci-1]);
 	/* and draw the rectangle */
-	gdk_draw_rectangle(buff->win.pixmap
-			   ,colourgc,TRUE,
-			   xp1,yp2,xp2-xp1,yp1-yp2);
+	//	gdk_draw_rectangle(buff->win.pixmap
+	//			   ,colourgc,TRUE,
+	//			   xp1,yp2,xp2-xp1,yp1-yp2);
 	xp1=xp2;
 	
       }
@@ -1057,11 +1089,15 @@ void draw_raster(dbuff *buff)
 	  ci=(int) floor((da-min)/(max-min)*(NUM_COLOURS-1e-12));
 	ci=NUM_COLOURS-ci;
 	
-	gdk_gc_set_foreground(colourgc,&colours[ci-1]);
+	cairo_set_source_rgb(buff->win.cr,colours[ci-1].red,colours[ci-1].green,colours[ci-1].blue);
+	cairo_rectangle(buff->win.cr,xp1,yp2,xp2-xp1,yp1-yp2);
+	cairo_fill(buff->win.cr);
+
+	//	gdk_gc_set_foreground(colourgc,&colours[ci-1]);
 	/* and draw the rectangle */
-	gdk_draw_rectangle(buff->win.pixmap
-			   ,colourgc,TRUE,
-			   xp1,yp2,xp2-xp1,yp1-yp2);
+	//	gdk_draw_rectangle(buff->win.pixmap
+	//		   ,colourgc,TRUE,
+	//		   xp1,yp2,xp2-xp1,yp1-yp2);
 	xp1=xp2;
 	
       }
@@ -1073,42 +1109,26 @@ void draw_raster(dbuff *buff)
 }
 
 
-void draw_points(GdkDrawable *pixmap,GdkGC *gc, GdkPoint *dpoints,gint ndpoints){
+//void draw_points(GdkDrawable *pixmap,GdkGC *gc, GdkPoint *dpoints,gint ndpoints){
+void draw_points(cairo_t *cr,cairo_surface_t *surface, GdkPoint *dpoints,gint ndpoints){
   // puts black points in at vertices?  9 pixels!
   int i;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  for (i=0;i<ndpoints;i++)
-    dpoints[i].x +=1;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  for (i=0;i<ndpoints;i++)
-    dpoints[i].y +=1;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  for (i=0;i<ndpoints;i++)
-    dpoints[i].x -= 1;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  for (i=0;i<ndpoints;i++)
-    dpoints[i].x -= 1;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  for (i=0;i<ndpoints;i++)
-    dpoints[i].y -= 1;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  for (i=0;i<ndpoints;i++)
-	dpoints[i].y -= 1;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  for (i=0;i<ndpoints;i++)
-    dpoints[i].x += 1;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  for (i=0;i<ndpoints;i++)
-    dpoints[i].x += 1;
-  gdk_draw_points(pixmap,gc,dpoints,ndpoints);
-  
-  // restore point positions
-  for (i=0;i<ndpoints;i++){
-    dpoints[i].y += 1;
-    dpoints[i].x -= 1;
-  }
-  
+  cairo_set_source_rgb(cr,0.,0.,0.);
 
+  for (i=0;i<ndpoints;i++){
+    cairo_rectangle(cr,dpoints[i].x-1,dpoints[i].y-1,3,3);
+    cairo_fill(cr);
+  }
+
+
+}
+void draw_line_segments(dbuff *buff, GdkPoint *dpoints, int ndpoints){
+  // must have set up color beforehand
+  int i;
+    cairo_move_to(buff->win.cr,dpoints[0].x+0.5,dpoints[0].y+0.5);
+    for (i=1;i<ndpoints;i++)
+      cairo_line_to(buff->win.cr,dpoints[i].x+0.5,dpoints[i].y+0.5);
+    cairo_stroke(buff->win.cr);
 }
 
 void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
@@ -1165,10 +1185,10 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
   y=(int)  -((data[i1*2+ri]
 	      +buff->disp.yoffset)*buff->win.sizey
 	     *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+  /*
   y = MIN(y,buff->win.sizey);
   y = MAX(y,1);
-  gdk_gc_set_foreground(colourgc,col);
-  
+  */
 
  // new way: much faster!
  dpoints[0].x = x+exint;
@@ -1182,18 +1202,22 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
    y2=(int) -((data[i*2+ri]
 	       +buff->disp.yoffset)*buff->win.sizey*
 	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+   /*
    y2 = MIN(y2,buff->win.sizey);
    y2 = MAX(y2,1);
+   */
    dpoints[i-i1].x = x2+exint;
    dpoints[i-i1].y = y2+eyint;
  }
- gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,
-		   i2-i1+1);
+ cairo_set_source_rgb(buff->win.cr,col->red,col->green,col->blue);
+ // printf("in draw_row_trace, drawing lines with %i points\n",i2-i1);
+ draw_line_segments(buff,dpoints,i2-i1+1);
  if (i2-i1+1 < 128 && buff->disp.points){
-   draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
-	       i2-i1+1);
+   draw_points(buff->win.cr,buff->win.surface,dpoints,i2-i1+1);
 
  }
+ // this duplicates a bit, but should ensure its always right.
+ show_active_border();
 
 }
 
@@ -1237,11 +1261,13 @@ void draw_oned(dbuff *buff,float extraxoff,float extrayoff,float *data
   if(buff->disp.base){
     y=-buff->disp.yoffset*buff->win.sizey*buff->disp.yscale/2.
       +buff->win.sizey/2.+1.5;
-    gdk_draw_line(buff->win.pixmap,buff->win.canvas->style->black_gc,
-		  1+exint,eyint+y,buff->win.sizex+exint,y);
+    cairo_set_source_rgb(buff->win.cr,0.,0.,0.);
+    cairo_move_to(buff->win.cr,1+exint,y+eyint+0.5);
+    cairo_line_to(buff->win.cr,buff->win.sizex+exint,y+eyint+0.5);
+    cairo_stroke(buff->win.cr);
 
   }
-
+  // what is extraxoff for anyway?
 
 return;
 }
@@ -1296,9 +1322,10 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     y=(int) -((data[recadd*i1+2*buff->disp.record2]
 	       +buff->disp.yoffset)*buff->win.sizey
 	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+    /*
     y = MIN(y,buff->win.sizey);
-    y = MAX(y,1);
-    gdk_gc_set_foreground(colourgc,&colours[RED]);
+    y = MAX(y,1); */
+    //    gdk_gc_set_foreground(colourgc,&colours[RED]);
 
     dpoints[0].x = x+exint;
     dpoints[0].y = y+eyint;
@@ -1309,18 +1336,23 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       y2=(int) -((data[recadd*i+2*buff->disp.record2]
 		  +buff->disp.yoffset)*buff->win.sizey*
 	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+      /*
       y2 = MIN(y2,buff->win.sizey);
-      y2 = MAX(y2,1);
+      y2 = MAX(y2,1); */
       
       dpoints[ndpoints].x = x2+exint;
       dpoints[ndpoints].y = y2+eyint;
       ndpoints += 1;
-    }
-    gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,
-		   ndpoints);
+    }    
+
+    cairo_set_source_rgb(buff->win.cr,1.,0.,0.);
+    draw_line_segments(buff,dpoints,ndpoints);
+
+    //    gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,
+    //		   ndpoints);
 
     if (ndpoints < 128 && buff->disp.points){ 
-      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
+      draw_points(buff->win.cr,buff->win.surface,dpoints,
 		  ndpoints);
     }
   }
@@ -1330,10 +1362,11 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     y=(int) -((data[recadd*(i1+1)+2*buff->disp.record2]
 	       +buff->disp.yoffset)*buff->win.sizey
 	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+    /*
     y = MIN(y,buff->win.sizey);
-    y = MAX(y,1);
+    y = MAX(y,1); */
     
-    gdk_gc_set_foreground(colourgc,&colours[GREEN]);
+    //    gdk_gc_set_foreground(colourgc,&colours[GREEN]);
     dpoints[0].x = x+exint;
     dpoints[0].y = y+eyint;
 
@@ -1344,17 +1377,19 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       y2=(int) -((data[recadd*(i+1)+2*buff->disp.record2]
 		  +buff->disp.yoffset)*buff->win.sizey*
 	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+      /*
       y2 = MIN(y2,buff->win.sizey);
-      y2 = MAX(y2,1);
+      y2 = MAX(y2,1); */
 
       dpoints[ndpoints].x = x2+exint;
       dpoints[ndpoints].y = y2+eyint;
       ndpoints += 1;
     }
-    gdk_draw_lines(buff->win.pixmap,colourgc,dpoints
-		    ,ndpoints);
+    cairo_set_source_rgb(buff->win.cr,0.,1.,0.);
+    draw_line_segments(buff,dpoints,ndpoints);
+
     if (ndpoints < 128 && buff->disp.points){ 
-      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
+      draw_points(buff->win.cr,buff->win.surface,dpoints,
 		  ndpoints);
     }
 
@@ -1367,10 +1402,10 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		    *(data[recadd*i1+2*buff->disp.record2]))
 	       +buff->disp.yoffset)*buff->win.sizey
 	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+    /*
     y = MIN(y,buff->win.sizey);
-    y = MAX(y,1);
-    
-    gdk_gc_set_foreground(colourgc,&colours[BLUE]);
+    y = MAX(y,1); */
+    //    gdk_gc_set_foreground(colourgc,&colours[BLUE]);
     dpoints[0].x = x+exint;
     dpoints[0].y = y+eyint;
 
@@ -1383,17 +1418,17 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		       +(data[recadd*i+2*buff->disp.record2])
 		       *(data[recadd*i+2*buff->disp.record2]))
 		  +buff->disp.yoffset)*buff->win.sizey*
-	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
-      y2 = MIN(y2,buff->win.sizey);
-      y2 = MAX(y2,1);
+	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5; 
+     /*      y2 = MIN(y2,buff->win.sizey);
+	      y2 = MAX(y2,1); */
       dpoints[ndpoints].x = x2+exint;
       dpoints[ndpoints].y = y2+eyint;
       ndpoints += 1;
     }
-    gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,ndpoints);
+    cairo_set_source_rgb(buff->win.cr,0.,0.,1.);
+    draw_line_segments(buff,dpoints,ndpoints);
     if (ndpoints < 128 && buff->disp.points){ 
-      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
-		  ndpoints);
+      draw_points(buff->win.cr,buff->win.surface,dpoints, ndpoints);
     }
 
    } 
@@ -1403,10 +1438,11 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     y=(int) -((data[recadd*i1+2*buff->disp.record2+1]
 	       +buff->disp.yoffset)*buff->win.sizey
 	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+    /*
     y = MIN(y,buff->win.sizey);
-    y = MAX(y,1);
+    y = MAX(y,1); */
 
-    gdk_gc_set_foreground(colourgc,&colours[GREEN]);
+    //    gdk_gc_set_foreground(colourgc,&colours[GREEN]);
     dpoints[0].x = x+exint;
     dpoints[0].y = y+eyint;
 
@@ -1417,18 +1453,18 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       y2=(int) -((data[recadd*i+2*buff->disp.record2+1]
 		  +buff->disp.yoffset)*buff->win.sizey*
 	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+      /*
       y2 = MIN(y2,buff->win.sizey);
-      y2 = MAX(y2,1);
+      y2 = MAX(y2,1); */
 
       dpoints[ndpoints].x = x2+exint;
       dpoints[ndpoints].y = y2+eyint;
       ndpoints += 1;
     }
-    gdk_draw_lines(buff->win.pixmap,colourgc,dpoints
-		   ,ndpoints);
+    cairo_set_source_rgb(buff->win.cr,0.,1.,0.);
+    draw_line_segments(buff,dpoints,ndpoints);
     if (ndpoints < 128 && buff->disp.points){ 
-      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
-		  ndpoints);
+      draw_points(buff->win.cr,buff->win.surface,dpoints,ndpoints);
     }
    }
    if(buff->disp.mag && true_complex){
@@ -1439,10 +1475,11 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		    *(data[recadd*i1+2*buff->disp.record2+1]))
 	       +buff->disp.yoffset)*buff->win.sizey
 	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+    /*
     y = MIN(y,buff->win.sizey);
-    y = MAX(y,1);
+    y = MAX(y,1); */
     
-    gdk_gc_set_foreground(colourgc,&colours[BLUE]);
+    //    gdk_gc_set_foreground(colourgc,&colours[BLUE]);
     dpoints[0].x = x+exint;
     dpoints[0].y = y+eyint;
 
@@ -1456,26 +1493,33 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		       *(data[recadd*i+2*buff->disp.record2+1]))
 		  +buff->disp.yoffset)*buff->win.sizey*
 	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+      /*
       y2 = MIN(y2,buff->win.sizey);
-      y2 = MAX(y2,1);
+      y2 = MAX(y2,1); */
       dpoints[ndpoints].x = x2+exint;
       dpoints[ndpoints].y = y2+eyint;
       ndpoints += 1;
     }
-    gdk_draw_lines(buff->win.pixmap,colourgc,dpoints,ndpoints);
+    cairo_set_source_rgb(buff->win.cr,0.,0.,1.);
+    draw_line_segments(buff,dpoints,ndpoints);
     if (ndpoints < 128 && buff-> disp.points){ 
-      draw_points(buff->win.pixmap,buff->win.canvas->style->black_gc,dpoints,
-		  ndpoints);
+      draw_points(buff->win.cr,buff->win.surface,dpoints,ndpoints);
     }
    } 
    
   if(buff->disp.base){
     y=-buff->disp.yoffset*buff->win.sizey*buff->disp.yscale/2.
       +buff->win.sizey/2.+1.5;
-    gdk_draw_line(buff->win.pixmap,buff->win.canvas->style->black_gc,
-		  1+exint,eyint+y,buff->win.sizex+exint,y);
+
+    cairo_set_source_rgb(buff->win.cr,0.,0.,0.);
+    cairo_move_to(buff->win.cr,1+exint,eyint+y+0.5);
+    cairo_line_to(buff->win.cr,buff->win.sizex+exint,eyint+y+0.5);
+    cairo_stroke(buff->win.cr);
+
   }
-return;
+  // duplicates, but ensures the border is right.
+  show_active_border();
+  return;
 }
 
 
@@ -1600,11 +1644,11 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
       //      fprintf(stderr,"got buffer at index: %i\n",i);
       for (j=i;j<num_buffs;j++)
 	add_sub.index[j] = add_sub.index[j+1];
-      gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_buff1),i);
-      gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_buff2),i);
-      gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.dest_buff),i+1);
-      gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.s_buff),i);
-      gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.d_buff),i+1);
+      gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(add_sub.s_buff1),i);
+      gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(add_sub.s_buff2),i);
+      gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(add_sub.dest_buff),i+1);
+      gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(fit_data.s_buff),i);
+      gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(fit_data.d_buff),i+1);
 
     }
   }
@@ -1624,12 +1668,15 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
   clear_param_set_2d(&buff->param_set);
 
-  { int i;
-  //  gtk_signal_disconnect_by_data(GTK_OBJECT(buff->win.canvas),buff);
-  i=g_signal_handlers_disconnect_matched(G_OBJECT(buff->win.canvas),G_SIGNAL_MATCH_DATA,0,0,NULL,NULL,buff);
+  { 
+  g_signal_handlers_disconnect_matched(G_OBJECT(buff->win.darea),G_SIGNAL_MATCH_DATA,0,0,NULL,NULL,buff);
   //  fprintf(stderr,"disconnected: %i handlers\n",i);
 }
-  gdk_pixmap_unref(buff->win.pixmap);
+
+  cairo_surface_destroy(buff->win.surface);
+
+  cairo_destroy(buff->win.cr);
+
 
   gtk_widget_destroy( GTK_WIDGET(buff->win.window) ); 
   g_free(buff);
@@ -1643,7 +1690,8 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
 
   if (num_buffs == 0){
-    gdk_cursor_unref(cursorclock);
+    // why bother - it crashes, the busy cursor doesn't work?
+    //    g_object_unref(cursorclock);
     gtk_main_quit();  
     fprintf(stderr,"called gtk_main_quit\n");
 
@@ -1661,7 +1709,7 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
       for( current = 0; buffp[ current ] == NULL; current++ );
 
     show_active_border();  
-    gdk_window_raise( buffp[ current ]->win.window->window );
+    gdk_window_raise( gtk_widget_get_window(buffp[ current ]->win.window) );
 
     old_update_open = no_update_open;
     no_update_open = 1;
@@ -1693,11 +1741,10 @@ void file_close(GtkAction *action,dbuff *buff)
   This seems to be roughly the same sequence that we'd get if we emitted a delete_event signal*/
 
 
-  int result;
-  //  fprintf(stderr,"file close for buffer: %i\n",buff->buffnum);
+  //  Fprintf(stderr,"file close for buffer: %i\n",buff->buffnum);
   /* kill the window */
   
-  result = destroy_buff(GTK_WIDGET(buff->win.window),NULL,buff);
+  destroy_buff(GTK_WIDGET(buff->win.window),NULL,buff);
 
   return;
 }
@@ -2034,16 +2081,16 @@ gint full_routine(GtkWidget *widget,dbuff *buff)
 
 
 
-void s2ndelete(dbuff *buff,GtkWidget *widget){
+void s2ndelete(GtkWidget *widget,dbuff *buff){
 
       gtk_widget_destroy(s2n_dialog);
 
-      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
   // disconnect our event
 
-      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
+      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.darea), 
                         G_CALLBACK( s2n_press_event), buff);
       doing_s2n = 0;
       buff->win.press_pend=0;
@@ -2072,25 +2119,25 @@ void signal2noise(GtkAction *action,dbuff *buff)
   s2n_dialog = gtk_dialog_new(); 
   s2n_label = gtk_label_new("Click on the peak");
   gtk_container_set_border_width( GTK_CONTAINER(s2n_dialog), 5 ); 
-  gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(s2n_dialog)->vbox) ), s2n_label, FALSE, FALSE, 5 ); 
+  gtk_box_pack_start ( GTK_BOX(gtk_dialog_get_content_area( GTK_DIALOG(s2n_dialog) )), s2n_label, FALSE, FALSE, 5 ); 
 
 
   // place the dialog:
   gtk_window_set_transient_for(GTK_WINDOW(s2n_dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(s2n_dialog),GTK_WIN_POS_CENTER_ON_PARENT);
 
-  g_signal_connect_swapped(G_OBJECT(s2n_dialog),"delete_event",G_CALLBACK(s2ndelete),buff);
+  g_signal_connect(G_OBJECT(s2n_dialog),"delete_event",G_CALLBACK(s2ndelete),buff);
   gtk_widget_show_all (s2n_dialog); 
 
 
 
   // block the ordinary press event
-  g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+  g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
-				     buff);
+				     buff); 
 
   // connect our event
-  g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+  g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
                         G_CALLBACK( s2n_press_event), buff);
   
   return;
@@ -2201,7 +2248,7 @@ void s2n_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
       s_pt2 = pix_to_x(buff, event->x);
       // now in here we need to calculate the s2n and display it
 
-      s2ndelete(buff,widget);
+      s2ndelete(widget,buff);
       do_s2n(peak,s_pt1,s_pt2,buff);
 
       // calculate the s2n
@@ -2223,13 +2270,13 @@ void signal2noiseold(GtkAction *action, dbuff *buff)
 
 
 
-void int_delete(dbuff *buff,GtkWidget *widget){
+void int_delete(GtkWidget *widget,dbuff *buff){
   //  fprintf(stderr,"in int_delete\n");
   buff->win.press_pend = 0;
   doing_int = 0;
-  g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
+  g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.darea), 
 					G_CALLBACK( integrate_press_event), buff);
-  g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+  g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
 				    G_CALLBACK (press_in_win_event),buff);
 
   gtk_widget_destroy(int_dialog);
@@ -2262,7 +2309,7 @@ void integrate(GtkAction *action, dbuff *buff)
   int_dialog = gtk_dialog_new(); 
   int_label = gtk_label_new("Click on one edge of the integral");
   gtk_container_set_border_width( GTK_CONTAINER(int_dialog), 5 ); 
-  gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(int_dialog)->vbox) ), int_label, FALSE, FALSE, 5 ); 
+  gtk_box_pack_start ( GTK_BOX(gtk_dialog_get_content_area( GTK_DIALOG(int_dialog)) ), int_label, FALSE, FALSE, 5 ); 
 
   // place the dialog:
   gtk_window_set_transient_for(GTK_WINDOW(int_dialog),GTK_WINDOW(panwindow));
@@ -2273,15 +2320,15 @@ void integrate(GtkAction *action, dbuff *buff)
 
 
   // block the ordinary press event
-  g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+  g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
 
   // connect our event
-  g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+  g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
                         G_CALLBACK( integrate_press_event), buff);
   //trap user killing our window
-  g_signal_connect_swapped(G_OBJECT(int_dialog),"delete_event",G_CALLBACK(int_delete),buff);
+  g_signal_connect(G_OBJECT(int_dialog),"delete_event",G_CALLBACK(int_delete),buff);
   
   return;
 
@@ -2297,7 +2344,7 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
  FILE *fstream=NULL;
  char string[2*UTIL_LEN],arr_name[PARAM_NAME_LEN];
  int count,i,j,arr_num_for_int,arr_type=3;
- float integral,f1,f2;
+ float integral;//,f1,f2;
  int export = 1;
 
  arr_num_for_int=0;
@@ -2342,18 +2389,18 @@ void do_integrate(int pt1,int pt2,dbuff *buff)
 
  if (export == 1) fprintf(fstream,"%s %s %s","#",arr_name,", integral value\n");
  
- 
+ /*
  if (buff->flags & FT_FLAG){         //frequency domain
    f1 = -( (float) pt1 * 1./buff->param_set.dwell*1e6/buff->npts
-	   - (float) 1./buff->param_set.dwell*1e6/2.);
+   	   - (float) 1./buff->param_set.dwell*1e6/2.);
    f2 = -( (float) pt2 * 1./buff->param_set.dwell*1e6/buff->npts
-	   - (float) 1./buff->param_set.dwell*1e6/2.);
+   	   - (float) 1./buff->param_set.dwell*1e6/2.);
  } 
  else{                              //time domain
    f1 = (float) pt1 * buff->param_set.dwell;
    f2 = (float) pt2 * buff->param_set.dwell;
  }
- 
+ */
  //now do integrate
  
  for (j = 0; j<buff->npts2;j+=buff->is_hyper+1){      //do each slice and output all to screen
@@ -2431,7 +2478,7 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 
       // disconnect our event
-      int_delete(buff,widget);
+      int_delete(widget,buff);
 
       //      fprintf(stderr,"about to do_integrate\n");
       do_integrate(i_pt1,i_pt2,buff);
@@ -2497,24 +2544,24 @@ gint expand_routine(GtkWidget *widget,dbuff *buff)
     return TRUE;
   }
 
-  if (buff->win.press_pend==0 &&GTK_TOGGLE_BUTTON(widget)->active
+if (buff->win.press_pend==0 && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))
       && (buff->disp.dispstyle==SLICE_ROW ||buff->disp.dispstyle==SLICE_COL
 	  ||buff->disp.dispstyle == RASTER)){
     /* do the expand */
     buff->win.toggleb = widget;
-    g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+    g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
-    g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+    g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
                         G_CALLBACK( expand_press_event), buff);
     buff->win.press_pend=2;
   }
-  else if( !GTK_TOGGLE_BUTTON(widget)->active && buff->win.toggleb == widget){
+ else if( !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)) && buff->win.toggleb == widget){
     /* give up on expand */
-    g_signal_handlers_disconnect_by_func(G_OBJECT (buff->win.canvas),
+    g_signal_handlers_disconnect_by_func(G_OBJECT (buff->win.darea),
                                   G_CALLBACK( expand_press_event),buff);
     buff->win.press_pend=0;
-    g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+    g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
     draw_canvas(buff);
@@ -2584,13 +2631,17 @@ gint expand_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 
 
-    if (buff->disp.dispstyle == RASTER){ //draw line other way too !
+    if (buff->disp.dispstyle == RASTER){ //draw line horizontally too !
       rect.x=1;
       rect.y=sizey+1-yval;
       rect.width=sizex;
       rect.height=1;
-      gdk_draw_line(buff->win.pixmap,colourgc,1,
-                  rect.y,sizex,rect.y);
+      cairo_set_source_rgb(buff->win.cr,0,0,1.);
+      cairo_move_to(buff->win.cr,1,sizey+1-yval+0.5);
+      cairo_line_to(buff->win.cr,1+sizex,sizey+1-yval+1+0.5);
+	//      gdk_draw_line(buff->win.pixmap,colourgc,1,
+	//                  rect.y,sizex,rect.y);
+      cairo_stroke(buff->win.cr);
       
       gtk_widget_queue_draw_area (widget, rect.x,rect.y,rect.width,rect.height);
     }
@@ -2667,22 +2718,22 @@ gint expandf_routine(GtkWidget *widget,dbuff *buff)
     return TRUE;
   }
 
-  if (buff->win.press_pend==0 &&GTK_TOGGLE_BUTTON(widget)->active
+  if (buff->win.press_pend==0 && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))
  && (buff->disp.dispstyle==SLICE_ROW ||buff->disp.dispstyle==SLICE_COL)){
     /* do the expand */
     buff->win.toggleb = widget;
-    g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+    g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
-    g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+    g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
                         G_CALLBACK( expandf_press_event), buff);
     buff->win.press_pend=1;
   }
-  else if( !GTK_TOGGLE_BUTTON(widget)->active && buff->win.toggleb == widget){
+  else if( !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)) && buff->win.toggleb == widget){
     /* give up on expand */
-    g_signal_handlers_disconnect_by_func(G_OBJECT (buff->win.canvas),
+    g_signal_handlers_disconnect_by_func(G_OBJECT (buff->win.darea),
                                   G_CALLBACK( expandf_press_event),buff);
-    g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+    g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
 
@@ -2700,12 +2751,12 @@ gint expandf_routine(GtkWidget *widget,dbuff *buff)
 gint
 expandf_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 {
-  int sizex,sizey;
+  int sizex; //,sizey;
   int xval;
 
   //fprintf(stderr,"in expandf press event\n");
   sizex=buff->win.sizex;
-  sizey=buff->win.sizey;
+  //  sizey=buff->win.sizey;
 
   xval=event->x;
   if(xval == 0) xval=1;
@@ -2785,7 +2836,7 @@ gint autocheck_routine(GtkWidget *widget,dbuff *buff)
   //fprintf(stderr,"autocheck routine\n");
   CHECK_ACTIVE(buff);
 
-  if (GTK_TOGGLE_BUTTON(widget)->active) draw_canvas(buff);
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))) draw_canvas(buff);
   return 0;
 }
 
@@ -2968,21 +3019,21 @@ gint offset_routine(GtkWidget *widget,dbuff *buff)
 {
   CHECK_ACTIVE(buff);
   //fprintf(stderr,"offset routine\n");
-  if (buff->win.press_pend==0 &&GTK_TOGGLE_BUTTON(widget)->active
+  if (buff->win.press_pend==0 && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))
  && (buff->disp.dispstyle==SLICE_ROW ||buff->disp.dispstyle==SLICE_COL)){
     buff->win.toggleb = widget;
     buff->win.press_pend=2;
-    g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+    g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
-    g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+    g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
                         G_CALLBACK( offset_press_event), buff);
   }
-  else if( !GTK_TOGGLE_BUTTON(widget)->active && buff->win.toggleb==widget){
-    g_signal_handlers_disconnect_by_func(G_OBJECT (buff->win.canvas),
+  else if( !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)) && buff->win.toggleb==widget){
+    g_signal_handlers_disconnect_by_func(G_OBJECT (buff->win.darea),
                                   G_CALLBACK( offset_press_event),buff);
     buff->win.press_pend=0;
-    g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+    g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
     draw_canvas(buff);
@@ -3010,9 +3061,13 @@ gint offset_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
     rect.y=yval;
     rect.width=sizex;
     rect.height=1;
-    gdk_gc_set_foreground(colourgc,&colours[BLUE]);
-    gdk_draw_line(buff->win.pixmap,colourgc,rect.x,
-                  rect.y,sizex,rect.y);
+    cairo_set_source_rgb(buff->win.cr,0,0,1.0);
+    cairo_move_to(buff->win.cr,rect.x,rect.y+0.5);
+    cairo_line_to(buff->win.cr,sizex,rect.y+0.5);
+    cairo_stroke(buff->win.cr);
+      //    gdk_gc_set_foreground(colourgc,&colours[BLUE]);
+      //    gdk_draw_line(buff->win.pixmap,colourgc,rect.x,
+      //                  rect.y,sizex,rect.y);
     gtk_widget_queue_draw_area (widget, rect.x,rect.y,rect.width,rect.height);
 
   }
@@ -3049,7 +3104,7 @@ void make_active(dbuff *buff){
     show_parameter_frame( &buff->param_set,buff->npts );
     show_process_frame( buff->process_data );
     show_active_border(); 
-    gdk_window_raise(buff->win.window->window);
+    gdk_window_raise(gtk_widget_get_window(buff->win.window));
     if (upload_buff == current)
       update_2d_buttons();
     else
@@ -3183,7 +3238,7 @@ gint press_in_win_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff)
 
 
     /* get position of buffer window */
-    gdk_window_get_position(buff->win.window->window,&wx,&wy);
+    gdk_window_get_position(gtk_widget_get_window(buff->win.window),&wx,&wy);
     /* and set position of popup */
 
     gtk_window_move(GTK_WINDOW(freq_popup),wx+event->x+1,wy+event->y+25);
@@ -3215,69 +3270,73 @@ gint press_in_win_event(GtkWidget *widget,GdkEventButton *event,dbuff *buff)
 void show_active_border()
 {
   dbuff *buff;
-  GdkRectangle rect;
-
+  //  GdkRectangle rect;
+  //  printf("in show_active_border\n");
   buff=buffp[current];
-  if(buff != NULL && colourgc != NULL){
-    gdk_gc_set_foreground(colourgc,&colours[RED]);
+  if(buff != NULL && buff->win.cr != NULL){
+    //    gdk_gc_set_foreground(colourgc,&colours[RED]);
    /* draw border in red */
     /*left edge */
+    //red :
+    cairo_set_source_rgb(buff->win.cr,1.,0.,0.);
+
+
+    cairo_move_to(buff->win.cr,0.5,0.5);
+    cairo_line_to(buff->win.cr,0.5,buff->win.sizey+1.5);
+    cairo_line_to(buff->win.cr,buff->win.sizex+1.5,buff->win.sizey+1.5);
+    cairo_line_to(buff->win.cr,buff->win.sizex+1.5,0.5);
+    cairo_line_to(buff->win.cr,0.5,0.5);
+    cairo_stroke(buff->win.cr);
+    gtk_widget_queue_draw_area(buff->win.darea,0,0,1,buff->win.sizey+2);
+    gtk_widget_queue_draw_area(buff->win.darea,0,0,buff->win.sizex+2,1);
+    gtk_widget_queue_draw_area(buff->win.darea,buff->win.sizex+1,0,1,buff->win.sizey+2);
+    gtk_widget_queue_draw_area(buff->win.darea,0,buff->win.sizey+1,buff->win.sizex+2,1);
+    /*		 
    rect.x=0;
    rect.y=0;
    rect.height=buff->win.sizey+2;
    rect.width=1;
-   gdk_draw_line(buff->win.pixmap,colourgc,
-		   rect.x,rect.y,rect.x,rect.y+rect.height);
-   gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
+   //   gdk_draw_line(buff->win.pixmap,colourgc,
+   //		   rect.x,rect.y,rect.x,rect.y+rect.height);
 
    rect.x=buff->win.sizex+1;
-   gdk_draw_line(buff->win.pixmap,colourgc,
-		   rect.x,rect.y,rect.x,rect.y+rect.height);
-   gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
+		 //   gdk_draw_line(buff->win.pixmap,colourgc,
+		 //		   rect.x,rect.y,rect.x,rect.y+rect.height);
+   gtk_widget_queue_draw_area(buff->win.darea,rect.x,rect.y,rect.width,rect.height);
 
    rect.y=0;
    rect.x=0;
    rect.height=1;
    rect.width=buff->win.sizex+2;
-   gdk_draw_line(buff->win.pixmap,colourgc,
-		   rect.x,rect.y,rect.x+rect.width,rect.y);
-   gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
+
+
+
+   //   gdk_draw_line(buff->win.pixmap,colourgc,
+   //		   rect.x,rect.y,rect.x+rect.width,rect.y);
+   gtk_widget_queue_draw_area(buff->win.darea,rect.x,rect.y,rect.width,rect.height);
    
    rect.y=buff->win.sizey+1;
-   gdk_draw_line(buff->win.pixmap,colourgc,
-		   rect.x,rect.y,rect.x+rect.width,rect.y);
-   gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
 
+//   gdk_draw_line(buff->win.pixmap,colourgc,
+		   rect.x,rect.y,rect.x+rect.width,rect.y);
+   gtk_widget_queue_draw_area(buff->win.darea,rect.x,rect.y,rect.width,rect.height);
+   */
  }
  buff=buffp[last_current];
  if((buff != NULL) && (last_current !=current)){
-    /*left edge */
-   rect.x=0;
-   rect.y=0;
-   rect.height=buff->win.sizey+2;
-   rect.width=1;
-   gdk_draw_line(buff->win.pixmap,buff->win.canvas->style->white_gc,
-		   rect.x,rect.y,rect.x,rect.y+rect.height);
-   gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
+   cairo_set_source_rgb(buff->win.cr,1.,1.,1.);
 
-   rect.x=buff->win.sizex+1;
-   gdk_draw_line(buff->win.pixmap,buff->win.canvas->style->white_gc,
-		   rect.x,rect.y,rect.x,rect.y+rect.height);
-   gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
 
-   rect.y=0;
-   rect.x=0;
-   rect.height=1;
-   rect.width=buff->win.sizex+2;
-   gdk_draw_line(buff->win.pixmap,buff->win.canvas->style->white_gc,
-		   rect.x,rect.y,rect.x+rect.width,rect.y);
-   gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
-   
-   rect.y=buff->win.sizey+1;
-   gdk_draw_line(buff->win.pixmap,buff->win.canvas->style->white_gc,
-		   rect.x,rect.y,rect.x+rect.width,rect.y);
-   gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
-
+   cairo_move_to(buff->win.cr,0.5,0.5);
+   cairo_line_to(buff->win.cr,0.5,buff->win.sizey+1.5);
+   cairo_line_to(buff->win.cr,buff->win.sizex+1.5,buff->win.sizey+1.5);
+   cairo_line_to(buff->win.cr,buff->win.sizex+1.5,0.5);
+   cairo_line_to(buff->win.cr,0.5,0.5);
+   cairo_stroke(buff->win.cr);
+   gtk_widget_queue_draw_area(buff->win.darea,0,0,1,buff->win.sizey+2);
+   gtk_widget_queue_draw_area(buff->win.darea,0,0,buff->win.sizex+2,1);
+   gtk_widget_queue_draw_area(buff->win.darea,buff->win.sizex+1,0,1,buff->win.sizey+2);
+   gtk_widget_queue_draw_area(buff->win.darea,0,buff->win.sizey+1,buff->win.sizex+2,1);
  }
  return;
 }
@@ -3343,7 +3402,7 @@ gint hyper_check_routine(GtkWidget *widget,dbuff *buff)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.true_complex),0);
 
 
-  if(GTK_TOGGLE_BUTTON(widget)->active){
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))){
 
     /* ok, just said that it is hypercomplex */
     if (buff->npts2 < 4){
@@ -4081,16 +4140,16 @@ gint pix_to_x(dbuff * buff,int xval){
 
 gint pix_to_y(dbuff * buff,int yval){
 
-  int npts1,npts2,i1,i2,j1,j2,ret;
+  int npts2,j1,j2,ret; //,i1,i2,npts1;
   float yppt;
 
 
-  npts1=buff->npts;
+  //  npts1=buff->npts;
   npts2=buff->npts2;
   if (buff->is_hyper) npts2 = buff->npts2/2;
 
-  i1=(int) (buff->disp.xx1 * (npts1-1) +.5);
-  i2=(int) (buff->disp.xx2 * (npts1-1) +.5);
+  //  i1=(int) (buff->disp.xx1 * (npts1-1) +.5);
+  //  i2=(int) (buff->disp.xx2 * (npts1-1) +.5);
 
   j1=(int) (buff->disp.yy1 * (npts2-1) +.5);
   j2=(int) (buff->disp.yy2 * (npts2-1) +.5);
@@ -5112,15 +5171,15 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   
 }
 
-void sf1delete(dbuff *buff,GtkWidget *widget){
+void sf1delete(GtkWidget *widget,dbuff *buff){
 
 
   buff->win.press_pend = 0;
   
 
-  g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
+  g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.darea), 
 					G_CALLBACK( set_sf1_press_event), buff);
-  g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+  g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
   gtk_widget_destroy(setsf1dialog);
@@ -5139,7 +5198,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   char s[PARAM_NAME_LEN];
 
 
-  sf1delete(buff,widget);
+  sf1delete(widget,buff);
   
 
   point = pix_to_x(buff, event->x);
@@ -5211,12 +5270,12 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
       }
       //      fprintf(stderr,"unarray in set_sf1_press_event: max size was %i\n",max);
       if (buff->buffnum == current) 
-	gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), max ); 
+	gtk_adjustment_set_value( acqs_2d_adj , max ); 
       else buff->param_set.num_acqs_2d = max;      
     } // that was the end of unarraying
 
     if (buff->buffnum == current)
-      gtk_adjustment_set_value(GTK_ADJUSTMENT(param_button[sf_param].adj),old_freq/buff->param_set.parameter[sf_param].unit);    
+      gtk_adjustment_set_value(param_button[sf_param].adj,old_freq/buff->param_set.parameter[sf_param].unit);    
     else
       buff->param_set.parameter[sf_param].f_val = old_freq/buff->param_set.parameter[sf_param].unit;
   }
@@ -5261,12 +5320,12 @@ void set_sf1(GtkAction *action,dbuff *buff)
   buff->win.press_pend=1;
 
   // block the ordinary press event
-  g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+  g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
 
   // connect our event
-  g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+  g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
                         G_CALLBACK( set_sf1_press_event), buff);
   
 
@@ -5281,8 +5340,8 @@ void set_sf1(GtkAction *action,dbuff *buff)
   setsf1dialog = gtk_dialog_new(); 
   setsf1label = gtk_label_new("Click on the new carrier frequency");
   gtk_container_set_border_width( GTK_CONTAINER(setsf1dialog), 5 ); 
-  gtk_box_pack_start ( GTK_BOX( (GTK_DIALOG(setsf1dialog)->vbox) ), setsf1label, FALSE, FALSE, 5 ); 
-  g_signal_connect_swapped(G_OBJECT(setsf1dialog),"delete_event",G_CALLBACK(sf1delete),buff);
+  gtk_box_pack_start ( GTK_BOX(gtk_dialog_get_content_area( GTK_DIALOG(setsf1dialog)) ), setsf1label, FALSE, FALSE, 5 ); 
+  g_signal_connect(G_OBJECT(setsf1dialog),"delete_event",G_CALLBACK(sf1delete),buff);
   gtk_window_set_transient_for(GTK_WINDOW(setsf1dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(setsf1dialog),GTK_WIN_POS_CENTER_ON_PARENT);
 
@@ -5441,7 +5500,7 @@ gint channel_button_change(GtkWidget *widget,dbuff *buff){
   CHECK_ACTIVE(buff);
 
 
-  if (!GTK_TOGGLE_BUTTON (widget)->active) {
+  if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))) {
     //    fprintf(stderr,"channel button not active\n");
     return TRUE;
   }
@@ -5560,7 +5619,7 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
 
   CHECK_ACTIVE(buff);
   if (base.spline_current_buff != -1) {
-    gdk_window_raise(base.dialog->window);
+    gdk_window_raise(gtk_widget_get_window(base.dialog));
     fprintf(stderr,"already picking\n");
     return;
   }
@@ -5602,11 +5661,11 @@ void pick_spline_points(GtkAction *action,dbuff *buff){
 
 
   base.spline_current_buff = buff->buffnum;
-  g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+  g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				  G_CALLBACK (press_in_win_event),
 				  buff);
   // connect our event
-  g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+  g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
 		    G_CALLBACK( baseline_spline), buff);
   buff->win.press_pend=1;
   
@@ -5703,7 +5762,7 @@ void show_spline_fit(GtkAction *action, dbuff *buff){
   calc_spline_fit(buff,base.spline_points,base.yvals,base.num_spline_points,base.y2vals,temp_data);
   
   draw_row_trace(buff, 0.,0.,temp_data,buff->npts, &colours[BLUE],0);
-  gtk_widget_queue_draw_area(buff->win.canvas,1,1,buff->win.sizex,buff->win.sizey);
+  gtk_widget_queue_draw_area(buff->win.darea,1,1,buff->win.sizex,buff->win.sizey);
   
   g_free(temp_data);
   
@@ -5753,7 +5812,7 @@ void baseline_spline(dbuff *buff, GdkEventButton * action, GtkWidget *widget)
 
   /* First:  if we get a point */
 
-  if ((void *) buff == (void *) buffp[base.spline_current_buff]->win.canvas){ // then we've come from selecting a point.
+  if ((void *) buff == (void *) buffp[base.spline_current_buff]->win.darea){ // then we've come from selecting a point.
       event = (GdkEventButton *) action;
 
       if (buffp[base.spline_current_buff]->disp.dispstyle==SLICE_ROW){
@@ -5812,17 +5871,17 @@ void baseline_spline(dbuff *buff, GdkEventButton * action, GtkWidget *widget)
     
     if ((void *) buff == (void *) base.dialog){ 
       //           fprintf(stderr,"buff is dialog!\n");
-      gtk_object_destroy(GTK_OBJECT(base.dialog));
-      
+      //      gtk_object_destroy(GTK_OBJECT(base.dialog));
+      gtk_widget_destroy(base.dialog);
       if ( buffp[base.spline_current_buff] == NULL){ // our buffer destroyed while we were open...
 	fprintf(stderr,"Baseline_spline: buffer was destroyed while we were open\n");
       }
       else{
 	buffp[base.spline_current_buff]->win.press_pend = 0;
-	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[base.spline_current_buff]->win.canvas), 
+	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[base.spline_current_buff]->win.darea), 
 					      G_CALLBACK( baseline_spline), buffp[base.spline_current_buff]);
 	
-	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[base.spline_current_buff]->win.canvas),
+	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[base.spline_current_buff]->win.darea),
 					  G_CALLBACK (press_in_win_event),
 					  buffp[base.spline_current_buff]);
       }
@@ -5870,7 +5929,7 @@ void add_subtract(GtkAction *action, dbuff *buff){
     add_sub.shown = 1;
   }
   else
-    gdk_window_raise( add_sub.dialog->window);
+    gdk_window_raise( gtk_widget_get_window(add_sub.dialog));
 
   
 
@@ -5880,7 +5939,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
 
 
   int i,j,k;
-  double f1,f2;
+  //  double f1,f2;
   int sbnum1,sbnum2,dbnum;
   char s[5];
 
@@ -5907,8 +5966,8 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
 
   //  fprintf(stderr,"got actives: %i %i %i\n",i,j,k);
 
-  f1 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult1));
-  f2 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult2));
+  //  f1 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult1));
+  //  f2 = gtk_spin_button_get_value(GTK_SPIN_BUTTON(add_sub.mult2));
   
   //  fprintf(stderr," got multipliers: %lf %lf\n",f1,f2);
 
@@ -5925,14 +5984,14 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
 
       for (i= add_sub.s_rec_c1-1; i >= buffp[sbnum1]->npts2;i--){
 	//	fprintf(stderr,"deleting record: %i\n",i);
-	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_record1),i+2);
+	gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(add_sub.s_record1),i+2);
       }
     }
     else if(buffp[sbnum1]->npts2 > add_sub.s_rec_c1){ // too few
       for (i=add_sub.s_rec_c1;i<buffp[sbnum1]->npts2;i++){
 	sprintf(s,"%i",i);
 	//	fprintf(stderr,"adding record: %i\n",i);
-	gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record1),s);
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.s_record1),s);
       }
     }
     add_sub.s_rec_c1 = buffp[sbnum1]->npts2;
@@ -5951,14 +6010,14 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
 
       for (i= add_sub.s_rec_c2-1; i >= buffp[sbnum2]->npts2;i--){
 	//	fprintf(stderr,"deleting record: %i\n",i);
-	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.s_record2),i+2);
+	gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(add_sub.s_record2),i+2);
       }
     }
     else if(buffp[sbnum2]->npts2 > add_sub.s_rec_c2){ // too few
       for (i=add_sub.s_rec_c2;i<buffp[sbnum2]->npts2;i++){
 	sprintf(s,"%i",i);
 	//	fprintf(stderr,"adding record: %i\n",i);
-	gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record2),s);
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.s_record2),s);
       }
     }
     add_sub.s_rec_c2 = buffp[sbnum2]->npts2;
@@ -5986,7 +6045,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
       for (i= add_sub.dest_rec_c-1; i >= new_num;i--){ // too many
 
 	//	fprintf(stderr,"deleting record: %i\n",i);
-	gtk_combo_box_remove_text(GTK_COMBO_BOX(add_sub.dest_record),i+2);
+	gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(add_sub.dest_record),i+2);
       }
 
     }
@@ -5994,7 +6053,7 @@ void add_sub_changed(GtkWidget *widget,gpointer data){
       for (i=add_sub.dest_rec_c;i<new_num;i++){
 	sprintf(s,"%i",i);
 	//	fprintf(stderr,"adding record: %i\n",i);
-	gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.dest_record),s);
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.dest_record),s);
       }
     }
     add_sub.dest_rec_c = new_num;
@@ -6337,8 +6396,8 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
   sbnum = add_sub.index[gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_buff))];
 
   // if we're coming in from a press event in the window:
-  if ((void *) buff == (void *) buffp[sbnum]->win.canvas){
-    int i,i_max,xpt,record,i_left,i_right;
+  if ((void *) buff == (void *) buffp[sbnum]->win.darea){
+    int i,xpt,record,i_left,i_right; //,i_max;
     float max,m,b,width,x_left,x_right;
 
     event = (GdkEventButton *) action;
@@ -6367,7 +6426,7 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
       
       xpt = pix_to_x(buffp[sbnum],event->x);
       //    fprintf(stderr,"got point %i\n",xpt);
-      i_max = xpt;
+      //      i_max = xpt;
       record = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record));
       
       max = buffp[sbnum]->data[xpt*2 + buffp[sbnum]->npts*2*record];
@@ -6376,7 +6435,7 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
 	for (i=xpt+1;i<buffp[sbnum]->npts;i++){
 	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->npts*2*record] > max){
 	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record];
-	    i_max = i;
+	    //	    i_max = i;
 	  }
 	  else i = buffp[sbnum]->npts;
 	}
@@ -6384,7 +6443,7 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
 	for (i=xpt-1;i>=0;i--){
 	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->npts*2*record] > max){
 	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record];
-	    i_max = i;
+	    //	    i_max = i;
 	  }
 	  else i = -1;
 	}
@@ -6454,17 +6513,18 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
   if ((void *) buff == (void *) fit_data.add_dialog){ 
     //           fprintf(stderr,"buff is dialog!\n");
     //    fprintf(stderr,"believe we got a delete event for dialog\n");
-    gtk_object_destroy(GTK_OBJECT(fit_data.add_dialog));
+    //    gtk_object_destroy(GTK_OBJECT(fit_data.add_dialog));
+    gtk_widget_destroy(fit_data.add_dialog);
     fit_data.add_dialog = NULL;
       if ( buffp[sbnum] == NULL){ // our buffer destroyed while we were open... shouldn't happen
 	fprintf(stderr,"fit_add_components: buffer was destroyed while we were open\n");
       }
       else{
 	buffp[sbnum]->win.press_pend = 0;
-	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[sbnum]->win.canvas), 
+	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[sbnum]->win.darea), 
 					      G_CALLBACK( fit_add_components), buffp[sbnum]);
 	
-	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[sbnum]->win.canvas),
+	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[sbnum]->win.darea),
 					  G_CALLBACK (press_in_win_event),
 					  buffp[sbnum]);
       }
@@ -6508,7 +6568,7 @@ void fitting(GtkAction *action,dbuff *buff){
     fit_data.shown = 1;
   }
   else
-    gdk_window_raise( fit_data.dialog->window); // but not fill in here
+    gdk_window_raise( gtk_widget_get_window(fit_data.dialog)); // but not fill in here
 
 
   
@@ -6596,11 +6656,11 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
       gtk_window_set_position(GTK_WINDOW(fit_data.add_dialog),GTK_WIN_POS_CENTER_ON_PARENT);
       gtk_widget_show_all (fit_data.add_dialog);
       */
-      g_signal_handlers_block_by_func(G_OBJECT(buffp[sbnum]->win.canvas),
+      g_signal_handlers_block_by_func(G_OBJECT(buffp[sbnum]->win.darea),
 				      G_CALLBACK (press_in_win_event),
 				      buffp[sbnum]);
       // connect our event
-      g_signal_connect (G_OBJECT (buffp[sbnum]->win.canvas), "button_press_event",
+      g_signal_connect (G_OBJECT (buffp[sbnum]->win.darea), "button_press_event",
                         G_CALLBACK( fit_add_components), buffp[sbnum]);
       buffp[sbnum]->win.press_pend=1;
       return;
@@ -6928,7 +6988,7 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	draw_row_trace(buffp[sbnum],0,0,spect,buffp[sbnum]->npts,&colours[BLUE],0);
 	//	draw_row_trace(buffp[sbnum],0,0,spect,n/2,&colours[GREEN],1);
 
-	gtk_widget_queue_draw_area(buffp[sbnum]->win.canvas,1,1,buffp[sbnum]->win.sizex,buffp[sbnum]->win.sizey);
+	gtk_widget_queue_draw_area(buffp[sbnum]->win.darea,1,1,buffp[sbnum]->win.sizex,buffp[sbnum]->win.sizey);
       }
 
   get_out_of_fit:
@@ -7140,14 +7200,14 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
     if (buffp[snum]->npts2 < fit_data.s_rec){ // too many
 
       for(i= fit_data.s_rec-1;i>= buffp[snum]->npts2;i--){
-	gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.s_record),i);
+	gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(fit_data.s_record),i);
       }
     }
     else 
       if (buffp[snum]->npts2 > fit_data.s_rec){ // too few
 	for (i=fit_data.s_rec;i<buffp[snum]->npts2;i++){
 	  sprintf(s,"%i",i);
-	  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.s_record),s);
+	  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(fit_data.s_record),s);
 	}
       }
     fit_data.s_rec = buffp[snum]->npts2;
@@ -7158,14 +7218,14 @@ void fit_data_changed(GtkWidget *widget,gpointer data){
     if (dnum >= 0 ) new_num = buffp[dnum]->npts2;
     if (new_num < fit_data.d_rec){ // too many
       for(i= fit_data.d_rec-1;i>= new_num;i--){
-	gtk_combo_box_remove_text(GTK_COMBO_BOX(fit_data.d_record),i+1);
+	gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(fit_data.d_record),i+1);
       }
     }
     else 
       if (new_num > fit_data.d_rec){ // too few
 	for (i=fit_data.d_rec;i<new_num;i++){
 	  sprintf(s,"%i",i);
-	  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_record),s);
+	  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(fit_data.d_record),s);
 	}
       }
     fit_data.d_rec = new_num;
@@ -7316,7 +7376,7 @@ void queue_window(GtkAction *action, dbuff *buff){
   CHECK_ACTIVE(buff);
 
  gtk_widget_show_all(queue.dialog);
- gdk_window_raise(queue.dialog->window);
+ gdk_window_raise(gtk_widget_get_window(queue.dialog));
 
  if ( gtk_tree_selection_get_selected(queue.select,&model,&queue.iter)){
    //   fprintf(stderr,"unselecting\n");
@@ -7816,7 +7876,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	      strcpy(output,"NO INTEGER FOUND");
 	      return 0;
 	    }
-	    gtk_adjustment_set_value( GTK_ADJUSTMENT(param_button[i].adj), (double) ival);
+	    gtk_adjustment_set_value( param_button[i].adj, (double) ival);
 	    //buffp[current]->param_set.parameter[i].i_val = ival;
 	    //	    show_parameter_frame( &buffp[current]->param_set ,buffp[current]->npts);
 	    //	    fprintf(stderr,"updated param %s to %i\n",pname,ival);
@@ -7834,7 +7894,7 @@ int script_handler(char *input,char *output, int source,int *bnum){
 	      return 0;
 	    }
 	   
-	    gtk_adjustment_set_value( GTK_ADJUSTMENT(param_button[i].adj), (double) fval);
+	    gtk_adjustment_set_value( param_button[i].adj, (double) fval);
 	    //	    buffp[current]->param_set.parameter[i].f_val = fval;
 	    //      show_parameter_frame( &buffp[current]->param_set ,buffp[current]->npts);
 	    //	    fprintf(stderr,"updated param %s to %lf\n",pname,fval);
@@ -8273,7 +8333,7 @@ void zero_points(GtkAction *action,dbuff *buff){
 
   CHECK_ACTIVE(buff);
   if (zero_buff != -1) {
-    gdk_window_raise(base.dialog->window);
+    gdk_window_raise(gtk_widget_get_window(base.dialog));
     fprintf(stderr,"already picking zeros\n");
     return;
   }
@@ -8302,11 +8362,11 @@ void zero_points(GtkAction *action,dbuff *buff){
   zero_buff = buff->buffnum;
   printf("set zero_buff to: %i\n",zero_buff);
 
-  g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+  g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				  G_CALLBACK (press_in_win_event),
 				  buff);
   // connect our event
-  g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+  g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
 		    G_CALLBACK(zero_points_handler), buff);
   buff->win.press_pend=1;
   
@@ -8337,7 +8397,7 @@ void zero_points_handler(dbuff *buff, GdkEventButton * action, GtkWidget *widget
 
   /* First:  if we get a point */
 
-  if ((void *) buff == (void *) buffp[zero_buff]->win.canvas){ // then we've come from selecting a point.
+  if ((void *) buff == (void *) buffp[zero_buff]->win.darea){ // then we've come from selecting a point.
       event = (GdkEventButton *) action;
 
       if (buffp[zero_buff]->disp.dispstyle==SLICE_ROW){
@@ -8370,17 +8430,18 @@ void zero_points_handler(dbuff *buff, GdkEventButton * action, GtkWidget *widget
     
     if ((void *) buff == (void *) zero_dialog){ 
       //           fprintf(stderr,"buff is dialog!\n");
-      gtk_object_destroy(GTK_OBJECT(zero_dialog));
-      
+      //      gtk_object_destroy(GTK_OBJECT(zero_dialog));
+      gtk_widget_destroy(zero_dialog);
+
       if ( buffp[zero_buff] == NULL){ // our buffer destroyed while we were open...
 	fprintf(stderr,"zero_points: buffer was destroyed while we were open\n");
       }
       else{
 	buffp[zero_buff]->win.press_pend = 0;
-	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[zero_buff]->win.canvas), 
+	g_signal_handlers_disconnect_by_func (G_OBJECT (buffp[zero_buff]->win.darea), 
 					      G_CALLBACK( zero_points_handler), buffp[zero_buff]);
 	
-	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[zero_buff]->win.canvas),
+	g_signal_handlers_unblock_by_func(G_OBJECT(buffp[zero_buff]->win.darea),
 					  G_CALLBACK (press_in_win_event),
 					  buffp[zero_buff]);
       }

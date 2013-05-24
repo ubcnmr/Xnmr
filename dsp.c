@@ -39,7 +39,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   int taps;
   int phase;
   long int rcf [256];
-  int pass,DSPpass;
+  int pass; //DSPpass;
   int ssf[3];
   FILE* fptr1;
   int value;
@@ -52,8 +52,8 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   int eo;
   char filter_name[PATH_LENGTH];
 
-  float input_level,ol2,ol5,olr;
-  float mcic2,mcic5,mrcf;
+  float input_level,ol2,ol5; //olr;
+  float mcic2,mcic5; //mrcf;
   float sum;
 
 
@@ -71,7 +71,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   // bypass the nco? 0 = no
   pass = 0;
   //bypass the dsp? 0 = no
-  DSPpass = 0;
+  //  DSPpass = 0;
   
   snprintf(filter_name,PATH_LENGTH,"/usr/share/Xnmr/filters/%d.imp",sw);
   fprintf(stderr,"setup_dsp: filter_name is %s\n",filter_name);
@@ -96,7 +96,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   fscanf(fptr1,"%d&",&value);
   contr[10][0]=value-1; //RCF decimation
   //  fprintf(stderr,"RCF dec: %d\n",value);
-  mrcf=value;
+  //  mrcf=value; // not used
   
   fscanf(fptr1,"%ld",&lvalue);
   clk = lvalue;
@@ -244,7 +244,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
 
   ssf[2] = (int) ceil( log( sum*ol5 )/0.693147 ) + 4;
   if (ssf[2] > 7) ssf[2] = 7; // was if > 7 then = 6 ??
-  olr = sum*ol5 * pow(2,(4-ssf[2]));
+  //  olr = sum*ol5 * pow(2,(4-ssf[2])); // not used
   if (ssf[2] < 0)  return -3;
   
 

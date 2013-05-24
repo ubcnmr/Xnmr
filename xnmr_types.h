@@ -25,7 +25,7 @@
 struct parameter_button_t {
   GtkWidget *label;
   GtkWidget *button;
-  GtkObject *adj;
+  GtkAdjustment *adj;
   GtkWidget *ent;
 };
 
@@ -33,16 +33,16 @@ struct popup_data_t {
   parameter_t* param;
   GtkWidget **spin_hbox;
   GtkWidget **sp_button;
-  GtkObject **adj;
+  GtkAdjustment **adj;
 
   int button_number;
 
   GtkWidget *frame;
   GtkWidget *win;
-  GtkObject *num_adj;
-  GtkObject *start_adj;
+  GtkAdjustment *num_adj;
+  GtkAdjustment *start_adj;
   GtkWidget *start_button;
-  GtkObject *inc_adj;
+  GtkAdjustment *inc_adj;
   GtkWidget *inc_button;
   GtkWidget *button_vbox;
   gint size;
@@ -51,7 +51,7 @@ struct popup_data_t {
 
 typedef struct {
   gint (*func) ( GtkWidget *widget, double *data );
-  GtkObject *adj;
+  GtkAdjustment *adj;
   GtkWidget *button;
 } process_button_t;
 
@@ -89,7 +89,7 @@ typedef struct {
   char is_hyper;
   char path_for_reload[PATH_LENGTH];
   struct{ /* stuff related to its window */
-    GtkWidget *canvas; 
+    GtkWidget *darea; 
     GtkWidget *toggleb;
     GtkWidget *window;
     GtkWidget *autocheck,*hypercheck;
@@ -100,7 +100,8 @@ typedef struct {
     int buffid;
     int press_pend;
     float pend1,pend2,pend3,pend4;
-    GdkPixmap *pixmap;
+    cairo_surface_t *surface;
+    cairo_t *cr;
     GSList *grp1,*grp2;
     GtkWidget *but1a,*but1b,*but1c,*but2a,*but2b,*but2c;
   } win;

@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <glib.h>
 
 #include "param_utils.h"
@@ -313,12 +314,12 @@ int i;
  for (i=0;i<param_set->num_parameters;i++){
    if (param_set->parameter[i].type == 'I'){
      if (param_set->parameter[i].i_val_2d != NULL)
-       g_free(param_set->parameter[i].i_val_2d);
+       free(param_set->parameter[i].i_val_2d);
      param_set->parameter[i].type = 'i';
    }
    else if (param_set->parameter[i].type == 'F'){
      if ( param_set->parameter[i].f_val_2d != NULL)
-       g_free(param_set->parameter[i].f_val_2d);
+       free(param_set->parameter[i].f_val_2d);
      param_set->parameter[i].type = 'f';
    }
  }
@@ -352,7 +353,7 @@ int load_p_string( char* params, unsigned int acqs_2d, parameter_set_t* param_se
 	    sfetch_int( params, param_set->parameter[i].name, &param_set->parameter[i].i_val,0 );
 	    param_set->parameter[i].size = acqs_2d;
 	    param_set->parameter[i].type = 'I';
-	    param_set->parameter[i].i_val_2d = g_malloc( acqs_2d * sizeof(gint) );
+	    param_set->parameter[i].i_val_2d = malloc( acqs_2d * sizeof(gint) );
 	    //	    fprintf(stderr,"load_p_string: malloc\n");
 	    for( j=0; j<acqs_2d; j++ )
 	      sfetch_int( params, param_set->parameter[i].name, &param_set->parameter[i].i_val_2d[ j ], j );
@@ -379,7 +380,7 @@ int load_p_string( char* params, unsigned int acqs_2d, parameter_set_t* param_se
 	      param_set->parameter[i].f_val /= param_set->parameter[i].unit;
 	    param_set->parameter[i].size = acqs_2d;
 	    param_set->parameter[i].type = 'F';
-	    param_set->parameter[i].f_val_2d = g_malloc( acqs_2d * sizeof(double) );
+	    param_set->parameter[i].f_val_2d = malloc( acqs_2d * sizeof(double) );
 	    //	    fprintf(stderr,"load_p_string: malloc\n");
 
 	    for( j=0; j<acqs_2d; j++ ){

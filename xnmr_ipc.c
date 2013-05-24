@@ -1,5 +1,4 @@
-#define GTK_DISABLE_DEPRECATED
-  /* xnmr_ipc.c
+/* xnmr_ipc.c
  *
  * Part of the Xnmr software project
  *
@@ -447,9 +446,8 @@ gint set_acqn_labels_mutex_wrap(){
 
 
 gint upload_and_draw_canvas_with_process_mutex_wrap( dbuff *buff ){
-  gint retval;
   gdk_threads_enter();
-  retval=upload_and_draw_canvas_with_process(buff);
+  upload_and_draw_canvas_with_process(buff);
   gdk_threads_leave();
   return FALSE;
 }

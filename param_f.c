@@ -1,4 +1,3 @@
-#define GTK_DISABLE_DEPRECATED
  /* param_f.c
  *
  * Implementation of the parameter panel page in Xnmr Software
@@ -35,11 +34,11 @@ GtkWidget *param_scrolled_window;
 GtkWidget *param_table;
 GtkWidget *prog_text_box;
 GtkWidget *save_text_box;
-GtkObject *acqs_adj;
-GtkObject *acqs_2d_adj;
-GtkObject *dwell_adj;
-GtkObject *sw_adj;
-GtkObject *npts_adj;
+GtkAdjustment *acqs_adj;
+GtkAdjustment *acqs_2d_adj;
+GtkAdjustment *dwell_adj;
+GtkAdjustment *sw_adj;
+GtkAdjustment *npts_adj;
 GtkWidget *acqs_spin_button;
 GtkWidget *acqs_2d_spin_button;
 GtkWidget *dwell_spin_button;
@@ -173,11 +172,11 @@ void update_param( GtkAdjustment* adj, parameter_t* param ) // Parameters must b
     switch( param->type ) 
       { 
       case 'i': 
-        param->i_val = (int) adj-> value; 
+        param->i_val = (int) gtk_adjustment_get_value(adj); 
         break; 
       
       case 'f': 
-        param->f_val = adj-> value; 
+        param->f_val = gtk_adjustment_get_value(adj); 
         break; 
       
       case 'F': 
@@ -637,20 +636,20 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
 
     if( adj == GTK_ADJUSTMENT( acqs_adj ) ){ 
-      current_param_set->num_acqs = adj->value; 
+      current_param_set->num_acqs = gtk_adjustment_get_value(adj); 
     } 
     else if( adj == GTK_ADJUSTMENT( acqs_2d_adj ) ) { 
-      current_param_set->num_acqs_2d = adj->value; 
+      current_param_set->num_acqs_2d = gtk_adjustment_get_value(adj); 
 
     } 
     else if (adj== GTK_ADJUSTMENT( sw_adj )){ 
       //    fprintf(stderr,"in sw adj\n"); 
-      current_param_set->sw = adj->value; 
+      current_param_set->sw = gtk_adjustment_get_value(adj); 
       if (!doing_sw_dwell) { 
 	long int decimate;
         doing_sw_dwell=TRUE; 
 	// get the closest we're going to get:
-	decimate = (long int) (DEFAULT_RCVR_CLK/adj->value+0.5);
+	decimate = (long int) (DEFAULT_RCVR_CLK/gtk_adjustment_get_value(adj)+0.5);
 	//	printf("setting dwell to: %f\n",1./DEFAULT_RCVR_CLK*decimate*1e6);
         gtk_adjustment_set_value( GTK_ADJUSTMENT( dwell_adj ), 1./DEFAULT_RCVR_CLK*decimate*1e6 ); 
 	current_param_set->sw = (long int) DEFAULT_RCVR_CLK/decimate; 
@@ -660,11 +659,11 @@ gint update_paths( GtkWidget* widget, gpointer data )
     } 
     else if (adj == GTK_ADJUSTMENT( dwell_adj )){ 
       //    fprintf(stderr,"in dwell adj\n"); 
-      current_param_set->dwell = adj->value; 
+      current_param_set->dwell = gtk_adjustment_get_value(adj); 
       if(!doing_sw_dwell){ 
 	long int decimate;
         doing_sw_dwell=TRUE; 
-	decimate = (long int) (adj->value/1e6*DEFAULT_RCVR_CLK +0.5);
+	decimate = (long int) (gtk_adjustment_get_value(adj)/1e6*DEFAULT_RCVR_CLK +0.5);
 	//	printf("setting sw to %f\n",DEFAULT_RCVR_CLK/decimate);
         gtk_adjustment_set_value(GTK_ADJUSTMENT( sw_adj ),DEFAULT_RCVR_CLK/decimate); 
 	current_param_set->dwell = decimate/DEFAULT_RCVR_CLK*1e6; 
@@ -673,11 +672,11 @@ gint update_paths( GtkWidget* widget, gpointer data )
       } 
     } 
     else if (adj== GTK_ADJUSTMENT( npts_adj)){ 
-      if (adj->value != buffp[current]->npts){ 
-        buff_resize(buffp[current],adj->value,buffp[current]->npts2); 
+      if (gtk_adjustment_get_value(adj) != buffp[current]->npts){ 
+        buff_resize(buffp[current],gtk_adjustment_get_value(adj),buffp[current]->npts2); 
 	if (allowed_to_change(current) == TRUE){
 	  //	  fprintf(stderr,"resetting acq_npts in buff %i",current);
-	  buffp[current]->acq_npts = adj->value;  /* always set this here, if we're doing a 
+	  buffp[current]->acq_npts = gtk_adjustment_get_value(adj);  /* always set this here, if we're doing a 
 						       zero fill, the zf routine will restore it  */
 	}
         draw_canvas(buffp[current]);   
@@ -835,7 +834,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     //    gtk_table_set_row_spacings(GTK_TABLE(param_table),1);
 
 
-    vbox=gtk_vbox_new(FALSE,0);
+    vbox=gtk_vbox_new_wrap(FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox),param_table,FALSE,FALSE,0);
     label=gtk_label_new("");
     gtk_box_pack_start(GTK_BOX(vbox),label,TRUE,FALSE,0);
@@ -879,9 +878,9 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
 
 
-    dwell_adj = gtk_adjustment_new(1,0.5,1000000,1,10,0 ); 
-    sw_adj = gtk_adjustment_new(1000000,1,2000000,1,10,0 ); 
-    npts_adj = gtk_adjustment_new(2048,1,MAX_DATA_NPTS,1,1,0); 
+    dwell_adj = (GtkAdjustment *) gtk_adjustment_new(1,0.5,1000000,1,10,0 ); 
+    sw_adj = (GtkAdjustment *) gtk_adjustment_new(1000000,1,2000000,1,10,0 ); 
+    npts_adj = (GtkAdjustment *) gtk_adjustment_new(2048,1,MAX_DATA_NPTS,1,1,0); 
   
     dwell_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( dwell_adj ), 0.5, 2 ); 
     sw_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( sw_adj ), 0.5, 0 ); 
@@ -939,8 +938,8 @@ gint update_paths( GtkWidget* widget, gpointer data )
     // 
 
 
-    acqs_adj = gtk_adjustment_new(1,1,10000000,1,10,0 ); 
-    acqs_2d_adj = gtk_adjustment_new(1,1,65535,1,10,0 ); 
+    acqs_adj = (GtkAdjustment *) gtk_adjustment_new(1,1,10000000,1,10,0 ); 
+    acqs_2d_adj = (GtkAdjustment *) gtk_adjustment_new(1,1,65535,1,10,0 ); 
   
     acqs_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( acqs_adj ), 0.5, 0 ); 
     acqs_2d_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( acqs_2d_adj ), 0.5, 0 ); 
@@ -1049,8 +1048,8 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
       if( s[0] != '#' ) { 
         result = sscanf( s, PARAMETER_FILE_FORMAT, param_set->parameter[i].name, &type ); 
-	printf("line is: %s\n",s);
-	printf("result is: %i, name is: %s\n",result,param_set->parameter[i].name);
+	//	printf("line is: %s\n",s);
+	//	printf("result is: %i, name is: %s\n",result,param_set->parameter[i].name);
         // in here we need to see if each new one has the same name and type as an old one, and if so, keep it 
         if( result == 2 ) {  //This indicates a valid format 
   	switch( type ) 
@@ -1234,14 +1233,20 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
     //Clear out the previous parameter set 
 
-    // fprintf(stderr, "removing %d buttons\n", num_buttons ); 
+    //    fprintf(stderr, "removing %d buttons\n", num_buttons ); 
 
     for( i=0; i<num_buttons; i++ ) { 
 
       if( param_button[i].adj != NULL ) { 
+	// the adjustment gets destroyed with the spin button for reasons I don't understand.
+	//	printf("count is: %i\n",G_OBJECT(param_button[i].adj)->ref_count);
         gtk_widget_hide( GTK_WIDGET( param_button[i].button ) ); 
-        gtk_object_destroy( param_button[i].adj ); 
         gtk_widget_destroy( GTK_WIDGET( param_button[i].button ) ); 
+	//	printf("count is: %i\n",G_OBJECT(param_button[i].adj)->ref_count);
+	//	printf("destroying an adjust:\n");
+	//	gtk_widget_destroy( GTK_WIDGET(param_button[i].adj) ); 
+       	//g_object_unref(G_OBJECT(param_button[i].adj));
+	//	printf("done destroying an adjust:\n");
       } 
       else { 
         gtk_widget_hide( GTK_WIDGET( param_button[i].ent ) ); 
@@ -1297,7 +1302,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
       strcpy( s, "" ); 
 
-      // fprintf(stderr, "trying to build a button of type %c\n", param_set->parameter[i].type ); 
+      //      fprintf(stderr, "trying to build a button of type %c\n", param_set->parameter[i].type ); 
 
       switch( param_set->parameter[i].type ) 
         { 
@@ -1305,8 +1310,9 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	  strcpy( s, "*" ); 
         case 'i': 
 	  strncat( s, param_set->parameter[i].name,PARAM_NAME_LEN-1); 
-	  param_button[i].adj = gtk_adjustment_new( param_set->parameter[i].i_val, param_set->parameter[i].i_min, param_set->parameter[i].i_max, 
+	  param_button[i].adj = (GtkAdjustment *) gtk_adjustment_new( param_set->parameter[i].i_val, param_set->parameter[i].i_min, param_set->parameter[i].i_max, 
 						    param_set->parameter[i].i_step, param_set->parameter[i].i_page, 0 ); 
+
 	  param_button[i].button = gtk_spin_button_new( GTK_ADJUSTMENT( param_button[i].adj ), 0.5, 0 ); 
 	  g_signal_connect (G_OBJECT (param_button[i].adj), "value_changed", G_CALLBACK (update_param), &param_set->parameter[i] ); 
 	  gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( param_button[i].button ), GTK_UPDATE_IF_VALID ); 
@@ -1327,7 +1333,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	  strncat( s, &param_set->parameter[i].unit_c,1 ); 
 	  strncat( s, ")",1 ); 
 	 	  
-	  param_button[i].adj = gtk_adjustment_new( param_set->parameter[i].f_val, param_set->parameter[i].f_min, param_set->parameter[i].f_max, 
+	  param_button[i].adj = (GtkAdjustment *)  gtk_adjustment_new( param_set->parameter[i].f_val, param_set->parameter[i].f_min, param_set->parameter[i].f_max, 
 						    param_set->parameter[i].f_step, param_set->parameter[i].f_page, 0 ); 
 	  param_button[i].button = gtk_spin_button_new( GTK_ADJUSTMENT( param_button[i].adj ), 0.5, param_set->parameter[i].f_digits ); 
 	  g_signal_connect (G_OBJECT (param_button[i].adj), "value_changed", G_CALLBACK (update_param), &param_set->parameter[i] ); 
@@ -1376,7 +1382,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_scrolled_window_set_policy ( GTK_SCROLLED_WINDOW(param_scrolled_window),
 				     GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 
-
+    //    fprintf(stderr,"returning\n");
   }
 
 
@@ -1386,12 +1392,12 @@ gint update_paths( GtkWidget* widget, gpointer data )
     int new_size, old_size; 
     GtkWidget **new_hbox; 
     GtkWidget **new_spb; 
-    GtkObject **new_adj; 
+    GtkAdjustment **new_adj; 
     GtkWidget *label; 
     int i; 
     char s[UTIL_LEN]; 
 
-    new_size = (int) (adj->value); 
+    new_size = (int) (gtk_adjustment_get_value(adj)); 
     old_size = popup_data.size; 
     //    fprintf(stderr, "resizing popup from %d to %d\n", old_size, new_size ); 
 
@@ -1399,7 +1405,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
       return; 
 
     new_hbox = g_malloc( sizeof( GtkWidget* ) * new_size ); 
-    new_adj = g_malloc( sizeof( GtkObject* ) * new_size ); 
+    new_adj = g_malloc( sizeof( GtkWidget* ) * new_size ); 
     new_spb = g_malloc( sizeof( GtkWidget* ) * new_size ); 
     //    fprintf(stderr,"resize popup: malloc\n");
 
@@ -1415,7 +1421,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
       //now create the additional ones 
 
       for( i=old_size; i<new_size; i++ ) { 
-        new_hbox[i] = gtk_hbox_new( FALSE, 0 ); 
+        new_hbox[i] = gtk_hbox_new_wrap( FALSE, 0 ); 
         snprintf( s,UTIL_LEN, "%d: ", i+1 ); 
         label = gtk_label_new( s ); 
         gtk_box_pack_start( GTK_BOX( new_hbox[i] ), label, TRUE, TRUE, 0 ); //was false false
@@ -1425,12 +1431,12 @@ gint update_paths( GtkWidget* widget, gpointer data )
   	{ 
   	case 'i': 
   	case 'I': 
-  	  new_adj[i] = gtk_adjustment_new(  popup_data.param->i_val, popup_data.param->i_min,  popup_data.param->i_max, popup_data.param->i_step, popup_data.param->i_page, 0 ); 
+  	  new_adj[i] = (GtkAdjustment *) gtk_adjustment_new(  popup_data.param->i_val, popup_data.param->i_min,  popup_data.param->i_max, popup_data.param->i_step, popup_data.param->i_page, 0 ); 
   	  new_spb[i] = gtk_spin_button_new( GTK_ADJUSTMENT( new_adj[i] ),  0.5, 0 ); 
   	  break; 
   	case 'f': 
   	case 'F':  
-  	  new_adj[i] = gtk_adjustment_new(  popup_data.param->f_val, popup_data.param->f_min, popup_data.param->f_max, popup_data.param->f_step, popup_data.param->f_page, 0 ); 
+  	  new_adj[i] = (GtkAdjustment *) gtk_adjustment_new(  popup_data.param->f_val, popup_data.param->f_min, popup_data.param->f_max, popup_data.param->f_step, popup_data.param->f_page, 0 ); 
   	  new_spb[i] = gtk_spin_button_new( GTK_ADJUSTMENT( new_adj[i] ),  0.5, popup_data.param->f_digits ); 
   	  break; 
   	default: 
@@ -1454,9 +1460,14 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
       for( i=new_size; i<old_size; i++ ) { 
         gtk_widget_hide( popup_data.spin_hbox[i] ); 
-        gtk_object_destroy( popup_data.adj[i] ); 
+	//	printf("count is: %i\n",G_OBJECT(popup_data.adj[i])->ref_count);
         gtk_widget_destroy( popup_data.sp_button[i] ); 
         gtk_widget_destroy( popup_data.spin_hbox[i] ); 
+	// the adjustment gets destroyed with the spin button...
+	//	gtk_widget_destroy( GTK_WIDGET(popup_data.adj[i] )); 
+	//	printf("doing popup_data destroy\n");
+	//	printf("done popup_data destroy\n");
+	//	g_object_unref(G_OBJECT(popup_data.adj[i]));
       } 
     } 
 
@@ -1493,24 +1504,24 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_container_set_border_width(GTK_CONTAINER (popup_data.frame),5); 
     gtk_widget_show( popup_data.frame ); 
 
-    hbox = gtk_hbox_new( FALSE, 5 ); 
+    hbox = gtk_hbox_new_wrap( FALSE, 5 ); 
     gtk_container_set_border_width(GTK_CONTAINER (hbox),5); 
     gtk_container_add( GTK_CONTAINER( popup_data.frame ), hbox ); 
     gtk_widget_show( hbox ); 
 
 
-    popup_data.button_vbox = gtk_vbox_new( FALSE, 5 ); 
+    popup_data.button_vbox = gtk_vbox_new_wrap( FALSE, 5 ); 
     //    gtk_widget_set_size_request( popup_data.button_vbox, 200, 0 ); 
     gtk_box_pack_start( GTK_BOX( hbox ), popup_data.button_vbox, FALSE,FALSE, 0 ); 
     gtk_widget_show( popup_data.button_vbox ); 
     
-    vbox=gtk_vbox_new(FALSE,0);
+    vbox=gtk_vbox_new_wrap(FALSE,0);
     gtk_widget_show(vbox);
     gtk_box_pack_start(GTK_BOX(hbox),vbox,FALSE,FALSE,0);
 
 
     // do the unarray, number of boxes line
-    hbox1=gtk_hbox_new(TRUE,0);
+    hbox1=gtk_hbox_new_wrap(TRUE,0);
     gtk_widget_show(hbox1);
     
     button = gtk_button_new_with_label( "Unarray" ); 
@@ -1518,7 +1529,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_box_pack_start(GTK_BOX(hbox1),button,TRUE,TRUE,0);
     gtk_widget_show( button ); 
 
-    popup_data.num_adj = gtk_adjustment_new( 0,1,100,1,5,0 ); 
+    popup_data.num_adj = (GtkAdjustment *) gtk_adjustment_new( 0,1,100,1,5,0 ); 
     button = gtk_spin_button_new( GTK_ADJUSTMENT( popup_data.num_adj ),  0.5, 0 ); 
     g_signal_connect( G_OBJECT( popup_data.num_adj ), "value_changed", G_CALLBACK( resize_popup ), NULL ); 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID ); 
@@ -1526,8 +1537,11 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_widget_show( button ); 
     
     gtk_box_pack_start(GTK_BOX(vbox),hbox1,FALSE,FALSE,2);
-
+#if GTK_MAJOR_VERSION == 2
     separator=gtk_hseparator_new();
+#else
+    separator=gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+#endif
     gtk_widget_show(separator);
     gtk_box_pack_start(GTK_BOX(vbox),separator,FALSE,FALSE,2);
 
@@ -1535,7 +1549,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     // do the cancel - ok line
     
 
-    hbox1=gtk_hbox_new(TRUE,0);
+    hbox1=gtk_hbox_new_wrap(TRUE,0);
     gtk_widget_show(hbox1);
     button = gtk_button_new_with_label( "Cancel" ); 
     g_signal_connect( G_OBJECT( button ), "clicked", G_CALLBACK( array_cancel_pressed ), NULL ); 
@@ -1550,19 +1564,23 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
     gtk_box_pack_start(GTK_BOX(vbox),hbox1,FALSE,FALSE,2);
 
+#if GTK_MAJOR_VERSION == 2
     separator=gtk_hseparator_new();
+#else
+    separator=gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+#endif
     gtk_widget_show(separator);
     gtk_box_pack_start(GTK_BOX(vbox),separator,FALSE,FALSE,2);
 
     // now the start line
-    hbox1=gtk_hbox_new(TRUE,0);
+    hbox1=gtk_hbox_new_wrap(TRUE,0);
     gtk_widget_show(hbox1);
 
     label = gtk_label_new( "Start" ); 
     gtk_box_pack_start(GTK_BOX(hbox1),label,TRUE,TRUE,0);
     gtk_widget_show( label ); 
 
-    popup_data.start_adj = gtk_adjustment_new(0,0,0,0,0,0  ); 
+    popup_data.start_adj = (GtkAdjustment *)  gtk_adjustment_new(0,0,0,0,0,0  ); 
     popup_data.start_button = gtk_spin_button_new( GTK_ADJUSTMENT( popup_data.start_adj ),  0.5, 2 ); 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON(  popup_data.start_button ), GTK_UPDATE_IF_VALID ); 
     gtk_box_pack_start(GTK_BOX(hbox1),popup_data.start_button,TRUE,TRUE,0);
@@ -1571,14 +1589,14 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_box_pack_start(GTK_BOX(vbox),hbox1,FALSE,FALSE,2);
 
     // then the increment line
-    hbox1=gtk_hbox_new(TRUE,0);
+    hbox1=gtk_hbox_new_wrap(TRUE,0);
     gtk_widget_show(hbox1);
 
     label = gtk_label_new( "Increment" ); 
     gtk_box_pack_start(GTK_BOX(hbox1),label,TRUE,TRUE,0);
     gtk_widget_show( label ); 
 
-    popup_data.inc_adj = gtk_adjustment_new(0,0,0,0,0,0  ); 
+    popup_data.inc_adj = (GtkAdjustment *) gtk_adjustment_new(0,0,0,0,0,0  ); 
     popup_data.inc_button = gtk_spin_button_new( GTK_ADJUSTMENT( popup_data.inc_adj ),  0.5, 2 ); 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON(  popup_data.inc_button ), GTK_UPDATE_IF_VALID ); 
     gtk_box_pack_start(GTK_BOX(hbox1),popup_data.inc_button,TRUE,TRUE,0);
@@ -1587,7 +1605,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_box_pack_start(GTK_BOX(vbox),hbox1,FALSE,FALSE,2);
 
     // then the update line
-    hbox1=gtk_hbox_new(TRUE,0);
+    hbox1=gtk_hbox_new_wrap(TRUE,0);
     gtk_widget_show(hbox1);
 
     label = gtk_label_new("");
@@ -1648,11 +1666,11 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	  resize_popup(GTK_ADJUSTMENT(popup_data.num_adj),NULL);
 	}
         for( i=0; i<popup_data.size; i++ ) { 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->value = popup_data.param->i_val; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->upper = popup_data.param->i_max; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->lower = popup_data.param->i_min; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->step_increment = popup_data.param->i_step; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->page_increment = popup_data.param->i_page; 
+	  gtk_adjustment_set_value(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_val); 
+	  gtk_adjustment_set_upper(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_max); 
+	  gtk_adjustment_set_lower(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_min); 
+	  gtk_adjustment_set_step_increment(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_step); 
+	  gtk_adjustment_set_page_increment(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_page); 
 	  gtk_adjustment_changed( GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
 	  gtk_adjustment_value_changed( GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
 	  gtk_spin_button_set_digits( GTK_SPIN_BUTTON( popup_data.sp_button[i] ), 0 ); 
@@ -1665,11 +1683,11 @@ gint update_paths( GtkWidget* widget, gpointer data )
 	  resize_popup(GTK_ADJUSTMENT(popup_data.num_adj),NULL);
 	}
         for( i=0; i<popup_data.size; i++ ) { 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->value = popup_data.param->f_val; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->upper = popup_data.param->f_max; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->lower = popup_data.param->f_min; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->step_increment = popup_data.param->f_step; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->page_increment = popup_data.param->f_page; 
+	  gtk_adjustment_set_value(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_val); 
+	  gtk_adjustment_set_upper(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_max); 
+	  gtk_adjustment_set_lower(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_min); 
+	  gtk_adjustment_set_step_increment(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_step); 
+	  gtk_adjustment_set_page_increment(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_page); 
 	  gtk_adjustment_changed( GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
 	  gtk_adjustment_value_changed( GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
 	  gtk_spin_button_set_digits( GTK_SPIN_BUTTON( popup_data.sp_button[i] ), popup_data.param->f_digits ); 
@@ -1679,11 +1697,11 @@ gint update_paths( GtkWidget* widget, gpointer data )
       case 'I': 
         gtk_adjustment_set_value( GTK_ADJUSTMENT( popup_data.num_adj ), popup_data.param->size ); 
         for( i=0; i<popup_data.size; i++ ) { 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->value = popup_data.param->i_val_2d[i]; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->upper = popup_data.param->i_max; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->lower = popup_data.param->i_min; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->step_increment = popup_data.param->i_step; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->page_increment = popup_data.param->i_page; 
+	  gtk_adjustment_set_value(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_val_2d[i]); 
+	  gtk_adjustment_set_upper(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_max); 
+	  gtk_adjustment_set_lower(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_min); 
+	  gtk_adjustment_set_step_increment(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_step); 
+	  gtk_adjustment_set_page_increment(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->i_page); 
 	  gtk_adjustment_changed( GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
 	  gtk_adjustment_value_changed( GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
 	  gtk_spin_button_set_digits( GTK_SPIN_BUTTON( popup_data.sp_button[i] ), 0 ); 
@@ -1693,11 +1711,11 @@ gint update_paths( GtkWidget* widget, gpointer data )
       case 'F': 
         gtk_adjustment_set_value( GTK_ADJUSTMENT( popup_data.num_adj ), popup_data.param->size ); 
         for( i=0; i<popup_data.size; i++ ) { 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->value = popup_data.param->f_val_2d[i]; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->upper = popup_data.param->f_max; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->lower = popup_data.param->f_min; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->step_increment = popup_data.param->f_step; 
-	  GTK_ADJUSTMENT( popup_data.adj[i] )->page_increment = popup_data.param->f_page; 
+	  gtk_adjustment_set_value(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_val_2d[i]);
+	  gtk_adjustment_set_upper(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_max);
+	  gtk_adjustment_set_lower(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_min);
+	  gtk_adjustment_set_step_increment(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_step);
+	  gtk_adjustment_set_page_increment(GTK_ADJUSTMENT( popup_data.adj[i] ), popup_data.param->f_page); 
 	  gtk_adjustment_changed( GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
 	  gtk_adjustment_value_changed( GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
 	  gtk_spin_button_set_digits( GTK_SPIN_BUTTON( popup_data.sp_button[i] ), popup_data.param->f_digits ); 
@@ -1716,40 +1734,40 @@ gint update_paths( GtkWidget* widget, gpointer data )
       case 'i': 
       case 'I': 
 	gtk_spin_button_set_digits( GTK_SPIN_BUTTON( popup_data.inc_button ), 0 ); 
-        GTK_ADJUSTMENT( popup_data.start_adj )->value = popup_data.param->i_val; 
-        GTK_ADJUSTMENT( popup_data.start_adj )->upper = popup_data.param->i_max; 
-        GTK_ADJUSTMENT( popup_data.start_adj )->lower = popup_data.param->i_min; 
-        GTK_ADJUSTMENT( popup_data.start_adj )->step_increment = popup_data.param->i_step; 
-        GTK_ADJUSTMENT( popup_data.start_adj )->page_increment = popup_data.param->i_page; 
+        gtk_adjustment_set_value(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->i_val); 
+	gtk_adjustment_set_upper(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->i_max); 
+	gtk_adjustment_set_lower(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->i_min); 
+	gtk_adjustment_set_step_increment(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->i_step); 
+	gtk_adjustment_set_page_increment(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->i_page); 
 	gtk_adjustment_changed( GTK_ADJUSTMENT( popup_data.start_adj ) ); 
 	gtk_adjustment_value_changed( GTK_ADJUSTMENT( popup_data.start_adj ) ); 
       
         gtk_spin_button_set_digits( GTK_SPIN_BUTTON( popup_data.start_button ), 0); 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->value = popup_data.param->i_val; 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->upper = abs( popup_data.param->i_max ) > abs( popup_data.param->i_min ) ? abs( popup_data.param->i_max ) : abs( popup_data.param->i_min ); 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->lower = -1 * GTK_ADJUSTMENT( popup_data.inc_adj )->upper; 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->step_increment = popup_data.param->i_step; 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->page_increment = popup_data.param->i_page; 
+        gtk_adjustment_set_value(GTK_ADJUSTMENT( popup_data.inc_adj ), popup_data.param->i_val); 
+        gtk_adjustment_set_upper(GTK_ADJUSTMENT( popup_data.inc_adj ), abs( popup_data.param->i_max ) > abs( popup_data.param->i_min ) ? abs( popup_data.param->i_max ) : abs( popup_data.param->i_min )); 
+        gtk_adjustment_set_lower(GTK_ADJUSTMENT( popup_data.inc_adj ), -1 * gtk_adjustment_get_upper(GTK_ADJUSTMENT( popup_data.inc_adj ))); 
+        gtk_adjustment_set_step_increment(GTK_ADJUSTMENT( popup_data.inc_adj ), popup_data.param->i_step); 
+        gtk_adjustment_set_page_increment(GTK_ADJUSTMENT( popup_data.inc_adj ), popup_data.param->i_page); 
         gtk_adjustment_changed( GTK_ADJUSTMENT( popup_data.inc_adj ) ); 
         gtk_adjustment_value_changed( GTK_ADJUSTMENT( popup_data.inc_adj ) ); 
 	break;
       case 'f': 
       case 'F': 
 	gtk_spin_button_set_digits( GTK_SPIN_BUTTON( popup_data.inc_button ), popup_data.param->f_digits ); 
-        GTK_ADJUSTMENT( popup_data.start_adj )->value = popup_data.param->f_val; 
-        GTK_ADJUSTMENT( popup_data.start_adj )->upper = popup_data.param->f_max; 
-        GTK_ADJUSTMENT( popup_data.start_adj )->lower = popup_data.param->f_min; 
-        GTK_ADJUSTMENT( popup_data.start_adj )->step_increment = popup_data.param->f_step; 
-        GTK_ADJUSTMENT( popup_data.start_adj )->page_increment = popup_data.param->f_page; 
+        gtk_adjustment_set_value(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->f_val); 
+	gtk_adjustment_set_upper(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->f_max); 
+	gtk_adjustment_set_lower(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->f_min); 
+	gtk_adjustment_set_step_increment(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->f_step); 
+	gtk_adjustment_set_page_increment(GTK_ADJUSTMENT( popup_data.start_adj ), popup_data.param->f_page); 
         gtk_adjustment_changed( GTK_ADJUSTMENT( popup_data.start_adj ) ); 
         gtk_adjustment_value_changed( GTK_ADJUSTMENT( popup_data.start_adj ) ); 
       
         gtk_spin_button_set_digits( GTK_SPIN_BUTTON( popup_data.start_button ), popup_data.param->f_digits );
-        GTK_ADJUSTMENT( popup_data.inc_adj )->value = popup_data.param->f_val; 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->upper = fabs( popup_data.param->f_max ) > fabs( popup_data.param->f_min ) ? fabs( popup_data.param->f_max ) : fabs( popup_data.param->f_min ); 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->lower = -1 * GTK_ADJUSTMENT( popup_data.inc_adj )->upper; 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->step_increment = popup_data.param->f_step; 
-        GTK_ADJUSTMENT( popup_data.inc_adj )->page_increment = popup_data.param->f_page; 
+        gtk_adjustment_set_value(GTK_ADJUSTMENT( popup_data.inc_adj ),  popup_data.param->f_val); 
+        gtk_adjustment_set_upper(GTK_ADJUSTMENT( popup_data.inc_adj ), fabs( popup_data.param->f_max ) > fabs( popup_data.param->f_min ) ? fabs( popup_data.param->f_max ) : fabs( popup_data.param->f_min )); 
+	gtk_adjustment_set_lower(GTK_ADJUSTMENT( popup_data.inc_adj ), -1 * gtk_adjustment_get_upper(GTK_ADJUSTMENT( popup_data.inc_adj ))); 
+        gtk_adjustment_set_step_increment(GTK_ADJUSTMENT( popup_data.inc_adj ), popup_data.param->f_step); 
+        gtk_adjustment_set_page_increment(GTK_ADJUSTMENT( popup_data.inc_adj ), popup_data.param->f_page); 
         gtk_adjustment_changed( GTK_ADJUSTMENT( popup_data.inc_adj ) ); 
         gtk_adjustment_value_changed( GTK_ADJUSTMENT( popup_data.inc_adj ) ); 
       } 
@@ -1763,7 +1781,8 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
 
     gtk_widget_show( popup_data.win ); 
-    gdk_window_raise(popup_data.win->window);
+    //    gdk_window_raise(popup_data.win->window);
+    gdk_window_raise(gtk_widget_get_window(popup_data.win));
     return; 
   } 
 
@@ -1787,7 +1806,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
         if (popup_data.bnum == current){ 
 	  gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), popup_data.size ); 
-	  strncat( s, popup_data.param->name,PARAM_NAME_LEN); 
+	  strncat( s, popup_data.param->name,PARAM_NAME_LEN-strlen(s)); 
 	  gtk_label_set_text( GTK_LABEL( param_button[ popup_data.button_number ].label ), s ); 
         } 
 	else buffp[popup_data.bnum]->param_set.num_acqs_2d = popup_data.size;
@@ -1800,7 +1819,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
         if (popup_data.bnum == current){ 
 	  gtk_adjustment_set_value( GTK_ADJUSTMENT( acqs_2d_adj ), popup_data.size ); 
-	  strncat( s, popup_data.param->name,PARAM_NAME_LEN); 
+	  strncat( s, popup_data.param->name,PARAM_NAME_LEN-strlen(s)); 
 	  strncat( s, "(",1 ); 
 	  strncat( s, &popup_data.param->unit_c,1 ); 
 	  strncat( s, ")",1 ); 
@@ -1842,11 +1861,11 @@ gint update_paths( GtkWidget* widget, gpointer data )
       { 
       case 'I': 
   	for( i=0; i<popup_data.size; i++ ) 
-  	  popup_data.param->i_val_2d[i] = (int) GTK_ADJUSTMENT( popup_data.adj[i] ) -> value; 
+  	  popup_data.param->i_val_2d[i] = (int) gtk_adjustment_get_value(GTK_ADJUSTMENT( popup_data.adj[i] )); 
   	break; 
       case 'F': 
   	for( i=0; i<popup_data.size; i++ ) 
-  	  popup_data.param->f_val_2d[i] = GTK_ADJUSTMENT( popup_data.adj[i] ) -> value; 
+  	  popup_data.param->f_val_2d[i] = gtk_adjustment_get_value(GTK_ADJUSTMENT( popup_data.adj[i] ) ); 
   	break; 
       default: 
   	fprintf(stderr, "Xnmr: apply_pressed: invalid parameter type\n" ); 
@@ -2001,8 +2020,8 @@ gint update_paths( GtkWidget* widget, gpointer data )
     int i; 
     for( i=0; i<popup_data.size; i++ ) 
       gtk_adjustment_set_value( GTK_ADJUSTMENT( popup_data.adj[i] ),  
-  			      GTK_ADJUSTMENT( popup_data.start_adj )->value + 
-  			      i*GTK_ADJUSTMENT( popup_data.inc_adj )->value ); 
+				gtk_adjustment_get_value(GTK_ADJUSTMENT( popup_data.start_adj )) + 
+				i*gtk_adjustment_get_value(GTK_ADJUSTMENT( popup_data.inc_adj ))); 
 
     return; 
   } 

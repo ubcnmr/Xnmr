@@ -34,9 +34,8 @@ static int port;
 
 
 int close_port_ad9850(){
-  int i;
   if (have_port == 1)
-    i = ioperm(port,8,0);
+    ioperm(port,8,0);
     
   return 0;
 }
@@ -84,7 +83,7 @@ int setup_ad9850()
   double an;
   int i;
   unsigned char status,bb[4];
-  unsigned long an2;
+  //  unsigned long an2;
   double got_freq;
 
 
@@ -143,7 +142,7 @@ int setup_ad9850()
     bb[i] = nco & 0xff;
     nco= nco >>8;
   }
-  an2 = bb[3]+256*bb[2]+bb[1]*256*256+bb[0]*256*256*256;
+  //  an2 = bb[3]+256*bb[2]+bb[1]*256*256+bb[0]*256*256*256;
 
 
   outb(0,port); // top five bits are phase

@@ -1,5 +1,4 @@
 #define _GNU_SOURCE
-#define GTK_DISABLE_DEPRECATED
 /* process_f.c
  *
  * Implementation of the process panel page in Xnmr
@@ -432,12 +431,15 @@ gint do_bft(GtkWidget *widget, double *unused)
 
 
 
-gint do_exp_mult_and_display( GtkWidget *widget, double *val )
+gint do_exp_mult_and_display( GtkWidget *widget, GtkAdjustment *adj )
 {
   dbuff *buff;
   gint result;
+  double val;
+  val = gtk_adjustment_get_value(adj);
 
-  result = do_exp_mult( widget, val );
+
+  result = do_exp_mult( widget, &val );
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -486,12 +488,14 @@ gint do_exp_mult( GtkWidget* widget, double* val )
 }
 
 
-gint do_gaussian_mult_and_display( GtkWidget *widget, double *val )
+gint do_gaussian_mult_and_display( GtkWidget *widget, GtkAdjustment *adj )
 {
   dbuff *buff;
   gint result;
+  double val;
+  val = gtk_adjustment_get_value(adj);
 
-  result = do_gaussian_mult( widget, val );
+  result = do_gaussian_mult( widget, &val );
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -613,11 +617,13 @@ gint do_zero_fill(GtkWidget * widget,double *val)
  return 0;
 }
 
-gint do_zero_fill_and_display(GtkWidget * widget,double *val)
+gint do_zero_fill_and_display(GtkWidget * widget,GtkAdjustment *adj)
 {
   dbuff *buff;
   gint result;
   gint old_npts;
+  double val;
+  val = gtk_adjustment_get_value(adj);
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -625,7 +631,7 @@ gint do_zero_fill_and_display(GtkWidget * widget,double *val)
     buff = buffp[ current ];
 
   old_npts=buff->npts;
-  result = do_zero_fill( widget, val );
+  result = do_zero_fill( widget, &val );
 
   if (old_npts != buff->npts)
     draw_canvas( buff );
@@ -690,16 +696,17 @@ gint do_left_shift(GtkWidget * widget,double *val)
 
   }
 
-gint do_left_shift_and_display(GtkWidget * widget,double *val)
+gint do_left_shift_and_display(GtkWidget * widget,GtkAdjustment *adj)
 {
   dbuff *buff;
   gint result;
-
+  double val;
+  val = gtk_adjustment_get_value(adj);
   //  fprintf(stderr,"in do_left_shift_and_display with val = %lf\n",*val);
-  result = do_left_shift( widget, val );
+  result = do_left_shift( widget, &val );
 
   if( widget == NULL ) {
-    fprintf(stderr,"widget is nyull\n");
+    fprintf(stderr,"widget is null\n");
     buff = buffp[ upload_buff ];
   }
   else 
@@ -769,13 +776,16 @@ gint do_left_shift_2d(GtkWidget * widget,double *val)
 
   }
 
-gint do_left_shift_2d_and_display(GtkWidget * widget,double *val)
+gint do_left_shift_2d_and_display(GtkWidget * widget,GtkAdjustment *adj)
 {
   dbuff *buff;
   gint result;
+  double val;
+
+  val = gtk_adjustment_get_value(adj);
 
   //  fprintf(stderr,"in do_left_shift_and_display with val = %lf\n",*val);
-  result = do_left_shift_2d( widget, val );
+  result = do_left_shift_2d( widget, &val );
 
   if( widget == NULL ) {
     fprintf(stderr,"widget is nyull\n");
@@ -827,12 +837,15 @@ gint do_truncate(GtkWidget * widget,double *val)
 
   }
 
-gint do_truncate_and_display(GtkWidget * widget,double *val)
+gint do_truncate_and_display(GtkWidget * widget,GtkAdjustment *adj)
 {
   dbuff *buff;
   gint result;
+  double val;
 
-  result = do_truncate( widget, val );
+  val = gtk_adjustment_get_value(adj);
+
+  result = do_truncate( widget, &val );
 
   if( widget == NULL ) {
     fprintf(stderr,"widget is nyull\n");
@@ -997,7 +1010,7 @@ gint do_phase_2d_and_display_wrapper( GtkWidget* widget, double *unused )
 gint process_button_toggle(GtkWidget *widget, int button )
 
 {
-  if (GTK_TOGGLE_BUTTON (widget)->active) {
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))) {
 
     if( process_button[ button ].adj == NULL )
       active_process_data[button].status = PROCESS_ON;
@@ -1019,7 +1032,7 @@ gint process_button_toggle(GtkWidget *widget, int button )
 gint process_local_global_toggle(GtkWidget *widget, int button )
 
 {
-  if (GTK_TOGGLE_BUTTON (widget)->active) {
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))) {
     active_process_data[PH].val =0;
   }
   else {
@@ -1043,7 +1056,7 @@ gint update_active_process_data( GtkAdjustment *adj, int button )
 
   // fprintf(stderr, "updating active process data\n" );
   
-  f = adj -> value;
+  f = gtk_adjustment_get_value(adj);
 
   active_process_data[ button ].val = f;
 
@@ -1105,9 +1118,9 @@ GtkWidget* create_process_frame()
    * left shift
    */
   nu=LS;
-  process_button[nu].adj= gtk_adjustment_new( 0, -10000, 10000, 1, 2, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 0, -10000, 10000, 1, 2, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
-  button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
+  button = gtk_spin_button_new(  process_button[nu].adj , 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
   gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu,nu+1);
   gtk_widget_show( button );
@@ -1119,7 +1132,7 @@ GtkWidget* create_process_frame()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Left Shift" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_left_shift_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_left_shift_and_display), process_button[nu].adj );
   process_button[nu].func = do_left_shift;
   gtk_widget_show(button);
 
@@ -1127,7 +1140,7 @@ GtkWidget* create_process_frame()
    * truncate 
    */
   nu=TR;
-  process_button[nu].adj= gtk_adjustment_new( 0, 0, 10000000, 1, 2, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 0, 0, 10000000, 1, 2, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
@@ -1141,7 +1154,7 @@ GtkWidget* create_process_frame()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Truncate" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_truncate_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_truncate_and_display),  process_button[nu].adj  );
   process_button[nu].func = do_truncate;
   gtk_widget_show(button);
 
@@ -1151,9 +1164,9 @@ GtkWidget* create_process_frame()
   nu=CR;
   // default value actually set in buff.c 
   //  process_button[nu].adj= gtk_adjustment_new( 9, 1, PSRBMAX , 1, 2, 0 );
-  process_button[nu].adj= gtk_adjustment_new( 9, 1, 4096 , 1, 2, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 9, 1, 4096 , 1, 2, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
-  button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00,0 );
+  button = gtk_spin_button_new(  process_button[nu].adj , 1.00,0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
   gtk_table_attach_defaults(GTK_TABLE(table),button,2,3,nu,nu+1);
   gtk_widget_show( button );
@@ -1166,7 +1179,7 @@ GtkWidget* create_process_frame()
 
   button = gtk_button_new_with_label( "Cross correlation" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_cross_correlate_and_display), &(GTK_ADJUSTMENT(process_button[nu].adj) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_cross_correlate_and_display), process_button[nu].adj );
   process_button[nu].func = do_cross_correlate;
   gtk_widget_show(button);
 
@@ -1179,7 +1192,7 @@ GtkWidget* create_process_frame()
    *  Exp Mult
    */
   nu=EM;
-  process_button[nu].adj =  gtk_adjustment_new( 0, -1e6, 1e6, 1, 10, 0 );
+  process_button[nu].adj =  (GtkAdjustment *) gtk_adjustment_new( 0, -1e6, 1e6, 1, 10, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT( process_button[nu].adj ), 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
@@ -1192,7 +1205,7 @@ GtkWidget* create_process_frame()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Exp Mult" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_exp_mult_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_exp_mult_and_display), process_button[nu].adj  );
   process_button[nu].func = do_exp_mult;
   gtk_widget_show(button);
 
@@ -1200,7 +1213,7 @@ GtkWidget* create_process_frame()
    *  Gaussian Mult
    */
   nu=GM;
-  process_button[nu].adj= gtk_adjustment_new( 0, -1e6, 1e6, 1, 10, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 0, -1e6, 1e6, 1, 10, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu );
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
@@ -1213,7 +1226,7 @@ GtkWidget* create_process_frame()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Gaussian Mult" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_gaussian_mult_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_gaussian_mult_and_display), process_button[nu].adj  );
   process_button[nu].func = do_gaussian_mult;
   gtk_widget_show(button);
 
@@ -1221,7 +1234,7 @@ GtkWidget* create_process_frame()
    * Zero fill
    */
   nu=ZF;
-  process_button[nu].adj= gtk_adjustment_new( 2, 1, 10, 1, 2, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 2, 1, 10, 1, 2, 0 );
   // the 2 is the default value but its actually set up in buff init in buff.c.
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 1 );
@@ -1236,7 +1249,7 @@ GtkWidget* create_process_frame()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Zero Fill" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu,nu+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_zero_fill_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_zero_fill_and_display), process_button[nu].adj  );
   process_button[nu].func = do_zero_fill;
   gtk_widget_show(button);
 
@@ -1318,7 +1331,7 @@ GtkWidget* create_process_frame()
    *  Phase radio buttons
    */
 
-  hbox = gtk_hbox_new(FALSE,1);
+  hbox = gtk_hbox_new_wrap(FALSE,1);
   
   button = gtk_radio_button_new_with_label( NULL, "local" );
   gtk_box_pack_start(GTK_BOX(hbox),button,FALSE,FALSE,1);
@@ -1475,12 +1488,14 @@ void show_process_frame( process_data_t* process_set )
 }
 
 
-gint do_cross_correlate_and_display( GtkWidget *widget, double *bits )
+gint do_cross_correlate_and_display( GtkWidget *widget, GtkAdjustment *adj )
 {
   dbuff *buff;
   gint result;
+  double bits;
+  bits = gtk_adjustment_get_value(adj);
 
-  result = do_cross_correlate( widget, bits );
+  result = do_cross_correlate( widget, &bits );
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -1950,7 +1965,7 @@ GtkWidget* create_process_frame_2d()
    * Left shift 2d
    */
   nu=LS2D;
-  process_button[nu].adj= gtk_adjustment_new( 0, -10000, 10000, 1, 2, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 0, -10000, 10000, 1, 2, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
@@ -1964,7 +1979,7 @@ GtkWidget* create_process_frame_2d()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Left shift 2D" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_left_shift_2d_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_left_shift_2d_and_display), process_button[nu].adj  );
   process_button[nu].func = do_left_shift_2d;
   gtk_widget_show(button);
 
@@ -1972,7 +1987,7 @@ GtkWidget* create_process_frame_2d()
    * Exp multiply
    */
   nu=EM2D;
-  process_button[nu].adj= gtk_adjustment_new( 2, -1E6, 1E6, 1, 2, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 2, -1E6, 1E6, 1, 2, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
@@ -1986,7 +2001,7 @@ GtkWidget* create_process_frame_2d()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Exp Mult 2D" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_exp_mult_2d_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_exp_mult_2d_and_display), process_button[nu].adj  );
   process_button[nu].func = do_exp_mult_2d;
   gtk_widget_show(button);
 
@@ -1994,7 +2009,7 @@ GtkWidget* create_process_frame_2d()
    * Gauss multiply
    */
   nu=GM2D;
-  process_button[nu].adj= gtk_adjustment_new( 2, -1E6, 1E6, 1, 2, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 2, -1E6, 1E6, 1, 2, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 0 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
@@ -2008,7 +2023,7 @@ GtkWidget* create_process_frame_2d()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Gauss Mult 2D" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_gaussian_mult_2d_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_gaussian_mult_2d_and_display),  process_button[nu].adj );
   process_button[nu].func = do_gaussian_mult_2d;
   gtk_widget_show(button);
 
@@ -2019,7 +2034,7 @@ GtkWidget* create_process_frame_2d()
    * Zero fill
    */
   nu=ZF2D;
-  process_button[nu].adj= gtk_adjustment_new( 2, 1, 100, 1, 2, 0 );
+  process_button[nu].adj= (GtkAdjustment *) gtk_adjustment_new( 2, 1, 100, 1, 2, 0 );
   g_signal_connect (G_OBJECT (process_button[nu].adj), "value_changed", G_CALLBACK (update_active_process_data), (void*) nu);
   button = gtk_spin_button_new( GTK_ADJUSTMENT(  process_button[nu].adj ), 1.00, 1 );
   gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID );
@@ -2033,7 +2048,7 @@ GtkWidget* create_process_frame_2d()
   gtk_widget_show(process_button[nu].button);
   button = gtk_button_new_with_label( "Zero Fill 2D" );
   gtk_table_attach_defaults(GTK_TABLE(table),button,1,2,nu-P2D,nu-P2D+1);
-  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_zero_fill_2d_and_display), &(GTK_ADJUSTMENT( process_button[nu].adj ) -> value) );
+  g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(do_zero_fill_2d_and_display), process_button[nu].adj  );
   process_button[nu].func = do_zero_fill_2d;
   gtk_widget_show(button);
 
@@ -2259,11 +2274,13 @@ gint do_zero_fill_2d(GtkWidget * widget,double *val)
  return 0;
 }
 
-gint do_zero_fill_2d_and_display(GtkWidget * widget,double *val)
+gint do_zero_fill_2d_and_display(GtkWidget * widget,GtkAdjustment *adj)
 {
   dbuff *buff;
   gint result;
   gint old_npts2;
+  double val;
+  val = gtk_adjustment_get_value(adj);
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -2271,7 +2288,7 @@ gint do_zero_fill_2d_and_display(GtkWidget * widget,double *val)
     buff = buffp[ current ];
 
   old_npts2=buff->npts2;
-  result = do_zero_fill_2d( widget, val );
+  result = do_zero_fill_2d( widget, &val );
 
   if (old_npts2 != buff->npts2)
     draw_canvas( buff );
@@ -2569,7 +2586,7 @@ gint do_hayashi1(GtkWidget *widget, double *unused)
    */
 
   dbuff *buff;
-  int i,j,k,seqlen,n,chulen,echolen,nseqs;
+  int i,j,k,seqlen,n,echolen,nseqs; // ,chulen;
   float *new_data;
   float *seqs;
   float *my_seq;
@@ -2600,7 +2617,7 @@ gint do_hayashi1(GtkWidget *widget, double *unused)
   printf("got: n = %i, k= %i\n",n,k);
   seqlen = 4*(2*n+1)*(2*k+1);
   nseqs = 4*n+2;
-  chulen = (2*n+1)*(2*k+1);
+  //  chulen = (2*n+1)*(2*k+1);
   echolen = 4*k+2;
 
   // check to make sure there are enough points
@@ -2960,12 +2977,14 @@ gint do_mag_2d(GtkWidget *widget, double *unused)
 
 
 
-gint do_exp_mult_2d_and_display( GtkWidget *widget, double* val )
+gint do_exp_mult_2d_and_display( GtkWidget *widget, GtkAdjustment *adj )
 {
   dbuff *buff;
   gint result;
+  double val;
+  val = gtk_adjustment_get_value(adj);
 
-  result = do_exp_mult_2d( widget, val );
+  result = do_exp_mult_2d( widget, &val );
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];
@@ -3033,12 +3052,14 @@ gint do_exp_mult_2d( GtkWidget* widget, double * val )
 
 
 
-gint do_gaussian_mult_2d_and_display( GtkWidget *widget, double* val )
+gint do_gaussian_mult_2d_and_display( GtkWidget *widget, GtkAdjustment *adj )
 {
   dbuff *buff;
   gint result;
+  double val;
+  val = gtk_adjustment_get_value(adj);
 
-  result = do_gaussian_mult_2d( widget, val );
+  result = do_gaussian_mult_2d( widget, &val );
 
   if( widget == NULL ) 
     buff = buffp[ upload_buff ];

@@ -4,8 +4,8 @@
 // it will also generate "simulated" data
 //
 
-
-#define NOHARDWARE
+// never define NOHARDWARE here. Do it in the Makefile (xnmr.c uses it too).
+//#define NOHARDWARE
 #define NO_RT_SCHED
 
 //#define OLD_PORT_INTERRUPT 
@@ -15,8 +15,8 @@
 // we should read the first two of these out of /proc/pci
 
 #define PULSE_PORT 0xb000
-#define DSP_PORT 0x0x378
-#define AD9850_PORT 0xb400
+#define AD9850_PORT 0x0378
+#define DSP_PORT 0xb400
 
 
 
@@ -473,8 +473,8 @@ int start_pprog()
 
 {
   pid_t pid;
-  uid_t ruid;
-  gid_t rgid;
+  //  uid_t ruid;
+  //  gid_t rgid;
 
   struct msgbuf message;
   int result;
@@ -495,9 +495,9 @@ int start_pprog()
       // hmm, this won't work though, because lock doesn't stay across exec
       mlockall(MCL_FUTURE);
 
-    ruid=getuid();
+      //    ruid=getuid();
     euid=geteuid();
-    rgid=getgid();
+    //    rgid=getgid();
     egid=getegid();
     //        fprintf(stderr,"real: %i, eff: %i\n, setting effective uid to %i\n",ruid,euid,ruid);
 
@@ -619,7 +619,7 @@ int accumulate_data( int* buffer )
       {
       // first, copy data to floats, then do FT
 	float *tdata,spare,scale = 2.0;
-	tdata = g_malloc( data_shm->npts*2 * sizeof(float));
+	tdata = malloc( data_shm->npts*2 * sizeof(float));
 	for ( i = 0; i < data_shm->npts*2 ; i += 1 )
 	  tdata[i] = (float) buffer[i];
 
@@ -649,7 +649,7 @@ int accumulate_data( int* buffer )
 	  //data_shm->data_image[i+1] += tdata[i+1];
 
 	}
-	g_free(tdata);
+	free(tdata);
 
       return 0;
       break;
@@ -761,7 +761,7 @@ int run()
 
   if (block_buffer != NULL){
     fprintf(stderr,"acq: on enter, block_buffer was not NULL\n");
-    g_free(block_buffer);
+    free(block_buffer);
     block_buffer = NULL;
   }
 
@@ -906,7 +906,7 @@ else{
   if (block_size > data_shm->num_acqs || data_shm->num_acqs_2d == 0) block_size = 0;
   
   if (block_size > 0){
-    block_buffer = g_malloc(data_shm->num_acqs_2d * data_shm->npts * 2 * sizeof ( long long));
+    block_buffer = malloc(data_shm->num_acqs_2d * data_shm->npts * 2 * sizeof ( long long));
     if (block_buffer == NULL){
       fprintf(stderr,"acq: malloc for block_buff failed\n");
       done = ERROR_DONE;
@@ -2000,7 +2000,7 @@ else{
   // do some cleaning
 
   if (block_buffer != NULL){
-    g_free(block_buffer);
+    free(block_buffer);
     block_buffer = NULL;
   }
   unlink("/var/run/Xnmr_acq_is_running");

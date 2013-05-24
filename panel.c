@@ -1,4 +1,3 @@
-#define GTK_DISABLE_DEPRECATED
 /* panel.c
  *
  * source code for Xnmr panel
@@ -78,7 +77,6 @@ gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 
   //  fprintf(stderr,"in kill clicked, setting not green\nin progress: %i, mode: %i\n",acq_in_progress,data_shm->mode);
   gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,NULL);
-  
   send_sig_acq( ACQ_KILL ); 
   
   if (acq_in_progress == ACQ_STOPPED) return 0;
@@ -147,7 +145,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
     return 0;
   }
 
-  if (GTK_TOGGLE_BUTTON (widget)->active) {
+  if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))) {
     /* If control reaches here, the toggle button is down */
     //  fprintf(stderr,"widget is active\n");
     if( acq_in_progress == ACQ_STOPPED ) {
@@ -178,7 +176,7 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 	//	fprintf(stderr,"setting mode NOSAVE\n");
 	data_shm->mode = NORMAL_MODE_NOSAVE;
       }
-      
+
       acq_process_data = buffp[ current ]->process_data;
 
       last_upload_buff = upload_buff;
@@ -313,7 +311,7 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
   }
 
 
-  if (GTK_TOGGLE_BUTTON (widget)->active) {
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))) {
     /* If control reaches here, the toggle button is coming down */
 
     if( acq_in_progress == ACQ_STOPPED ) {
@@ -392,7 +390,7 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
     return 0;
   }
 
-  if (GTK_TOGGLE_BUTTON (widget)->active) {
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))) {
     /* If control reaches here, the toggle button is down */
 
     if( acq_in_progress == ACQ_STOPPED ) {
@@ -470,8 +468,8 @@ GtkWidget* create_panels()
 
   book = gtk_notebook_new();
 
-  panhbox=gtk_hbox_new(FALSE,0);
-  panvbox=gtk_vbox_new(FALSE,0);
+  panhbox=gtk_hbox_new_wrap(FALSE,0);
+  panvbox=gtk_vbox_new_wrap(FALSE,0);
 
   gtk_notebook_set_tab_pos(GTK_NOTEBOOK(book),GTK_POS_BOTTOM);
 
@@ -504,6 +502,8 @@ GtkWidget* create_panels()
 
     start_button = gtk_toggle_button_new_with_label( "Acquire and Save" );
 
+
+
   if(no_acq == FALSE){
   
     if( data_shm->mode == NORMAL_MODE && data_shm->acq_sig_ui_meaning != ACQ_DONE) {
@@ -535,9 +535,7 @@ GtkWidget* create_panels()
   gtk_box_pack_start(GTK_BOX(panvbox),start_button_nosave,TRUE,TRUE,0);
     
 
-
   repeat_button = gtk_toggle_button_new_with_label( "Repeat" );
-  
   if(no_acq ==FALSE){
   
     if( data_shm->mode == REPEAT_MODE ) {
@@ -553,11 +551,9 @@ GtkWidget* create_panels()
 
   gtk_box_pack_start(GTK_BOX(panvbox),repeat_button,TRUE,TRUE,0);
 
-
   
   button = gtk_button_new_with_label( "Process" );
   script_widgets.process_button = button;
-
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(process_data), NULL);
   gtk_box_pack_start(GTK_BOX(panvbox),button,TRUE,TRUE,0);
 
@@ -608,6 +604,14 @@ GtkWidget* create_panels()
   */
 
   gtk_widget_show_all(panhbox);
+
+
+  // so theme colors work:
+  gtk_widget_set_name(repeat_button,"mybutton");
+  gtk_widget_set_name(start_button,"mybutton");
+  gtk_widget_set_name(start_button_nosave,"mybutton");
+  gtk_widget_set_name(repeat_p_button,"mybutton");
+
   return panhbox;
   
 }

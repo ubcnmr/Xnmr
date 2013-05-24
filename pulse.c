@@ -1242,7 +1242,7 @@ int is_a_float_device(int device_id)
    //   fprintf(stderr,"found num devices = %i\n",num_dev);
 
    //   fprintf(stderr,"sizeof hardware_config: %i\n",sizeof(*hardware_config));
-   hardware_config = g_malloc(num_dev * sizeof(*hardware_config));
+   hardware_config = malloc(num_dev * sizeof(*hardware_config));
 
    do { 
      fgets( s, PATH_LENGTH, fid );  

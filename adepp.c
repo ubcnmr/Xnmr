@@ -157,7 +157,7 @@ int read_fifo_epp(int npts,int *data)
 
   unsigned short high;
   unsigned short low;
-  unsigned char mask1,mask2,mask3,mask4;
+  unsigned char mask3,mask4; //,mask1,mask2;
   int i,istart=0;
 
   //  fprintf(stderr,"in read_fifo_epp, port is: %i\n",port);
@@ -167,8 +167,8 @@ int read_fifo_epp(int npts,int *data)
     // should check status in here...
     // start off by clocking first byte into latches:
 
-  mask1 = FIFO | FIFO_OFF | MR_OFF | DSP_NRESET | R_ON;
-  mask2 = FIFO | FIFO_OFF | MR_OFF | DSP_NRESET;
+  //  mask1 = FIFO | FIFO_OFF | MR_OFF | DSP_NRESET | R_ON;
+  //  mask2 = FIFO | FIFO_OFF | MR_OFF | DSP_NRESET;
   
   mask3 = FIFO | FIFO_OFF | MR_OFF | DSP_NRESET | OEA;
   mask4 = FIFO | FIFO_OFF | MR_OFF | DSP_NRESET | R_ON;

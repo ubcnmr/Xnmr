@@ -1,4 +1,3 @@
-//#define GTK_DISABLE_DEPRECATED
 /* Xnmr.c
  *
  * X windows NMR Control center - main program
@@ -129,6 +128,15 @@ which bails out if the file exists.
 
 
 
+April 23, 2013 - start work for migrating to GTK3.
+
+on todo list: 
+
+1) redo drawing in cairo.
+
+n) cursor_busy and cursor_normal borked?
+
+
 */
 
 
@@ -156,7 +164,7 @@ which bails out if the file exists.
 
 
 GdkColor colours[NUM_COLOURS+EXTRA_COLOURS]; // matches in xnmr.h
-GdkGC *colourgc;
+//GdkGC *colourgc;
 phase_data_struct phase_data;
 add_sub_struct add_sub;
 fitting_struct fit_data;
@@ -165,7 +173,7 @@ queue_struct queue;
 int phase_npts=0;
 GtkWidget *phase_dialog,*freq_popup,*fplab1,*fplab2,*fplab3,*fplab4,*fplab5;
 
-GtkObject *phase0_ad,*phase1_ad;
+GtkAdjustment *phase0_ad,*phase1_ad;
 float phase0,phase1;
 float phase20,phase21;
 GdkCursor *cursorclock;
@@ -186,7 +194,7 @@ int main(int argc,char *argv[])
   int result,result_shm;
   GtkWidget  *pantable;
   GtkWidget *button,*hbox,*vbox;
-  GtkObject *adjust;
+  GtkAdjustment *adjust;
   GtkWidget *label;
   char title[UTIL_LEN],command[PATH_LENGTH];
   int width,height;
@@ -226,13 +234,14 @@ int main(int argc,char *argv[])
 
   /* initialize the gtk stuff */
 
-  g_thread_init(NULL); // we don't really use threads, except to catch signals
+  //  g_thread_init(NULL); // we don't really use threads, except to catch signals
   gdk_threads_init();
   // mutex to ensure that routines added with idle_add don't collide.
   gtk_init(&argc, &argv);
 
 
   // see if /dev/PP_irq0 exists.  if not, then imply noacq.
+#ifndef NOHARDWARE
   {
     struct stat sstat;
     if (stat("/dev/PP_irq0",&sstat) == -1){
@@ -240,6 +249,7 @@ int main(int argc,char *argv[])
       printf("couldn't find /dev/PP_irq0, forcing noacq\n");
     }
   }
+#endif
 
   /* look for command line arguments  that gtk didn't want*/
   do{
@@ -250,13 +260,54 @@ int main(int argc,char *argv[])
     }
   }while (ar !=EOF );
 
+#if GTK_MAJOR_VERSION == 2
   gtk_rc_parse("/usr/share/Xnmr/config/xnmrrc");
   path_strcpy(command,getenv("HOME"));
   path_strcat(command,"/.xnmrrc");
 	 
   //  fprintf(stderr,"looking for rc file: %s\n",command);
   gtk_rc_parse( command );
- 
+#else
+  //  GtkStyleContext *context;
+  GtkCssProvider *provider;
+  GdkScreen *screen;
+  GdkDisplay *display;
+
+  provider=gtk_css_provider_new();
+
+  // these two should work but don't
+  //  context=gtk_widget_get_style_context(panwindow);
+  //    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider),
+  //				 GTK_STYLE_PROVIDER_PRIORITY_USER);
+
+  display = gdk_display_get_default ();
+  screen = gdk_display_get_default_screen (display);                                                                                   
+  gtk_style_context_add_provider_for_screen (screen, GTK_STYLE_PROVIDER (provider),    GTK_STYLE_PROVIDER_PRIORITY_USER);
+
+  gtk_css_provider_load_from_data(GTK_CSS_PROVIDER(provider),
+				  "GtkButton#mybutton {\n"
+				  "background-image: none;\n"
+				  "}\n"
+				  "GtkButton#mybutton:active {\n"
+				  " background-color: #f00\n"
+				  "}\n"
+				  "GtkButton#mybutton:hover {\n" // icing
+ 				  " background-color: shade (@bg_color,1.04);\n"
+ 				  "}\n"
+ 				  "GtkButton#mybutton:active:hover {\n" // icing
+ 				  " background-color: #f33;\n"
+ 				  "}\n"
+				  "GtkArrow#littlearrow {\n"
+				  "-GtkArrow-arrow-scaling:  0.4\n;"
+				  "}\n"
+				  "GtkArrow#bigarrow {\n"
+				  "-GtkArrow-arrow-scaling:  0.9\n;"
+				  "}\n",
+				  -1,NULL);
+  g_object_unref(provider);
+#endif
+  
+
   /* initialize my stuff */
   for(i=0;i<MAX_BUFFERS;i++)
     {
@@ -342,8 +393,11 @@ int main(int argc,char *argv[])
   }
 
   /* build the notebook/panel window */
-
   panwindow=gtk_window_new( GTK_WINDOW_TOPLEVEL );
+
+  
+  
+  
 
   gtk_window_set_default_size(GTK_WINDOW(panwindow),1000,300);
 
@@ -355,7 +409,7 @@ int main(int argc,char *argv[])
   gtk_container_add(GTK_CONTAINER(panwindow),pantable);
 
   //  gtk_window_set_position(GTK_WINDOW(panwindow),GTK_WIN_POS_NONE);
-  gtk_window_set_gravity(GTK_WINDOW(panwindow),GDK_GRAVITY_NORTH_WEST);
+  //  gtk_window_set_gravity(GTK_WINDOW(panwindow),GDK_GRAVITY_NORTH_WEST);
   gtk_window_set_icon_from_file(GTK_WINDOW(panwindow),"/usr/share/Xnmr/xnmr_buff_icon.png",NULL);
 
   // want size of buffer window to set placement of panel window.
@@ -392,7 +446,7 @@ int main(int argc,char *argv[])
 
   queue.num_queued = 0;
   queue.label=gtk_label_new("0 Experiments in Queue");
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),queue.label,FALSE,FALSE,0);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(queue.dialog))),queue.label,FALSE,FALSE,0);
 
 
   queue.list =  gtk_list_store_new(N_COLUMNS,G_TYPE_INT,G_TYPE_STRING);
@@ -426,15 +480,15 @@ int main(int argc,char *argv[])
   column = gtk_tree_view_column_new_with_attributes("File Name",renderer,"text",1,NULL);
   gtk_tree_view_append_column(GTK_TREE_VIEW(tree),column);
 
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->vbox),tree,FALSE,FALSE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(queue.dialog))),tree,FALSE,FALSE,2);
 
 
   button = gtk_button_new_with_label("Remove from Queue");
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->action_area),button,FALSE,FALSE,0);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(queue.dialog))),button,FALSE,FALSE,0);
   g_signal_connect(G_OBJECT(button),"clicked",G_CALLBACK(remove_queue),NULL);
 
   button=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(queue.dialog)->action_area),button,TRUE,TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(queue.dialog))),button,TRUE,TRUE,2);
 
   g_signal_connect_swapped(G_OBJECT(button),"clicked",G_CALLBACK(gtk_widget_hide),queue.dialog);
 
@@ -457,8 +511,12 @@ int main(int argc,char *argv[])
 
 
   // The buffer line:
-  hbox=gtk_hbox_new(TRUE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),hbox,FALSE,FALSE,0);
+  hbox=gtk_hbox_new_wrap(TRUE,2);
+  // in gtk3, this will become - stupid!
+  //  hbox=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,2);
+  //  gtk_box_set_homogeneous(GTK_BOX(hbox),TRUE);
+
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(add_sub.dialog))),hbox,FALSE,FALSE,0);
 
   label=gtk_label_new("Source 1");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
@@ -469,14 +527,14 @@ int main(int argc,char *argv[])
 
   
 
-  hbox=gtk_hbox_new(TRUE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),hbox,FALSE,FALSE,0);
+  hbox=gtk_hbox_new_wrap(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(add_sub.dialog))),hbox,FALSE,FALSE,0);
 
   label=gtk_label_new("Buffer");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
 
-  add_sub.s_buff1 = gtk_combo_box_new_text();
+  add_sub.s_buff1 = gtk_combo_box_text_new();
   //  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_buff1),"line1");
   //  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_buff1),"line2");
   g_signal_connect(G_OBJECT(add_sub.s_buff1),"changed",
@@ -487,7 +545,7 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
 
-  add_sub.s_buff2 = gtk_combo_box_new_text();
+  add_sub.s_buff2 = gtk_combo_box_text_new();
   //  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_buff2),"line1");
   //  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_buff2),"line2");
   g_signal_connect(G_OBJECT(add_sub.s_buff2),"changed",
@@ -498,25 +556,25 @@ int main(int argc,char *argv[])
   label=gtk_label_new("Buffer");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  add_sub.dest_buff = gtk_combo_box_new_text();
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.dest_buff),"New");
+  add_sub.dest_buff = gtk_combo_box_text_new();
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.dest_buff),"New");
   g_signal_connect(G_OBJECT(add_sub.dest_buff),"changed",
 		     G_CALLBACK (add_sub_changed),NULL);
   gtk_box_pack_start(GTK_BOX(hbox),add_sub.dest_buff,FALSE,FALSE,2);
 
 
   // the record line:
-  hbox = gtk_hbox_new(TRUE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),hbox,FALSE,FALSE,0);
+  hbox = gtk_hbox_new_wrap(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(add_sub.dialog))),hbox,FALSE,FALSE,0);
   
 
   label=gtk_label_new("record");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  add_sub.s_record1 = gtk_combo_box_new_text();
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record1),"Each");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record1),"Sum All");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record1),"0");
+  add_sub.s_record1 = gtk_combo_box_text_new();
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.s_record1),"Each");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.s_record1),"Sum All");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.s_record1),"0");
   add_sub.s_rec_c1 = 1; 
   g_signal_connect(G_OBJECT(add_sub.s_record1),"changed",
 		     G_CALLBACK (add_sub_changed),NULL);
@@ -526,10 +584,10 @@ int main(int argc,char *argv[])
   label=gtk_label_new("record");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  add_sub.s_record2 = gtk_combo_box_new_text();
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record2),"Each");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record2),"Sum All");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.s_record2),"0");
+  add_sub.s_record2 = gtk_combo_box_text_new();
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.s_record2),"Each");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.s_record2),"Sum All");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.s_record2),"0");
   add_sub.s_rec_c2 = 1; 
   g_signal_connect(G_OBJECT(add_sub.s_record2),"changed",
 		     G_CALLBACK (add_sub_changed),NULL);
@@ -539,10 +597,10 @@ int main(int argc,char *argv[])
   label=gtk_label_new("record");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  add_sub.dest_record = gtk_combo_box_new_text();
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.dest_record),"Each");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.dest_record),"Append");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(add_sub.dest_record),"0");
+  add_sub.dest_record = gtk_combo_box_text_new();
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.dest_record),"Each");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.dest_record),"Append");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(add_sub.dest_record),"0");
   add_sub.dest_rec_c = 1; 
   g_signal_connect(G_OBJECT(add_sub.dest_record),"changed",
 		     G_CALLBACK (add_sub_changed),NULL);
@@ -551,13 +609,13 @@ int main(int argc,char *argv[])
 
   // now the multiplier line:
 
-  hbox = gtk_hbox_new(TRUE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->vbox),hbox,FALSE,FALSE,0);
+  hbox = gtk_hbox_new_wrap(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(add_sub.dialog))),hbox,FALSE,FALSE,0);
 
   label=gtk_label_new("multiplier");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
   
-  adjust = gtk_adjustment_new(1.0,-1e6,1e6,0.1,1.,0.);
+  adjust = (GtkAdjustment *) gtk_adjustment_new(1.0,-1e6,1e6,0.1,1.,0.);
   add_sub.mult1= gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0,6);
   gtk_box_pack_start(GTK_BOX(hbox),add_sub.mult1,FALSE,FALSE,2);
 
@@ -565,7 +623,7 @@ int main(int argc,char *argv[])
   label=gtk_label_new("multiplier");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
   
-  adjust = gtk_adjustment_new(1.0,-1e6,1e6,0.1,1.,0.);
+  adjust = (GtkAdjustment *) gtk_adjustment_new(1.0,-1e6,1e6,0.1,1.,0.);
   add_sub.mult2= gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0,6);
   gtk_box_pack_start(GTK_BOX(hbox),add_sub.mult2,FALSE,FALSE,2);
 
@@ -575,11 +633,11 @@ int main(int argc,char *argv[])
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
   add_sub.apply = gtk_button_new_from_stock(GTK_STOCK_APPLY);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->action_area),add_sub.apply,TRUE,TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(add_sub.dialog))),add_sub.apply,TRUE,TRUE,2);
   g_signal_connect(G_OBJECT(add_sub.apply),"clicked",G_CALLBACK(add_sub_buttons),NULL);
 
   add_sub.close=gtk_button_new_from_stock(GTK_STOCK_CLOSE);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(add_sub.dialog)->action_area),add_sub.close,TRUE,TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(add_sub.dialog))),add_sub.close,TRUE,TRUE,2);
   g_signal_connect(G_OBJECT(add_sub.close),"clicked",G_CALLBACK(add_sub_buttons),NULL);
 
   g_signal_connect( G_OBJECT (add_sub.dialog), "delete_event", G_CALLBACK( hide_add_sub ), NULL );
@@ -604,8 +662,8 @@ int main(int argc,char *argv[])
 
   // the label line:
 
-  hbox=gtk_hbox_new(TRUE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),hbox,FALSE,FALSE,0);
+  hbox=gtk_hbox_new_wrap(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(fit_data.dialog))),hbox,FALSE,FALSE,0);
 
   label=gtk_label_new("Data Source");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
@@ -620,13 +678,13 @@ int main(int argc,char *argv[])
 
 
   // buffer line:
-  hbox=gtk_hbox_new(TRUE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),hbox,FALSE,FALSE,0);
+  hbox=gtk_hbox_new_wrap(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(fit_data.dialog))),hbox,FALSE,FALSE,0);
 
   label=gtk_label_new("Buffer");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  fit_data.s_buff = gtk_combo_box_new_text();
+  fit_data.s_buff = gtk_combo_box_text_new();
   g_signal_connect(G_OBJECT(fit_data.s_buff),"changed",
 		   G_CALLBACK(fit_data_changed),NULL);
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.s_buff,FALSE,FALSE,2);
@@ -634,12 +692,12 @@ int main(int argc,char *argv[])
   label=gtk_label_new("Buffer");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
   
-  fit_data.d_buff = gtk_combo_box_new_text();
+  fit_data.d_buff = gtk_combo_box_text_new();
   g_signal_connect(G_OBJECT(fit_data.d_buff),"changed",
 		   G_CALLBACK(fit_data_changed),NULL);
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.d_buff,FALSE,FALSE,2);
 
-  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_buff),"New");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(fit_data.d_buff),"New");
 
   label=gtk_label_new("Store best fit?");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
@@ -651,15 +709,15 @@ int main(int argc,char *argv[])
 
 
   // record line
-  hbox=gtk_hbox_new(TRUE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),hbox,FALSE,FALSE,0);
+  hbox=gtk_hbox_new_wrap(TRUE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(fit_data.dialog))),hbox,FALSE,FALSE,0);
 
   label=gtk_label_new("record");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
   
-  fit_data.s_record = gtk_combo_box_new_text();
+  fit_data.s_record = gtk_combo_box_text_new();
   //  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.s_record),"Each");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.s_record),"0");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(fit_data.s_record),"0");
   g_signal_connect(G_OBJECT(fit_data.s_record),"changed",
 		   G_CALLBACK(fit_data_changed),NULL);
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.s_record,FALSE,FALSE,2);
@@ -668,10 +726,10 @@ int main(int argc,char *argv[])
   label=gtk_label_new("record");
   gtk_box_pack_start(GTK_BOX(hbox),label,FALSE,FALSE,2);
 
-  fit_data.d_record = gtk_combo_box_new_text();
+  fit_data.d_record = gtk_combo_box_text_new();
   //  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_record),"Each");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_record),"Append");
-  gtk_combo_box_append_text(GTK_COMBO_BOX(fit_data.d_record),"0");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(fit_data.d_record),"Append");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(fit_data.d_record),"0");
   g_signal_connect(G_OBJECT(fit_data.d_record),"changed",
 		   G_CALLBACK(fit_data_changed),NULL);
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.d_record,FALSE,FALSE,2);
@@ -687,8 +745,8 @@ int main(int argc,char *argv[])
 
   // next line:
 
-  hbox=gtk_hbox_new(FALSE,2);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->vbox),hbox,FALSE,FALSE,0);
+  hbox=gtk_hbox_new_wrap(FALSE,2);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(fit_data.dialog))),hbox,FALSE,FALSE,0);
 
 
   label = gtk_label_new("# Components:");
@@ -697,7 +755,7 @@ int main(int argc,char *argv[])
 
 
   
-  adjust = gtk_adjustment_new(0,0,MAX_FIT,1,1,0);
+  adjust =  (GtkAdjustment *)gtk_adjustment_new(0,0,MAX_FIT,1,1,0);
   fit_data.components=gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0,0);
   gtk_box_pack_start(GTK_BOX(hbox),fit_data.components,FALSE,FALSE,2);
   g_signal_connect(G_OBJECT(fit_data.components),"value_changed",G_CALLBACK(fit_data_changed),NULL);
@@ -733,11 +791,11 @@ int main(int argc,char *argv[])
   g_signal_connect(G_OBJECT(fit_data.close),"clicked",G_CALLBACK(fitting_buttons),NULL);
 
   //  the labels for the start values
-  vbox=gtk_vbox_new(TRUE,0);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(fit_data.dialog)->action_area),vbox,FALSE,FALSE,0);
+  vbox=gtk_vbox_new_wrap(TRUE,0);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(fit_data.dialog))),vbox,FALSE,FALSE,0);
   
 
-  hbox=gtk_hbox_new(TRUE,2);
+  hbox=gtk_hbox_new_wrap(TRUE,2);
   gtk_box_pack_start(GTK_BOX(vbox),hbox,FALSE,FALSE,0);
 
   label=gtk_label_new("Num");
@@ -764,7 +822,7 @@ int main(int argc,char *argv[])
 
 
 
-  gtk_widget_show_all(GTK_WIDGET(GTK_DIALOG(fit_data.dialog)->vbox));
+  gtk_widget_show_all(GTK_WIDGET(gtk_dialog_get_content_area(GTK_DIALOG(fit_data.dialog))));
   gtk_widget_show_all(GTK_WIDGET(vbox));
 
   // start with zero components, let the user choose how to add them.
@@ -776,7 +834,7 @@ int main(int argc,char *argv[])
   for (i=0;i<MAX_FIT;i++){
     char stt[5];
 
-    fit_data.hbox[i] = gtk_hbox_new(TRUE,2);
+    fit_data.hbox[i] = gtk_hbox_new_wrap(TRUE,2);
     gtk_box_pack_start(GTK_BOX(vbox),fit_data.hbox[i],FALSE,FALSE,0);
     
     sprintf(stt,"%i",i+1);
@@ -786,19 +844,19 @@ int main(int argc,char *argv[])
 
 
   //center
-    adjust = gtk_adjustment_new(0.0,-1e7,1e7,100,1000,0);
+    adjust = (GtkAdjustment *) gtk_adjustment_new(0.0,-1e7,1e7,100,1000,0);
     fit_data.center[i] = gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0.2,1);
     gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.center[i],FALSE,FALSE,2);
     gtk_widget_show(GTK_WIDGET(fit_data.center[i]));
 
     // amplitude
-    adjust = gtk_adjustment_new(0.0,-1e12,1e12,100,1000,0);
+    adjust = (GtkAdjustment *) gtk_adjustment_new(0.0,-1e12,1e12,100,1000,0);
     fit_data.amplitude[i] = gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0.2,1);
     gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.amplitude[i],FALSE,FALSE,2);
     gtk_widget_show(GTK_WIDGET(fit_data.amplitude[i]));
     
     // gauss width
-    adjust = gtk_adjustment_new(0.0,0.0,1e6,10,100,0);
+    adjust = (GtkAdjustment *) gtk_adjustment_new(0.0,0.0,1e6,10,100,0);
     fit_data.gauss_wid[i] = gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0.2,1);
     gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.gauss_wid[i],FALSE,FALSE,2);
     gtk_widget_show(GTK_WIDGET(fit_data.gauss_wid[i]));
@@ -811,7 +869,7 @@ int main(int argc,char *argv[])
 
 
     // lorentz width
-    adjust = gtk_adjustment_new(0.0,0.0,1e6,10,100,0);
+    adjust = (GtkAdjustment *) gtk_adjustment_new(0.0,0.0,1e6,10,100,0);
     fit_data.lorentz_wid[i] = gtk_spin_button_new(GTK_ADJUSTMENT(adjust),0.2,1);
     gtk_box_pack_start(GTK_BOX(fit_data.hbox[i]),fit_data.lorentz_wid[i],FALSE,FALSE,2);
     gtk_widget_show(GTK_WIDGET(fit_data.lorentz_wid[i]));
@@ -869,43 +927,44 @@ int main(int argc,char *argv[])
 
 
   /* do some color stuff */
-  colourgc=gdk_gc_new(buffp[0]->win.canvas->window);
+  
+  // colourgc=gdk_gc_new(buffp[0]->win.canvas->window);
 
   colours[RED].red=65535;
   colours[RED].blue=0;
   colours[RED].green=0;
-  colours[RED].pixel=(gulong) 255*256*256; /* red */
+  colours[RED].pixel=(gulong) 255*256*256; // red 
   // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
-  gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[RED],FALSE,TRUE);
+  //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[RED],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
   
   colours[BLUE].red=0;
   colours[BLUE].blue=65535;
   colours[BLUE].green=0;
-  colours[BLUE].pixel=(gulong) 255; /* blue */
+  colours[BLUE].pixel=(gulong) 255; // blue 
   // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
-  gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLUE],FALSE,TRUE);
+  //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLUE],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
 
   colours[GREEN].red=0;
   colours[GREEN].blue=0;
   colours[GREEN].green=65535;
-  colours[GREEN].pixel=(gulong) 255*256; /* green */
+  colours[GREEN].pixel=(gulong) 255*256; // green
   // fprintf(stderr,"pixel: %li\n",colours[GREEN].pixel);
-  gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[GREEN],FALSE,TRUE);
+  //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[GREEN],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[GREEN].pixel);
 
   colours[WHITE].red=65535;
   colours[WHITE].blue=65535;
   colours[WHITE].green=65535;
   colours[WHITE].pixel=255+255*256+255*256*256;
-  gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[WHITE],FALSE,TRUE);
+  //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[WHITE],FALSE,TRUE);
 
   colours[BLACK].red=0;
   colours[BLACK].blue=0;
   colours[BLACK].green=0;
   colours[BLACK].pixel=0;
-  gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLACK],FALSE,TRUE);
+  //  gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLACK],FALSE,TRUE);
 
 
   ic=0;
@@ -918,8 +977,8 @@ int main(int argc,char *argv[])
       +256*colours[ic].red+colours[ic].blue/256;
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     
-    gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
-		    &colours[ic],FALSE,TRUE);
+    //    gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
+    //		    &colours[ic],FALSE,TRUE);
     ic++;
   }
 
@@ -932,8 +991,8 @@ int main(int argc,char *argv[])
     colours[ic].pixel= (gulong) colours[ic].green 
       +256*colours[ic].red+colours[ic].blue/256;
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
-    gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
-		    &colours[ic],FALSE,TRUE);
+    //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
+    //		    &colours[ic],FALSE,TRUE);
     ic++;
   }
 
@@ -949,8 +1008,8 @@ int main(int argc,char *argv[])
     colours[ic].pixel= (gulong) colours[ic].green 
       +256*colours[ic].red+colours[ic].blue/256;
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
-    gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
-		    &colours[ic],FALSE,TRUE);
+    //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
+    //		    &colours[ic],FALSE,TRUE);
     ic++;
   }
 
@@ -963,8 +1022,8 @@ int main(int argc,char *argv[])
     colours[ic].pixel= (gulong) colours[ic].green 
       +256*colours[ic].red+colours[ic].blue/256;
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
-    gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
-		    &colours[ic],FALSE,TRUE);
+    //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
+    //		    &colours[ic],FALSE,TRUE);
     ic++;
   }
 
@@ -992,10 +1051,10 @@ white set up below  */
 
   /* first the phase dialog */
   phase_dialog = gtk_dialog_new();
-  phase0_ad=gtk_adjustment_new(0.0,-180.0,181.0,.1,.1,0);
-  phase1_ad=gtk_adjustment_new(0.0,-180.0,181.0,.1,.1,0);
+  phase0_ad= (GtkAdjustment *) gtk_adjustment_new(0.0,-180.0,180.0,.1,.1,0);
+  phase1_ad= (GtkAdjustment *) gtk_adjustment_new(0.0,-180.0,180.0,.1,.1,0);
 
-  hbox=gtk_hbox_new(FALSE,1);
+  hbox=gtk_hbox_new_wrap(FALSE,1);
   button=gtk_button_new_with_label("-360");
   gtk_box_pack_start(GTK_BOX(hbox),button,FALSE,FALSE,1);
   gtk_widget_show(button);
@@ -1010,7 +1069,7 @@ white set up below  */
   g_signal_connect(G_OBJECT(button),"clicked",
 		     G_CALLBACK(phase_buttons),NULL);
   gtk_widget_show(hbox);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->vbox),
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(phase_dialog))),
 		     hbox,TRUE,TRUE,1);
 
   snprintf(title,UTIL_LEN,"Phase 1");
@@ -1018,26 +1077,34 @@ white set up below  */
   gtk_widget_show(label);
   gtk_box_pack_start(GTK_BOX(hbox),
 		     label,TRUE,TRUE,1);
+#if GTK_MAJOR_VERSION == 2
   phase_data.pscroll1=gtk_hscale_new(GTK_ADJUSTMENT(phase1_ad));
-  gtk_range_set_update_policy(GTK_RANGE(phase_data.pscroll1),
-			      GTK_UPDATE_CONTINUOUS);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->vbox) ,
+#else
+  phase_data.pscroll1 = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL,phase1_ad);
+#endif
+  //  gtk_range_set_update_policy(GTK_RANGE(phase_data.pscroll1),
+  //			      GTK_UPDATE_CONTINUOUS);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(phase_dialog))) ,
 		     phase_data.pscroll1,TRUE,TRUE,1);
   g_signal_connect(G_OBJECT(phase1_ad),"value_changed",
 		     G_CALLBACK(phase_changed),NULL);
-  gtk_widget_set_size_request(phase_data.pscroll1,397,50);
+  //    gtk_widget_set_size_request(phase_data.pscroll1,397,50);
   gtk_widget_show (phase_data.pscroll1);
 
   snprintf(title,UTIL_LEN,"Phase 0");
   label=gtk_label_new(title);
   gtk_widget_show(label);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->vbox),
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(phase_dialog))),
 		     label,TRUE,TRUE,1);
+#if GTK_MAJOR_VERSION == 2
   phase_data.pscroll0=gtk_hscale_new(GTK_ADJUSTMENT(phase0_ad));
-  gtk_widget_set_size_request(phase_data.pscroll0,397,50);
-  gtk_range_set_update_policy(GTK_RANGE(phase_data.pscroll0),
-			      GTK_UPDATE_CONTINUOUS);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->vbox) ,
+#else
+  phase_data.pscroll0 = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL,phase0_ad);
+#endif
+  //  gtk_widget_set_size_request(phase_data.pscroll0,397,50);
+  //gtk_range_set_update_policy(GTK_RANGE(phase_data.pscroll0),
+  //			      GTK_UPDATE_CONTINUOUS);
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(phase_dialog))) ,
 		     phase_data.pscroll0,TRUE,TRUE,0);
   g_signal_connect(G_OBJECT(phase0_ad),"value_changed",
 		     G_CALLBACK(phase_changed),NULL);
@@ -1045,7 +1112,7 @@ white set up below  */
 
 
   button=gtk_button_new_from_stock(GTK_STOCK_OK);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->action_area),
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(phase_dialog))),
 		     button,TRUE,TRUE,1);
   g_signal_connect(G_OBJECT(button),"clicked",
 		     G_CALLBACK(phase_buttons),(void *) 0);
@@ -1053,7 +1120,7 @@ white set up below  */
   phase_data.ok=button;
 
   button=gtk_button_new_with_label("Apply all");
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->action_area),
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(phase_dialog))),
 		     button,TRUE,TRUE,1);
   g_signal_connect(G_OBJECT(button),"clicked",
 		     G_CALLBACK(phase_buttons),(void *) 1);
@@ -1062,7 +1129,7 @@ white set up below  */
 
 
   button=gtk_button_new_with_label("Update Last");
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->action_area),
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(phase_dialog))),
 		     button,TRUE,TRUE,1);
   g_signal_connect(G_OBJECT(button),"clicked",
 		     G_CALLBACK(phase_buttons),(void *) 2);
@@ -1070,7 +1137,7 @@ white set up below  */
   phase_data.update=button;
 
   button=gtk_button_new_from_stock(GTK_STOCK_CANCEL);
-  gtk_box_pack_start(GTK_BOX(GTK_DIALOG(phase_dialog)->action_area),
+  gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(GTK_DIALOG(phase_dialog))),
 		     button,TRUE,TRUE,1);
   g_signal_connect(G_OBJECT(button),"clicked",
 		     G_CALLBACK(phase_buttons),(void *) 3);
@@ -1090,7 +1157,7 @@ white set up below  */
   freq_popup=gtk_window_new(GTK_WINDOW_POPUP);
   gtk_window_set_gravity(GTK_WINDOW(freq_popup),GDK_GRAVITY_NORTH_WEST);
 
-  vbox=gtk_vbox_new(FALSE,1);
+  vbox=gtk_vbox_new_wrap(FALSE,1);
   gtk_container_add(GTK_CONTAINER(freq_popup),vbox);
   gtk_widget_show(vbox);
   
@@ -1156,7 +1223,7 @@ white set up below  */
   /* post main - clean up */
   // fprintf(stderr,"post main cleanup\n");
   /* unalloc gc */
-  gdk_gc_unref(colourgc);
+  //  gdk_gc_unref(colourgc);
 
   //  gtk_timeout_remove(timeout_tag);
 
@@ -1190,10 +1257,10 @@ void open_phase(GtkAction *action, dbuff *buff)
   gtk_window_set_title(GTK_WINDOW (phase_dialog),temps);
 
   buff->win.press_pend =1;
-  g_signal_handlers_block_by_func(G_OBJECT(buff->win.canvas),
+  g_signal_handlers_block_by_func(G_OBJECT(buff->win.darea),
 				   G_CALLBACK (press_in_win_event),
 				   buff);
-  g_signal_connect (G_OBJECT (buff->win.canvas), "button_press_event",
+  g_signal_connect (G_OBJECT (buff->win.darea), "button_press_event",
 		      G_CALLBACK( pivot_set_event), buff);
 
   if(buff->disp.dispstyle==SLICE_ROW){
@@ -1280,20 +1347,19 @@ void open_phase(GtkAction *action, dbuff *buff)
 
   /* check what the phase 1 value is */
 
-  old_low=GTK_ADJUSTMENT(phase1_ad)->lower;
-  old_up=GTK_ADJUSTMENT(phase1_ad)->upper;
+  old_low=gtk_adjustment_get_lower(GTK_ADJUSTMENT(phase1_ad));
+  old_up=gtk_adjustment_get_upper(GTK_ADJUSTMENT(phase1_ad));
   
-  GTK_ADJUSTMENT(phase1_ad)->lower = 
-    floor((future_p1+180.0)/360.0)*360.-180. ;
-  GTK_ADJUSTMENT(phase1_ad)->upper =GTK_ADJUSTMENT(phase1_ad)->lower+
-    (old_up-old_low);
+  gtk_adjustment_set_lower(GTK_ADJUSTMENT(phase1_ad),floor((future_p1+180.0)/360.0)*360.-180.);
+  gtk_adjustment_set_upper(GTK_ADJUSTMENT(phase1_ad) ,gtk_adjustment_get_lower(GTK_ADJUSTMENT(phase1_ad))+
+			   (old_up-old_low));
   
   // postpone setting phase1 till the upper and lower limits make sense.
   gtk_adjustment_changed(GTK_ADJUSTMENT(phase1_ad));
   gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),future_p1);
 
 
-  phase_data.last_phase1=GTK_ADJUSTMENT(phase1_ad)->value;
+  phase_data.last_phase1=gtk_adjustment_get_value(GTK_ADJUSTMENT(phase1_ad));
 
 
   gtk_window_set_transient_for(GTK_WINDOW(phase_dialog),GTK_WINDOW(panwindow));
@@ -1319,8 +1385,8 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
     npts1=buff->npts;  
     true_complex = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.true_complex));
 
-    lp0=GTK_ADJUSTMENT(phase0_ad)->value;
-    lp1=GTK_ADJUSTMENT(phase1_ad)->value;
+    lp0=gtk_adjustment_get_value(GTK_ADJUSTMENT(phase0_ad));
+    lp1=gtk_adjustment_get_value(GTK_ADJUSTMENT(phase1_ad));
 
     /* do the ok button */
     if(widget == phase_data.ok || widget ==phase_data.apply_all){
@@ -1448,15 +1514,15 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
       /* close up */
       gtk_widget_hide(phase_dialog);
       phase_data.is_open=0;
-      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
-      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
+      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.darea), 
                         G_CALLBACK( pivot_set_event), buff);
       buff->win.press_pend=0;
       draw_canvas(buff);
       if (buff->buffnum == current){
-	gdk_window_raise(buff->win.window->window);
+	gdk_window_raise(gtk_widget_get_window(buff->win.window));
 	// fprintf(stderr,"raised current window 4\n");
       }
       phase_npts=0;
@@ -1484,14 +1550,14 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
       phase_npts = 0;
       gtk_widget_hide(phase_dialog);
       phase_data.is_open=0;
-      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.canvas), 
+      g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.darea), 
                         G_CALLBACK( pivot_set_event), buff);
-      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.canvas),
+      g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
 				     G_CALLBACK (press_in_win_event),
 				     buff);
       buff->win.press_pend=0;
       if (buff->buffnum == current){
-	gdk_window_raise(buff->win.window->window);
+	gdk_window_raise(gtk_widget_get_window(buff->win.window));
 	// fprintf(stderr,"raised current window 5\n");
       }
 
@@ -1499,16 +1565,20 @@ gint phase_buttons(GtkWidget *widget,gpointer data)
     }
     else if (widget == phase_data.pbut){
       lp1+=360;
-      GTK_ADJUSTMENT(phase1_ad)->lower +=360.0;
-      GTK_ADJUSTMENT(phase1_ad)->upper +=360.;
+      gtk_adjustment_set_lower(GTK_ADJUSTMENT(phase1_ad),
+			       gtk_adjustment_get_lower(GTK_ADJUSTMENT(phase1_ad))+360.0);
+      gtk_adjustment_set_upper(GTK_ADJUSTMENT(phase1_ad),
+			       gtk_adjustment_get_upper(GTK_ADJUSTMENT(phase1_ad))+360.0);
       gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),lp1);
       phase_changed(phase1_ad,NULL);
       gtk_adjustment_changed(GTK_ADJUSTMENT(phase1_ad));
     }
     else if (widget == phase_data.mbut){
       lp1-=360;
-      GTK_ADJUSTMENT(phase1_ad)->lower -=360.0;
-      GTK_ADJUSTMENT(phase1_ad)->upper -=360.;
+      gtk_adjustment_set_lower(GTK_ADJUSTMENT(phase1_ad),
+			       gtk_adjustment_get_lower(GTK_ADJUSTMENT(phase1_ad))-360.0);
+      gtk_adjustment_set_upper(GTK_ADJUSTMENT(phase1_ad),
+			       gtk_adjustment_get_upper(GTK_ADJUSTMENT(phase1_ad))-360.0);
       gtk_adjustment_set_value(GTK_ADJUSTMENT(phase1_ad),lp1);
       phase_changed(phase1_ad,NULL);
       gtk_adjustment_changed(GTK_ADJUSTMENT(phase1_ad));
@@ -1559,7 +1629,7 @@ gint do_phase(float *source,float *dest,float phase0,float phase1,int npts)
 }
 
 
-gint phase_changed(GtkObject *widget,gpointer *data)
+gint phase_changed(GtkAdjustment *widget,gpointer *data)
 {
   float lp0,lp1;
   float dp0,dp1;
@@ -1570,15 +1640,15 @@ gint phase_changed(GtkObject *widget,gpointer *data)
   /* make sure buffer still exists and phase window is actually open */
   if(buffp[phase_data.buffnum]==NULL || phase_data.is_open==0) return -1;
   buff=buffp[phase_data.buffnum];
-  lp0=GTK_ADJUSTMENT(phase0_ad)->value;
-  lp1=GTK_ADJUSTMENT(phase1_ad)->value;
+  lp0=gtk_adjustment_get_value(GTK_ADJUSTMENT(phase0_ad));
+  lp1=gtk_adjustment_get_value(GTK_ADJUSTMENT(phase1_ad));
 
   if(G_OBJECT(widget) == G_OBJECT(phase1_ad)){
    /* all we do in here is make the corresponding change in phase0 */
     lp0 = lp0- (lp1-phase_data.last_phase1)*phase_data.pivot;
     lp0 = lp0-(floor ((lp0+180.)/360.))*360. ;
     phase_data.last_phase1=lp1;
-    if (phase_data.pivot == 0.) phase_changed(GTK_OBJECT(phase0_ad),NULL);
+    if (phase_data.pivot == 0.) phase_changed(phase0_ad,NULL);
     gtk_adjustment_set_value(GTK_ADJUSTMENT(phase0_ad),lp0);
   }
   else /* is a phase 0 adjust */
@@ -1611,14 +1681,15 @@ gint phase_changed(GtkObject *widget,gpointer *data)
       rect.y=1;
       rect.width=sizex;
       rect.height=sizey;
-      gdk_draw_rectangle(buff->win.pixmap,
+
+      //      printf("phase changed, drawing whole thing in white\n");
+      /*      gdk_draw_rectangle(buff->win.pixmap,
 			 buff->win.canvas->style->white_gc,TRUE,
 			 rect.x,rect.y,rect.width,rect.height);
-      
-      if (colourgc == NULL){
-	fprintf(stderr,"in draw_canvas, gc is NULL\n");
-	return -1;           //??????? -SN
-      } /* shouldn't need this */
+      */
+       cairo_set_source_rgb(buff->win.cr,1.,1.,1.);
+       cairo_rectangle(buff->win.cr,rect.x,rect.y,rect.width,rect.height);
+       cairo_fill(buff->win.cr);
       if(buff->disp.dispstyle==SLICE_ROW){
 	draw_oned(buff,0.,0.,phase_data.data2,phase_npts);
       }
@@ -1630,20 +1701,20 @@ gint phase_changed(GtkObject *widget,gpointer *data)
       if ( phase_data.pivot >0 && phase_data.pivot <1){
 	draw_vertical(buff,&colours[BLUE],phase_data.pivot,-1);
       }
-      gtk_widget_queue_draw_area(buff->win.canvas,rect.x,rect.y,rect.width,rect.height);
+      gtk_widget_queue_draw_area(buff->win.darea,rect.x,rect.y,rect.width,rect.height);
     } /* end phase 0 adjust */
   return 0;  
 }
 
 gint pivot_set_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 {
-  int sizex,sizey,xval;
-  float new_pivot,lp0,lp1,ll1,ll2;
+  int sizex,xval; //sizey;
+  float new_pivot,lp0,ll1,ll2; //lp1;
 
   sizex=buff->win.sizex;
-  sizey=buff->win.sizey;
-  lp0=GTK_ADJUSTMENT(phase0_ad)->value;
-  lp1=GTK_ADJUSTMENT(phase1_ad)->value;
+  //  sizey=buff->win.sizey;
+  lp0=gtk_adjustment_get_value(GTK_ADJUSTMENT(phase0_ad));
+  //  lp1=gtk_adjustment_get_value(GTK_ADJUSTMENT(phase1_ad));
 
   if(buff->win.press_pend<1){
     fprintf(stderr,"in pivot set and press_pend <1\n");
@@ -1693,16 +1764,16 @@ gint pivot_set_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 void cursor_busy(dbuff *buff)
 {
-  //  fprintf(stderr,"setting cursor busy\n");
-  gdk_window_set_cursor(buff->win.window->window,cursorclock);
+  //    fprintf(stderr,"setting cursor busy\n");
+  gdk_window_set_cursor(gtk_widget_get_window(buff->win.window),cursorclock);
 
   return;
 }
 
 void cursor_normal(dbuff *buff)
 {
-  //  fprintf(stderr,"setting cursor normal\n");
-   gdk_window_set_cursor(buff->win.window->window,NULL); 
+  //    fprintf(stderr,"setting cursor normal\n");
+  gdk_window_set_cursor(gtk_widget_get_window(buff->win.window),NULL); 
    return;
 }
 
@@ -1804,7 +1875,7 @@ gint popup_msg( char* msg ,char modal)
     dialog = gtk_dialog_new_with_buttons("Fit Results",GTK_WINDOW(panwindow),
 	      GTK_DIALOG_DESTROY_WITH_PARENT,GTK_STOCK_CLOSE,GTK_RESPONSE_NONE,NULL);
     label=gtk_label_new(msg);
-    gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox),label);
+    gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),label);
     gtk_widget_show_all(dialog);
     g_signal_connect_swapped(dialog,"response",G_CALLBACK(gtk_widget_destroy),dialog);
   }
@@ -1812,9 +1883,8 @@ gint popup_msg( char* msg ,char modal)
 }
 
 gint popup_msg_mutex_wrap(char *msg){
-  gint i;
   gdk_threads_enter();
-  i = popup_msg(msg,TRUE);
+  popup_msg(msg,TRUE);
   gdk_threads_leave();
   return FALSE;
 }
@@ -1864,9 +1934,38 @@ void draw_vertical(dbuff *buff,GdkColor *col, float xvalf,int xvali){
     rect.width=1;
     rect.height=sizey;
 
-    gdk_gc_set_foreground(colourgc,col);
-    gdk_draw_line(buff->win.pixmap,colourgc,rect.x,1,rect.x,sizey);
-    gtk_widget_queue_draw_area (buff->win.canvas, rect.x,rect.y,rect.width,rect.height);
+    cairo_set_source_rgb(buff->win.cr,col->red,col->green,col->blue);
+    cairo_move_to(buff->win.cr,rect.x+0.5,1);
+    cairo_line_to(buff->win.cr,rect.x+0.5,rect.height);
+    cairo_stroke(buff->win.cr);
+    //    gdk_draw_line(buff->win.pixmap,colourgc,rect.x,1,rect.x,sizey);
+    gtk_widget_queue_draw_area (buff->win.darea, rect.x,rect.y,rect.width,rect.height);
 }
 
 
+
+GtkWidget * gtk_hbox_new_wrap(gboolean homo, gint spacing){
+
+#if GTK_MAJOR_VERSION == 2
+  return gtk_hbox_new(homo,spacing);
+#else
+  GtkWidget* temp;
+  temp = gtk_box_new(GTK_ORIENTATION_HORIZONTAL,spacing);
+  gtk_box_set_homogeneous(GTK_BOX(temp),homo);
+  return temp;
+#endif
+
+}
+
+GtkWidget * gtk_vbox_new_wrap(gboolean homo, gint spacing){
+
+#if GTK_MAJOR_VERSION == 2
+  return gtk_vbox_new(homo,spacing);
+#else
+  GtkWidget* temp;
+  temp = gtk_box_new(GTK_ORIENTATION_VERTICAL,spacing);
+  gtk_box_set_homogeneous(GTK_BOX(temp),homo);
+  return temp;
+#endif
+
+}
