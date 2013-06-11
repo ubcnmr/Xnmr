@@ -51,13 +51,16 @@ void *sig_handler_thread_routine(void *dummy)
   sigset_t sigset;
   int sig;
 
-
   sigemptyset( &sigset );
-
+  // this duplicates what's done in xnmr.c:
   sigaddset(&sigset,SIGQUIT);
   sigaddset(&sigset,SIGTERM);
   sigaddset(&sigset,SIGINT);
   sigaddset(&sigset,SIG_UI_ACQ);
+  sigaddset(&sigset,SIGTTIN);
+  // we don't actually ever get SIGTTIN.
+  // if its blocked, it never gets delivered, but the 
+  // read call that triggers it returns an error (EIO)
 
   // this blocking shouldn't be necessary - done in xnmr.c before threads created.
   //  sigprocmask(SIG_UNBLOCK,&sigset,NULL);
@@ -100,7 +103,7 @@ int init_ipc_signals()
   sigaddset(&sigset,SIGQUIT);;
   sigaddset(&sigset,SIGTERM);
   sigaddset(&sigset,SIGINT);
-
+  sigaddset(&sigset,SIGTTIN);
   //  sigprocmask(SIG_BLOCK,&sigset,NULL);
   pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 

@@ -214,7 +214,7 @@ int main(int argc,char *argv[])
       'n'
       }
   }
-;
+  ;
 
   //first, we have to block SIGUSR1 in case ACQ is already launched and running
   // or just not enable the signals till later?
@@ -227,6 +227,7 @@ int main(int argc,char *argv[])
     sigaddset(&sigset,SIGQUIT);;
     sigaddset(&sigset,SIGTERM);
     sigaddset(&sigset,SIGINT);
+    sigaddset(&sigset,SIGTTIN);
     
     sigprocmask(SIG_BLOCK,&sigset,NULL);
   }

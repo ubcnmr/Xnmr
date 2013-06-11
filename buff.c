@@ -7467,12 +7467,13 @@ void *readscript_thread_routine(void *buff){
 
   // this signal stuff shouldn't be necessary here... done in xnmr.c right at beginning.
   sigset_t sigset;
-
+  char *dummy;
   sigemptyset(&sigset);
   sigaddset(&sigset,SIG_UI_ACQ);
   sigaddset(&sigset,SIGQUIT);;
   sigaddset(&sigset,SIGTERM);
   sigaddset(&sigset,SIGINT);
+  sigaddset(&sigset,SIGTTIN);
 
   pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 
@@ -7482,18 +7483,29 @@ void *readscript_thread_routine(void *buff){
   sem_init(&readscript_data.sem,0,0);
   readscript_data.source = 1; // tells it that we're from stdin
   do{
-    fprintf(stderr,"in readscript, waiting for input\n");
-    fgets(readscript_data.iline,200,stdin);
+    //    fprintf(stderr,"in readscript, waiting for input\n");
+    dummy = fgets(readscript_data.iline,200,stdin);
+    //    fprintf(stderr,"returned from read\n");
+    if (dummy == NULL && errno == EIO){ // fgets failed - probably we're in the background
+      //the SIGTTIN never gets delivered, even if we wait for it.
+      g_idle_add((GSourceFunc) popup_msg_wrap,"Can't read from console.\n"
+"Was Xnmr started in background?\nIf Xnmr was started from a command line,\n"
+"bring it to the foreground with (fg) and try again.");
+      interactive_thread_open = 0;
+      buffp[readscript_data.bnum]->script_open = 0;
+      sem_destroy(&readscript_data.sem);
+      pthread_exit(NULL);
+    }
     fprintf(stderr,"got input: %s",readscript_data.iline);
     //    gdk_threads_enter();
     g_idle_add((GSourceFunc) script_handler,&readscript_data);
     fprintf(stderr,"calling sem_wait\n");
     sem_wait(&readscript_data.sem);
     rval = readscript_data.rval;
-      
+    
     //    script_handler(iline,oline,1,&bnum);
     //    gdk_threads_leave();
-
+    
     if (rval == 0){ // the 1 is to tell is we're from stdin
       fprintf(stderr,"%s\n",readscript_data.oline);
       fprintf(stderr,"readscript_thread_routine exiting\n");
@@ -7503,6 +7515,7 @@ void *readscript_thread_routine(void *buff){
       pthread_exit(NULL);
     } 
     fprintf(stderr,"%s\n",readscript_data.oline);
+    
   }while ( 1 );
 
 }
@@ -7611,6 +7624,8 @@ void *readsocket_thread_routine(void *buff){
   sigaddset(&sigset,SIGQUIT);;
   sigaddset(&sigset,SIGTERM);
   sigaddset(&sigset,SIGINT);
+  sigaddset(&sigset,SIGTTIN); // if we try to read while in background.
+   // SIGTSTP is if you CTRL-Z
 
   pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 
