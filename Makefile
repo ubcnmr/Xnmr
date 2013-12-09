@@ -34,13 +34,13 @@ Xnmr_preproc: Xnmr_preproc.c
 	$(CC) $(CFLAGS)  -o Xnmr_preproc Xnmr_preproc.c
 
 # added -L/usr/realtime/lib and -lpthread for rtai
-acq: acq.o pulse_hardware.o libxnmr.so dsp.o adepp.o ad9850.o 
+acq: acq.o pulse_hardware.o  dsp.o adepp.o ad9850.o 
 	$(CC) $(CFLAGS) -L/usr/realtime/lib -L. -o acq acq.o pulse_hardware.o dsp.o adepp.o ad9850.o -lm -lpthread  -lxnmr
 	@echo ""
 	@echo "Don't forget to make acq suid!!!"
 	@echo ""
 Xnmr: xnmr.o buff.o panel.o process_f.o param_f.o xnmr_ipc.o  spline.o\
- splint.o nrutil.o  libxnmr.so
+ splint.o nrutil.o  
 	$(CC) $(CFLAGS)  -L. xnmr.o   buff.o  panel.o process_f.o param_f.o\
  xnmr_ipc.o  spline.o splint.o nrutil.o -o Xnmr \
 `pkg-config --libs  gtk+-3.0` -L    -lm -lport -lgfortran  -lxnmr 

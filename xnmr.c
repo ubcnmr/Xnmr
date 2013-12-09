@@ -249,6 +249,8 @@ int main(int argc,char *argv[])
       printf("couldn't find /dev/PP_irq0, forcing noacq\n");
     }
   }
+#else
+  no_acq = TRUE;
 #endif
 
   /* look for command line arguments  that gtk didn't want*/
