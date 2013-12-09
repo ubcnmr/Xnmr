@@ -10,12 +10,16 @@
 #CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNOHARDWARE
 CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNOHARDWARE
 
+#For cygwin, add -DCYGWIN
+#For cygwin, change every libxnmr.so to libxnmr.dll
+
+
 #O3 causes serious problems with rtai!
 
 # for icc:
 #CFLAGS =    -O3 -axP -ipo  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 
-all: Xnmr acq libxnmr.so Xnmr_preproc
+all:  libxnmr.so Xnmr acq Xnmr_preproc
 
 clean:
 	rm -f *.o acq Xnmr core libxnmr.a libxnmr.so Xnmr_preproc
@@ -39,7 +43,8 @@ Xnmr: xnmr.o buff.o panel.o process_f.o param_f.o xnmr_ipc.o  spline.o\
  splint.o nrutil.o  libxnmr.so
 	$(CC) $(CFLAGS)  -L. xnmr.o   buff.o  panel.o process_f.o param_f.o\
  xnmr_ipc.o  spline.o splint.o nrutil.o -o Xnmr \
-`pkg-config --libs  gtk+-3.0` -L   -lf2c -lm -lport -lgfortran  -lxnmr -Xlinker -defsym -Xlinker MAIN__=main 
+`pkg-config --libs  gtk+-3.0` -L    -lm -lport -lgfortran  -lxnmr 
+# This used to be necessary: -Xlinker -defsym -Xlinker MAIN__=main 
 
 # the -Xlinker -defsym -Xlinker MAIN__=main   passes: '-defsym MAIN__=main' to the linker, let us use 
 # fortran and C together.  The -lportP has the nonlinear fitting routine, and lf2c is necessary for fortran

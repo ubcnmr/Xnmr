@@ -4719,8 +4719,10 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	    fgets(linebuff,200,infile);
 	  }while(linebuff[0] == '#');
 	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
-	  if (eof == 2) counter += 1;
-	}while (eof == 2);
+	  if (eof == 1) counter += 1;
+	}while (eof == 1);
+	//	  if (eof == 2) counter += 1;
+	//	}while (eof == 2);
 	printf("will try to load in: %i lines, real part only.\n",counter);
 	rewind(infile);
 	buff_resize(buff,counter,1);
@@ -4729,7 +4731,7 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	    fgets(linebuff,200,infile);
 	  }while(linebuff[0] == '#');
 	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
-	  buff->data[2*i] = num2;
+	  buff->data[2*i] = num1;
 	  buff->data[2*i+1] = 0.;
 	}
 	update_npts(counter);
@@ -5021,9 +5023,13 @@ gint set_cwd(char *dir)
   
   result = wordexp(dir, &word, WRDE_NOCMD|WRDE_UNDEF);
   //  fprintf(stderr,"in set_cwd: %s  dir is: %s\n",word.we_wordv[0],dir);
-
-  result = chdir(word.we_wordv[0]);
-  wordfree(&word);
+  if (result == 0){
+    result = chdir(word.we_wordv[0]);
+    wordfree(&word);
+  }
+  else
+    result = chdir(dir);
+  
   if ( result !=0 )
     perror("set_cwd1:");
     
@@ -7614,6 +7620,7 @@ void socket_script(GtkAction *action, dbuff *buff){
 void *readsocket_thread_routine(void *buff){
   unsigned int rlen;
   int rval;
+  socklen_t fromlen;
 
   // this signal stuff shouldn't be necessary - signals blocked in xnmr.c before threads
   // created.
@@ -7635,7 +7642,9 @@ void *readsocket_thread_routine(void *buff){
   socketscript_data.source = 2; // tells it that we're from socket
 
   do{
-    rlen = recvfrom(fds,socketscript_data.iline,200,0,NULL,0);
+    //    rlen = recvfrom(fds,socketscript_data.iline,200,0,NULL,0);
+    fromlen = 108; 
+    rlen = recvfrom(fds,socketscript_data.iline,200,0,(struct sockaddr *)&from,&fromlen);
     socketscript_data.iline[rlen] = 0;
 
     fprintf(stderr,"got input: %s",socketscript_data.iline);
@@ -7657,6 +7666,7 @@ void *readsocket_thread_routine(void *buff){
       sem_destroy(&socketscript_data.sem);
       pthread_exit(NULL);
     }
+    //    printf("address is: %s\n",from.sun_path);
     sendto(fds,socketscript_data.oline,strnlen(socketscript_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
     fprintf(stderr,"%s\n",socketscript_data.oline);
 
@@ -7731,6 +7741,7 @@ void script_handler(script_data *myscript_data){
     if (strncmp("SET REC ",input,8) == 0){
     if (strncmp("SCALE ",input,6) == 0){
 
+    EXIT
     AUTOPHASE
 */
 

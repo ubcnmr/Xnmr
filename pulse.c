@@ -105,6 +105,13 @@ notes: phase_sweep starts off at -5 deg, so you'll want to left shift to there b
  #include <sys/time.h> 
  #include <time.h>
 
+#ifdef CYGWIN
+struct msgbuf{
+  long mtype;       /* message type, must be > 0 */
+  char mtext[1];    /* message data */
+};
+#endif
+
  /* 
   *  global data structures used by this module 
   * 
@@ -1201,8 +1208,10 @@ int is_a_float_device(int device_id)
     * and allow the pulse program to exit normally  
      */
 
-   signal( SIGINT, (__sighandler_t )stop ); 
-   signal( SIGTERM,(__sighandler_t ) stop ); 
+   signal( SIGINT,  stop ); 
+   signal( SIGTERM, stop ); 
+   //   signal( SIGINT, (__sighandler_t )stop ); 
+   //   signal( SIGTERM,(__sighandler_t ) stop ); 
 
    return 0; 
  } 
@@ -1366,6 +1375,7 @@ int is_a_float_device(int device_id)
    char s[PATH_LENGTH];
    FILE *fs;
    struct msgbuf message; 
+#ifndef CYGWIN
    struct rlimit my_lim;
 
   if (getrlimit(RLIMIT_MEMLOCK,&my_lim) == 0){
@@ -1381,6 +1391,7 @@ int is_a_float_device(int device_id)
     }
   }
 
+#endif
 
    //  exec's into the pulse program, but after the fork.  Can't do it
    //  here because we aren't necessarily root. - This is a problem - the mem lock doesn't work across the fork for acq...
