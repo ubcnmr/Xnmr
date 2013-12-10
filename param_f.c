@@ -828,7 +828,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_container_add(GTK_CONTAINER(param_frame),param_scrolled_window);
 
     /* arguments are homogeneous and spacing  */
-    param_table = gtk_table_new(3,6,TRUE); /* rows, columns, homogeneous  */
+    param_table = gtk_table_new(3,6,FALSE); /* rows, columns, homogeneous  */
     
 
     //    gtk_table_set_row_spacings(GTK_TABLE(param_table),1);
