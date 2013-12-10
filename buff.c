@@ -49,7 +49,6 @@ reload wrapper                             (from end of acquisition)
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <semaphore.h>
-
 #include "buff.h"
 #include "xnmr.h"
 #include "xnmr_ipc.h"
@@ -5004,6 +5003,19 @@ int file_append(GtkAction *action, dbuff *buff)
 
   fwrite(buff->data,sizeof (float), npts*2 , fstream);
   fclose(fstream);
+
+  // write to data.fid as well
+  path_strcpy(s,buff->param_set.save_path);
+  path_strcat(s , "/data.fid");
+  fstream = fopen(s,"a");
+  if (fstream == NULL){
+    popup_msg("Can't open data.fid for append",TRUE);
+    return 0;
+  }
+
+  fwrite(buff->data,sizeof (float), npts*2 , fstream);
+  fclose(fstream);
+
   return 1;
 
 

@@ -33,6 +33,8 @@ libxnmr.so: pulse.o param_utils.o four1.o
 Xnmr_preproc: Xnmr_preproc.c
 	$(CC) $(CFLAGS)  -o Xnmr_preproc Xnmr_preproc.c
 
+
+
 # added -L/usr/realtime/lib and -lpthread for rtai
 acq: acq.o pulse_hardware.o  dsp.o adepp.o ad9850.o 
 	$(CC) $(CFLAGS) -L/usr/realtime/lib -L. -o acq acq.o pulse_hardware.o dsp.o adepp.o ad9850.o -lm -lpthread  -lxnmr
