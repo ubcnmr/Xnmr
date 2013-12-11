@@ -130,7 +130,6 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 
   // in here with data = 0 means acq+save,data = 1 acq nosave
   dbuff* buff;
-  GdkColor color;
   
   char s[PATH_LENGTH];
   static char norecur=0;
@@ -228,8 +227,14 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       check_buff_size();  
       send_sig_acq( ACQ_START );
       set_acqn_labels(1);
+#if GTK_MAJOR_VERSION == 2
+      GdkColor color;      
       gdk_color_parse("green",&color);
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+#else
+      GdkRGBA color = {0.,1.,0.,1.};
+      gtk_widget_override_background_color(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+#endif
       set_window_title(buffp[upload_buff]); // add a * to the name
 
       return 0;
@@ -303,7 +308,6 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
 
 gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
 {
-  GdkColor color;
   static char norecur=0;
   if (norecur == 1){
     norecur = 0;
@@ -340,8 +344,14 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
       path_strcpy(buffp[current]->path_for_reload,data_shm->save_data_path);
       set_window_title(buffp[current]);
 
+#if GTK_MAJOR_VERSION == 2
+      GdkColor color;      
       gdk_color_parse("green",&color);
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+#else
+      GdkRGBA color = {0.,1.,0.,1.};
+      gtk_widget_override_background_color(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+#endif
 
       acq_in_progress = ACQ_REPEATING;
       set_window_title(buffp[upload_buff]);
@@ -383,7 +393,6 @@ gint repeat_button_toggled( GtkWidget *widget, gpointer *data )
 gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
 {
 
-  GdkColor color;
   static char norecur = 0;
   if (norecur == 1){
     norecur = 0;
@@ -417,8 +426,14 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
       data_shm->dwell= buffp[current]->param_set.dwell; // this is what the pulse program will use
 
       //      fprintf(stderr,"put %f in shm dwell\n",data_shm->dwell);
+#if GTK_MAJOR_VERSION == 2
+      GdkColor color;      
       gdk_color_parse("green",&color);
       gtk_widget_modify_bg(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+#else
+      GdkRGBA color = {0.,1.,0.,1.};
+      gtk_widget_override_background_color(buffp[upload_buff]->win.ct_box,GTK_STATE_NORMAL,&color);
+#endif
 
       acq_in_progress = ACQ_REPEATING_AND_PROCESSING;
       set_window_title(buffp[upload_buff]);
