@@ -163,7 +163,7 @@ n) cursor_busy and cursor_normal borked?
  */
 
 
-GdkColor colours[NUM_COLOURS+EXTRA_COLOURS]; // matches in xnmr.h
+GdkRGBA colours[NUM_COLOURS+EXTRA_COLOURS]; // matches in xnmr.h
 //GdkGC *colourgc;
 phase_data_struct phase_data;
 add_sub_struct add_sub;
@@ -932,51 +932,50 @@ int main(int argc,char *argv[])
   
   // colourgc=gdk_gc_new(buffp[0]->win.canvas->window);
 
-  colours[RED].red=65535;
+  colours[RED].red=1.;
   colours[RED].blue=0;
   colours[RED].green=0;
-  colours[RED].pixel=(gulong) 255*256*256; // red 
+  colours[RED].alpha=1.; // red 
   // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[RED],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
   
   colours[BLUE].red=0;
-  colours[BLUE].blue=65535;
+  colours[BLUE].blue=1.;
   colours[BLUE].green=0;
-  colours[BLUE].pixel=(gulong) 255; // blue 
+  colours[BLUE].alpha=1.; // blue 
   // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLUE],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
 
   colours[GREEN].red=0;
   colours[GREEN].blue=0;
-  colours[GREEN].green=65535;
-  colours[GREEN].pixel=(gulong) 255*256; // green
+  colours[GREEN].green=1.;
+  colours[GREEN].alpha = 1.;// green
   // fprintf(stderr,"pixel: %li\n",colours[GREEN].pixel);
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[GREEN],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[GREEN].pixel);
 
-  colours[WHITE].red=65535;
-  colours[WHITE].blue=65535;
-  colours[WHITE].green=65535;
-  colours[WHITE].pixel=255+255*256+255*256*256;
+  colours[WHITE].red=1.;
+  colours[WHITE].blue=1.;
+  colours[WHITE].green=1.;
+  colours[WHITE].alpha=1.;;
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[WHITE],FALSE,TRUE);
 
   colours[BLACK].red=0;
   colours[BLACK].blue=0;
   colours[BLACK].green=0;
-  colours[BLACK].pixel=0;
+  colours[BLACK].alpha=1;
   //  gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLACK],FALSE,TRUE);
 
 
   ic=0;
   for (i=0;i<NUM_COLOURS/4;i++) {
-    colours[ic].red = (int) 256*255.;
-    colours[ic].blue = (int) 256*255.*0;
-    colours[ic].green = (int) 256*255.*i/(NUM_COLOURS/4.);
+    colours[ic].red = 1.;
+    colours[ic].blue = 0.;
+    colours[ic].green = i/(NUM_COLOURS/4.);
     
-    colours[ic].pixel= (gulong) colours[ic].green 
-      +256*colours[ic].red+colours[ic].blue/256;
+    colours[ic].alpha = 1.;
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     
     //    gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
@@ -985,13 +984,12 @@ int main(int argc,char *argv[])
   }
 
   for (i=0;i<NUM_COLOURS/4;i++){
-    colours[ic].red = (int) 256*255.*(1.-(i/(NUM_COLOURS/4.)));
-    colours[ic].blue = (int) 256*255.*0;
-    colours[ic].green = (int) 256*255.;
+    colours[ic].red = (1.-(i/(NUM_COLOURS/4.)));
+    colours[ic].blue = 0.;
+    colours[ic].green = 1.;
 
 
-    colours[ic].pixel= (gulong) colours[ic].green 
-      +256*colours[ic].red+colours[ic].blue/256;
+    colours[ic].alpha = 1.;
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
     //		    &colours[ic],FALSE,TRUE);
@@ -1002,13 +1000,11 @@ int main(int argc,char *argv[])
   ic++;
   //  fprintf(stderr,"just skipped colour: %i\n",ic-1);
   for (i=0;i<NUM_COLOURS/4;i++){
-    colours[ic].red = (int) 256*255.*0;
-    colours[ic].blue = (int) 256*255.*i/(NUM_COLOURS/4.);
-    colours[ic].green = (int) 256*255.;
+    colours[ic].red = 0.;
+    colours[ic].blue = i/(NUM_COLOURS/4.);
+    colours[ic].green = 1.;
     
-
-    colours[ic].pixel= (gulong) colours[ic].green 
-      +256*colours[ic].red+colours[ic].blue/256;
+    colours[ic].alpha = 1.;
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
     //		    &colours[ic],FALSE,TRUE);
@@ -1016,13 +1012,12 @@ int main(int argc,char *argv[])
   }
 
   for (i=0;i<NUM_COLOURS/4;i++){
-    colours[ic].red = (int) 256*255.*0;
-    colours[ic].blue = (int) 256*255.;
-    colours[ic].green = (int) 256*255.*(1.0-i/(NUM_COLOURS/4.));
+    colours[ic].red = 0.;
+    colours[ic].blue = 1.;
+    colours[ic].green = (1.0-i/(NUM_COLOURS/4.));
 
 
-    colours[ic].pixel= (gulong) colours[ic].green 
-      +256*colours[ic].red+colours[ic].blue/256;
+    colours[ic].alpha = 1.;
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
     //		    &colours[ic],FALSE,TRUE);
@@ -1894,7 +1889,7 @@ gint popup_msg_wrap(char *msg){
 
 
 
-void draw_vertical(dbuff *buff,GdkColor *col, float xvalf,int xvali){
+void draw_vertical(dbuff *buff,GdkRGBA *col, float xvalf,int xvali){
 
 
   GdkRectangle rect;

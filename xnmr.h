@@ -23,7 +23,7 @@
 
 /* global variables */
 
-extern GdkColor  colours[NUM_COLOURS+EXTRA_COLOURS];
+extern GdkRGBA  colours[NUM_COLOURS+EXTRA_COLOURS];
 extern phase_data_struct  phase_data;
 extern add_sub_struct add_sub;
 extern fitting_struct fit_data;
@@ -62,7 +62,7 @@ gint hide_phase( GtkWidget *widget, GdkEvent  *event, gpointer data );
 gint popup_msg( char* msg,char modal);
 gint popup_msg_wrap( char* msg );
 
-void draw_vertical(dbuff *buff,GdkColor  *col, float xvalf,int xvali);
+void draw_vertical(dbuff *buff,GdkRGBA  *col, float xvalf,int xvali);
 GtkWidget * gtk_hbox_new_wrap(gboolean homo, gint spacing);
 GtkWidget * gtk_vbox_new_wrap(gboolean homo, gint spacing);
 

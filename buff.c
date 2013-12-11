@@ -1132,7 +1132,7 @@ void draw_line_segments(dbuff *buff, GdkPoint *dpoints, int ndpoints){
 }
 
 void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
-		    ,float *data,int npts, GdkColor *col,int ri){
+		    ,float *data,int npts, GdkRGBA *col,int ri){
   int x,y,i1,i2,x2,y2,exint,eyint,i;
   /* first point */
 
