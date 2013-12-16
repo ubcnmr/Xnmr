@@ -508,11 +508,11 @@ int start_pprog()
     path_strcat(s,"/Xnmr/prog/");
     path_strcat(s,data_shm->pulse_exec_path);
 
-    fs = fopen(s,"r");
+    fs = fopen(s,"rb");
     if (fs == NULL){
       path_strcpy(s,"/usr/share/Xnmr/prog/");
       path_strcat(s,data_shm->pulse_exec_path);
-      fs = fopen(s,"r");
+      fs = fopen(s,"rb");
     }
 
     if (fs != NULL){
@@ -825,7 +825,7 @@ int run()
     
     //We have to empty the file 
     
-    fstream = fopen( fileN, "w" );
+    fstream = fopen( fileN, "wb" );
     if (fstream == NULL){
       cant_open_file();
       return 0;
@@ -837,7 +837,7 @@ int run()
     path_strcpy( fileNfid, path);
     path_strcat( fileNfid, "data.fid" );
 
-    fstream = fopen( fileNfid, "w" );
+    fstream = fopen( fileNfid, "wb" );
     if (fstream == NULL){
       cant_open_file();
       return 0;
@@ -1506,7 +1506,7 @@ else{
 	//	fprintf(stderr, "acq appending file: %s\n", fileN );
 	
 	// need to change to fseek 
-	fstream = fopen( fileN, "r+" );
+	fstream = fopen( fileN, "r+b" );
 	//      fprintf(stderr,"seeking to: %i\n",data_shm->last_acqn_2d*data_shm->npts*2*sizeof(float));
 	fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
 	for( i=0; i<data_shm->npts*2; i++ ) {
@@ -1516,7 +1516,7 @@ else{
 	
 	fclose( fstream );
 
-	fstream = fopen( fileNfid, "r+" );
+	fstream = fopen( fileNfid, "r+b" );
 	//      fprintf(stderr,"seeking to: %i\n",data_shm->last_acqn_2d*data_shm->npts*2*sizeof(float));
 	fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
 	for( i=0; i<data_shm->npts*2; i++ ) {
@@ -1952,7 +1952,7 @@ else{
 	 
 	  //	  fprintf(stderr,"writing out data\n");
 	  // write out the data
-	  fstream = fopen( fileN, "r+" );
+	  fstream = fopen( fileN, "r+b" );
 	  
 	  //      fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
 	  fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2*sizeof (float), SEEK_SET);
@@ -1965,7 +1965,7 @@ else{
 	  	
 	
 	  fclose( fstream );
-	  fstream = fopen( fileNfid, "r+" );
+	  fstream = fopen( fileNfid, "r+b" );
 	  
 	  //      fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2 * sizeof (float),SEEK_SET);
 	  fseek(fstream,data_shm->last_acqn_2d*data_shm->npts*2*sizeof (float), SEEK_SET);
