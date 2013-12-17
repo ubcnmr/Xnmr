@@ -14,6 +14,15 @@ CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNO
 #For cygwin, change every libxnmr.so to libxnmr.dll
 
 
+<<<<<<< Makefile
+#CC = icc
+#CC=clang
+#CFLAGS = -g  -O2   -Wall   -floop-interchange -floop-strip-mine -floop-block `pkg-config --cflags gthread-2.0 gtk+-2.0`
+CFLAGS = -g  -O2   -Wall   `pkg-config --cflags gthread-2.0 gtk+-2.0`
+
+
+=======
+>>>>>>> 1.30
 #O3 causes serious problems with rtai!
 
 # for icc:
@@ -45,7 +54,7 @@ Xnmr: xnmr.o buff.o panel.o process_f.o param_f.o xnmr_ipc.o  spline.o\
  splint.o nrutil.o  
 	$(CC) $(CFLAGS)  -L. xnmr.o   buff.o  panel.o process_f.o param_f.o\
  xnmr_ipc.o  spline.o splint.o nrutil.o -o Xnmr \
-`pkg-config --libs  gtk+-3.0` -L    -lm -lport -lgfortran  -lxnmr 
+`pkg-config --libs  gtk+-3.0`  -lm -lport -lgfortran  -lxnmr 
 # This used to be necessary: -Xlinker -defsym -Xlinker MAIN__=main 
 
 # the -Xlinker -defsym -Xlinker MAIN__=main   passes: '-defsym MAIN__=main' to the linker, let us use 
