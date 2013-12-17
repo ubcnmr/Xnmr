@@ -5033,7 +5033,7 @@ int file_append(GtkAction *action, dbuff *buff)
   // write to data.fid as well
   path_strcpy(s,buff->param_set.save_path);
   path_strcat(s , DPATH_SEP "data.fid");
-  fstream = fopen(s,"a");
+  fstream = fopen(s,"ab");
   if (fstream == NULL){
     popup_msg("Can't open data.fid for append",TRUE);
     return 0;
