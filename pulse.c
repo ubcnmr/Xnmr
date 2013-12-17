@@ -2,16 +2,14 @@
 /*  pulse.c 
 
 
-
-
   * 
   * This module is to be used for writing NMR pulse programs that are 
   * controlled by a separate process called acq (see acq.c) 
   * 
   * UBC Physics 
   * 
-  * This version uses a message queue for communication between the acq and pprog 
-  * processes 
+  * This version uses a message queue for communication between the acq and 
+  * pprog processes 
   *   
   * 
   * written by: Scott Nelson  and Carl Michal

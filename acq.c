@@ -4,8 +4,9 @@
 // it will also generate "simulated" data
 //
 
-// never define NOHARDWARE here. Do it in the Makefile (xnmr.c uses it too).
-//#define NOHARDWARE
+// can define NOHARDWARE here or do it in the Makefile.
+// for simulator mode, want NOHARDWARE, but /dev/PP_irq0 must exist
+#define NOHARDWARE
 #define NO_RT_SCHED
 
 //#define OLD_PORT_INTERRUPT 

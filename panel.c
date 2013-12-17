@@ -68,7 +68,7 @@ int  setup_channels(){
 }
 
 
-#ifndef WIN
+#ifndef MINGW
 
 gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 {
@@ -525,7 +525,7 @@ GtkWidget* create_panels()
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), TRUE );
       acq_in_progress = ACQ_RUNNING;
     }
-#ifndef WIN
+#ifndef MINGW
     g_signal_connect(G_OBJECT(start_button),"toggled",G_CALLBACK(start_button_toggled), NULL);
 #endif
   }
@@ -544,7 +544,7 @@ GtkWidget* create_panels()
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button_nosave ), TRUE );
       acq_in_progress = ACQ_RUNNING;
     }
-#ifndef WIN
+#ifndef MINGW
     g_signal_connect(G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(start_button_toggled),NULL);
 #endif
   }
@@ -561,7 +561,7 @@ GtkWidget* create_panels()
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( repeat_button ), TRUE );
       acq_in_progress = ACQ_REPEATING;
     }
-#ifndef WIN
+#ifndef MINGW
     g_signal_connect(G_OBJECT(repeat_button),"toggled",G_CALLBACK(repeat_button_toggled), NULL);
 #endif
   }
@@ -580,7 +580,7 @@ GtkWidget* create_panels()
 
   repeat_p_button = gtk_toggle_button_new_with_label( "Repeat and Process" );
   if(no_acq ==FALSE){
-#ifndef WIN
+#ifndef MINGW
     g_signal_connect(G_OBJECT(repeat_p_button),"toggled",G_CALLBACK(repeat_p_button_toggled), NULL);
 #endif
   }
@@ -596,7 +596,7 @@ GtkWidget* create_panels()
   
   button = gtk_button_new_with_label("Kill");
   if( no_acq == FALSE ){
-#ifndef WIN
+#ifndef MINGW
   g_signal_connect( G_OBJECT( button ), "clicked", G_CALLBACK( kill_button_clicked ), NULL );
 #endif
   }

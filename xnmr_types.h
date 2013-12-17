@@ -102,7 +102,7 @@ typedef struct {
     float pend1,pend2,pend3,pend4;
     cairo_surface_t *surface;
     cairo_t *cr;
-    GSList *grp1,*grp2;
+    GSList *group1,*group2;
     GtkWidget *but1a,*but1b,*but1c,*but2a,*but2b,*but2c;
   } win;
   struct{ /* related to display */

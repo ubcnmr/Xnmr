@@ -151,14 +151,14 @@ n) cursor_busy and cursor_normal borked?
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <signal.h>
-#ifndef WIN
+#ifndef MINGW
 #include <sys/wait.h>
 #endif
 #include <stdio.h>
 #include <gtk/gtk.h>
 #include <getopt.h>
 #include <string.h>
-#ifndef WIN
+#ifndef MINGW
 #include <sys/shm.h>
 #endif
 #include <unistd.h>
@@ -216,11 +216,11 @@ int main(int argc,char *argv[])
       0,
       NULL,
       'n'
-      }
+    }
   }
   ;
 
-#ifndef WIN
+#ifndef MINGW
   //first, we have to block SIGUSR1 in case ACQ is already launched and running
   // or just not enable the signals till later?
   //block_signal();
@@ -244,15 +244,15 @@ int main(int argc,char *argv[])
   // mutex to ensure that routines added with idle_add don't collide.
     gtk_init(&argc, &argv);
 
-
+#ifndef MINGW
   // see if /dev/PP_irq0 exists.  if not, then imply noacq.
-#ifndef NOHARDWARE
   {
     struct stat sstat;
     if (stat("/dev/PP_irq0",&sstat) == -1){
       no_acq = TRUE;
       printf("couldn't find /dev/PP_irq0, forcing noacq\n");
     }
+    printf("found /dev/PP_irq0\n");
   }
 #else
   no_acq = TRUE;
@@ -330,7 +330,7 @@ int main(int argc,char *argv[])
 
 
   result_shm=-1;
-#ifndef WIN
+#ifndef MINGW
   if (!no_acq){
 
     result_shm = xnmr_init_shm();  //this tells us whether acq is already launched
@@ -430,7 +430,7 @@ int main(int argc,char *argv[])
 
   /* create a first buffer */
 
-#ifndef WIN
+#ifndef MINGW
   path_strcpy(command,getenv(HOMEP));
   make_path( command);
   path_strcat(command,"Xnmr/data/");
@@ -440,14 +440,14 @@ int main(int argc,char *argv[])
     fprintf(stderr,"creating directories...");
     path_strcpy (command,getenv(HOMEP));
     path_strcat(command,"/Xnmr");
-#ifndef WIN
+#ifndef MINGW
     result = mkdir(command,0755);
 #else
     result = mkdir(command);
 #endif
     if (result != 0) perror("making ~/Xnmr:");
     path_strcat(command,DPATH_SEP "data");
-#ifndef WIN
+#ifndef MINGW
     result = mkdir(command,0755);
 #else 
     result = mkdir(command);
@@ -1219,7 +1219,7 @@ white set up below  */
   if (no_acq ==TRUE){
     signal( SIGINT,  do_destroy_all );
     signal( SIGTERM,  do_destroy_all );
-#ifndef WIN
+#ifndef MINGW
     signal( SIGQUIT,  do_destroy_all ); // this is ordinary ^C or kill
 #endif
   }
@@ -1835,7 +1835,8 @@ gint destroy_all(GtkWidget *widget, gpointer data)
     }
   }
   do_destroy_all();
-  return FALSE; // seems hardly necessary
+  printf("returned from do_destroy_all\n");
+  return TRUE; // seems hardly necessary
 }
 
 void do_destroy_all()

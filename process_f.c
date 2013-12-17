@@ -1629,7 +1629,7 @@ gint do_cross_correlate( GtkWidget *widget, double *bits ){
     popup_msg("do_cross_correlate panic! buff is null!",TRUE);
     return 0;
   }
-#ifndef WIN
+#ifndef MINGW
   if (strcasestr(buff->param_set.exec_path,"frank")){
     printf("doing frank cross correlate\n");
     return do_cross_correlate_frank(widget,bits);

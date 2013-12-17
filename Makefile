@@ -2,17 +2,16 @@
 #
 # UBC Physics
 
-# can use -DNOHARDWARE to allow software simulated acqs.
-#CC = icc
+# can use -DNOHARDWARE to allow software simulated acqs (if /dev/PP_irq0 exists)
+
 #CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-2.0`  -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED -DGSEAL_ENABLE
 
 #CFLAGS = -g  -O2   -Wall  `pkg-config --cflags  gtk+-2.0`  -Wno-unused-result -DNOHARDWARE
 #CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNOHARDWARE
-CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNOHARDWARE
+CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result 
 
 #For cygwin, add -DCYGWIN
 #For cygwin, change every libxnmr.so to libxnmr.dll
-
 
 
 

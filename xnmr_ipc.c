@@ -20,7 +20,7 @@
 
 #include <gtk/gtk.h>
 #include <signal.h>
-#ifndef WIN
+#ifndef MINGW
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/errno.h>
@@ -32,7 +32,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#ifndef WIN
+#ifndef MINGW
 #include <pthread.h>
 #endif
 
@@ -49,7 +49,7 @@ struct timeval last_time, current_time;
 
 
 
-#ifndef WIN
+#ifndef MINGW
 void *sig_handler_thread_routine(void *dummy)
 { 
   sigset_t sigset;
@@ -830,7 +830,7 @@ int upload_data( dbuff* buff )    //uploads the shm data to the active buffer, r
   return 0;
   }
 
-#ifndef WIN
+#ifndef MINGW
 
 gint release_ipc_stuff()
 {

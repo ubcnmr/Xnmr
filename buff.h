@@ -12,9 +12,7 @@
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <math.h>
-#ifndef WIN
 #include <semaphore.h>
-#endif
 #include "param_f.h"
 #include "process_f.h"
 #include "xnmr_types.h"
@@ -89,7 +87,6 @@ enum
     N_COLUMNS,
   };
 
-#ifndef WIN
 typedef struct{
   char iline[200];
   char oline[200];
@@ -99,7 +96,7 @@ typedef struct{
   int bnum;
 } script_data;
 /* global variables */
-#endif
+
 extern int current;
 extern int last_current;
 extern int num_buffs;
@@ -271,15 +268,16 @@ void queue_window(GtkAction *action, dbuff *buff);
 void remove_queue(GtkWidget *widget, gpointer dum);
 void set_queue_label();
 
-#ifndef WIN
 void readscript(GtkAction *action,dbuff *buff);
 void *readscript_thread_routine(void *buff);
 void *readsocket_thread_routine(void *buff);
+void *readscript2_thread_routine(void *buff);
+void *readsocket2_thread_routine(void *buff);
 //int script_handler(char *input,char *output,int source,int *bnum);
 void script_handler(script_data *myscript_data);
 gint script_notify_acq_complete();
 void socket_script(GtkAction *action,dbuff *buff);
-#endif
+void socket_script2(GtkAction *action,dbuff *buff);
 void shim_integrate(GtkWidget *action, dbuff *buff);
 gint do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3);
 void scale_data(dbuff *buff,int pt,float scale);
@@ -288,6 +286,19 @@ void first_point_auto_phase();
 
 void zero_points(GtkAction *action,dbuff *buff);
 void zero_points_handler(dbuff *buff, GdkEventButton * action, GtkWidget *widget);
+
+// this lets the unix sockets stuff compile under MinGW, but it doesn't run.
+#ifdef MINGW
+#define UNIX_PATH_LEN 108
+typedef struct sockaddr_un {
+  unsigned short sun_family; /* address family AF_LOCAL/AF_UNIX */
+  char sun_path[UNIX_PATH_LEN]; /* 108 bytes of socket address */
+} ;
+ 
+/* Evaluates the actual length of `sockaddr_un' structure. */
+ #define SUN_LEN(p) ((size_t)(((struct sockaddr_un *) NULL)->sun_path) \
+		      + strlen ((p)->sun_path))
+#endif 
 
 #endif
 

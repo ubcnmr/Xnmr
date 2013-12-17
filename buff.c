@@ -35,7 +35,6 @@ reload wrapper                             (from end of acquisition)
 */
 
 #define _GNU_SOURCE
-
 #include <unistd.h>
 #include <string.h>
 #include <gtk/gtk.h>
@@ -43,17 +42,21 @@ reload wrapper                             (from end of acquisition)
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef WIN
+#ifndef MINGW
 #include <wordexp.h>
 #endif
 #include <string.h>
 #include <signal.h>
-#ifndef WIN
 #include <pthread.h>
+#ifndef MINGW
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <semaphore.h>
+#include <netinet/in.h>
+#else
+#include <winsock.h>
+//#include <winsock2.h>
 #endif
+#include <semaphore.h>
 #include "buff.h"
 #include "xnmr.h"
 #include "xnmr_ipc.h"
@@ -63,11 +66,20 @@ reload wrapper                             (from end of acquisition)
 #include "param_utils.h"
 #include "nr.h"
 
+
 /*
  *  Global Variable for this modules
  */
 
+#ifdef MINGW
+size_t strnlen(const char *s, size_t maxlen)
+{
+  size_t ct;
+  for (ct = 0; ct < maxlen && *s; ++s) ++ct;
+  return ct;
+  }
 
+#endif
 
 extern char no_acq;
 extern char connected; //from xnmr_ipc.c
@@ -98,9 +110,7 @@ GtkWidget* int_label;
 char doing_s2n=0;
 char doing_int=0;
 GtkWidget *setsf1dialog;
-#ifndef WIN
-script_data socketscript_data,readscript_data;
-#endif 
+script_data socketscript2_data,socketscript_data,readscript_data;
 
 /*need a pivot point on phase change */
 /* need to be able to  to bigger and smaller first order phases 
@@ -169,12 +179,12 @@ dbuff *create_buff(int num){
     { "clearspline",NULL,"Clear Spline Points",NULL,"Clear the spline points",G_CALLBACK(clear_spline)},
     { "zeropoints",NULL,"Zero Points",NULL,"Zero Points",G_CALLBACK(zero_points)},
     { "queueexpt",NULL,"Queue _Experiment",NULL,"Queue this experiment",G_CALLBACK(queue_expt)},
-    { "queuewindow",NULL,"Queue _Window",NULL,"Display the queue window",G_CALLBACK(queue_window)}
-#ifndef WIN
-    ,
+    { "queuewindow",NULL,"Queue _Window",NULL,"Display the queue window",G_CALLBACK(queue_window)},
     { "readscript",NULL,"Read from stdin",NULL,"Read from stdin",G_CALLBACK(readscript)},
-    { "socketscript",NULL,"Open Socket for script",NULL,"Open Socket for script",G_CALLBACK(socket_script)}
+#ifndef MINGW
+    { "socketscript",NULL,"Open Unix Socket for script",NULL,"Open Socket for script",G_CALLBACK(socket_script)},
 #endif
+    { "socketscript2",NULL,"Open UDP Socket for script",NULL,"Open UDP Socket for script",G_CALLBACK(socket_script2)}
     };
 
  static const char *ui_description =
@@ -237,12 +247,13 @@ dbuff *create_buff(int num){
    "   <menu action='HardwareMenu'>"
    "    <menuitem action='ResetDSP'/>"
    "   </menu>"
-#ifndef WIN
    "   <menu action='ScriptingMenu'>"
    "    <menuitem action='readscript'/>"
+#ifndef MINGW
    "    <menuitem action='socketscript'/>"
-   "   </menu>"
 #endif
+   "    <menuitem action='socketscript2'/>"
+   "   </menu>"
    " </menubar>"
    "</ui>";
 
@@ -325,18 +336,18 @@ dbuff *create_buff(int num){
     // they get toggled signals to prevent user from changing during acq, but
     // not hooked up till after we set them initially.
     buff->win.but1a= gtk_radio_button_new_with_label(NULL,"1A");
-    buff->win.grp1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1a));
-    buff->win.but1b= gtk_radio_button_new_with_label(buff->win.grp1,"1B");
-    buff->win.grp1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1b));
-    buff->win.but1c= gtk_radio_button_new_with_label(buff->win.grp1,"1C");
-    //    buff->win.grp1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1c));
+    buff->win.group1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1a));
+    buff->win.but1b= gtk_radio_button_new_with_label(buff->win.group1,"1B");
+    buff->win.group1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1b));
+    buff->win.but1c= gtk_radio_button_new_with_label(buff->win.group1,"1C");
+    //    buff->win.group1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1c));
 
     buff->win.but2a= gtk_radio_button_new_with_label(NULL,"2A");
-    buff->win.grp2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2a));
-    buff->win.but2b= gtk_radio_button_new_with_label(buff->win.grp2,"2B");
-    buff->win.grp2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2b));
-    buff->win.but2c= gtk_radio_button_new_with_label(buff->win.grp2,"2C");
-    //    buff->win.grp2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2c));
+    buff->win.group2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2a));
+    buff->win.but2b= gtk_radio_button_new_with_label(buff->win.group2,"2B");
+    buff->win.group2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2b));
+    buff->win.but2c= gtk_radio_button_new_with_label(buff->win.group2,"2C");
+    //    buff->win.group2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2c));
 
 
 
@@ -1666,7 +1677,7 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
 
   num_buffs -=1;
-#ifndef WIN
+#ifndef MINGW
   if (num_buffs == 0 && no_acq == FALSE)
     release_ipc_stuff(); // this detaches shared mem and sets our pid to -1 in it.
 #endif
@@ -3694,7 +3705,7 @@ gint do_load( dbuff* buff, char* path, int fid )
 
   // but only if this isn't the users temp file.
   //  fprintf(stderr,"in do_load: %s\n",path);
-#ifndef WIN
+#ifndef MINGW
   path_strcpy(s,getenv(HOMEP));
   path_strcat(s, DPATH_SEP "Xnmr" DPATH_SEP "data" DPATH_SEP "acq_temp");
   if (strcmp(s,path) !=0 ){
@@ -3938,7 +3949,7 @@ gint check_overwrite( dbuff* buff, char* path )
   // since the filechooser widget seems to create the directory for us on save_as.
   // it is possible this will still fail...
 
-#ifndef WIN
+#ifndef MINGW
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
 #else
   if( mkdir( path ) != 0 ) {
@@ -5052,14 +5063,14 @@ int file_append(GtkAction *action, dbuff *buff)
 
 gint set_cwd(char *dir)
 {
-#ifndef WIN
+#ifndef MINGW
   wordexp_t word;
 #endif
   // dir comes back fixed - ie expanded for any ".."'s or "~"'s in the pathname
 
   int result;
   //  fprintf(stderr,"in set_cwd with arg: %s, old working dir was %s\n",dir,getcwd(old_dir,PATH_LENGTH));
-#ifndef WIN
+#ifndef MINGW
   result = wordexp(dir, &word, WRDE_NOCMD|WRDE_UNDEF);
   //  fprintf(stderr,"in set_cwd: %s  dir is: %s\n",word.we_wordv[0],dir);
   if (result == 0){
@@ -7336,7 +7347,7 @@ void queue_expt(GtkAction *action, dbuff *buff){
     return;
   }
 
-#ifndef WIN
+#ifndef MINGW
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
 #else
   if( mkdir( path ) != 0 ) {
@@ -7478,9 +7489,18 @@ void set_queue_label(){
 
 
 
-#ifndef WIN
 // remote control/scripting starts here...
-int socket_thread_open = 0;
+/* 
+   There are three ways Xnmr can be remote controlled: 
+   first is it can take input from the command line
+   second it can open a Unix datagram socket - nice to communicate with 
+   C programs or python programs
+   finally, it can open a UDP socket - very similar to the Unix datagram
+   socket, but it works on windows too.
+
+*/
+
+int socket_thread_open = 0; // this is a bitmask - 1 is for unix socket, 2 is for udp socket. Can do both (for separate buffs).
 int interactive_thread_open = 0;
 
 void readscript(GtkAction *action,dbuff *buff){
@@ -7518,14 +7538,16 @@ void *readscript_thread_routine(void *buff){
   // this signal stuff shouldn't be necessary here... done in xnmr.c right at beginning.
   sigset_t sigset;
   char *dummy;
+#ifndef MINGW
   sigemptyset(&sigset);
   sigaddset(&sigset,SIG_UI_ACQ);
-  sigaddset(&sigset,SIGQUIT);;
+  sigaddset(&sigset,SIGQUIT);
   sigaddset(&sigset,SIGTERM);
   sigaddset(&sigset,SIGINT);
   sigaddset(&sigset,SIGTTIN);
 
   pthread_sigmask(SIG_BLOCK,&sigset,NULL);
+#endif
 
 
   readscript_data.bnum = ((dbuff *)buff)->buffnum; // changes only if set by script.
@@ -7546,7 +7568,7 @@ void *readscript_thread_routine(void *buff){
       sem_destroy(&readscript_data.sem);
       pthread_exit(NULL);
     }
-    fprintf(stderr,"got input: %s",readscript_data.iline);
+    fprintf(stderr,"got input: %s\n",readscript_data.iline);
     //    gdk_threads_enter();
     g_idle_add((GSourceFunc) script_handler,&readscript_data);
     fprintf(stderr,"calling sem_wait\n");
@@ -7570,12 +7592,11 @@ void *readscript_thread_routine(void *buff){
 
 }
 
-
-
 // some globals for the socket stuff.
-struct sockaddr_un my_addr;
+ struct sockaddr_un my_addr;
 struct sockaddr_un from;
-int fds;
+ struct sockaddr_in my_addr2,from2;
+ int fds,fds2;
 
 gint script_notify_acq_complete(){
 
@@ -7590,6 +7611,11 @@ gint script_notify_acq_complete(){
     script_widgets.acquire_notify = 0;
     sendto(fds,mess,13,0,(struct sockaddr *)&from,SUN_LEN(&from));
   }
+  if (script_widgets.acquire_notify == 3){ // udp socket
+    script_widgets.acquire_notify = 0;
+    sendto(fds2,mess,13,0,(struct sockaddr *)&from2,sizeof(struct sockaddr));
+  }
+
 
 
   return FALSE;
@@ -7608,7 +7634,7 @@ void socket_script(GtkAction *action, dbuff *buff){
     return;
   }
 
-  if (socket_thread_open == 1){
+  if (socket_thread_open & 1){
     popup_msg("Socket thread already listening",TRUE);
     return;
   }
@@ -7627,7 +7653,7 @@ void socket_script(GtkAction *action, dbuff *buff){
 
   my_addr.sun_family = AF_UNIX;
   strncpy(my_addr.sun_path,"/tmp/Xnmr_remote",17);
-  fds = socket(PF_LOCAL,SOCK_DGRAM,0);
+  fds = socket(PF_UNIX,SOCK_DGRAM,0);
   if (fds == 0){
     popup_msg("Can't open socket",TRUE);
     return;
@@ -7642,14 +7668,14 @@ void socket_script(GtkAction *action, dbuff *buff){
       return;
     }
   }
-
+  printf("trying to bind socket to %s\n",my_addr.sun_path);
   if (bind(fds,(struct sockaddr *)&my_addr,SUN_LEN(&my_addr)) != 0){
     popup_msg("Couldn't bind socket",TRUE);
     return;
   }
   chmod (my_addr.sun_path,0666);
   
-  socket_thread_open = 1;
+  socket_thread_open |= 1;
   buff->script_open = 1;
   
   pthread_create(&socket_thread,NULL,&readsocket_thread_routine,buff);
@@ -7664,22 +7690,27 @@ void socket_script(GtkAction *action, dbuff *buff){
 void *readsocket_thread_routine(void *buff){
   unsigned int rlen;
   int rval;
+#ifndef MINGW
   socklen_t fromlen;
+#else
+  int fromlen;
+#endif
 
   // this signal stuff shouldn't be necessary - signals blocked in xnmr.c before threads
   // created.
   sigset_t sigset;
 
+#ifndef MINGW
   sigemptyset(&sigset);
   sigaddset(&sigset,SIG_UI_ACQ);
-  sigaddset(&sigset,SIGQUIT);;
+  sigaddset(&sigset,SIGQUIT);
   sigaddset(&sigset,SIGTERM);
   sigaddset(&sigset,SIGINT);
   sigaddset(&sigset,SIGTTIN); // if we try to read while in background.
    // SIGTSTP is if you CTRL-Z
 
   pthread_sigmask(SIG_BLOCK,&sigset,NULL);
-
+#endif
 
   socketscript_data.bnum = ((dbuff *)buff)->buffnum;
   sem_init(&socketscript_data.sem,0,0);
@@ -7691,7 +7722,7 @@ void *readsocket_thread_routine(void *buff){
     rlen = recvfrom(fds,socketscript_data.iline,200,0,(struct sockaddr *)&from,&fromlen);
     socketscript_data.iline[rlen] = 0;
 
-    fprintf(stderr,"got input: %s",socketscript_data.iline);
+    fprintf(stderr,"got input: %s\n",socketscript_data.iline);
 
     //    gdk_threads_enter();
     //    rval = script_handler(iline,oline,2,&bnum); // the 2 says we're from a socket
@@ -7705,7 +7736,7 @@ void *readsocket_thread_routine(void *buff){
       fprintf(stderr,"readsocket_thread_routine exiting\n");
 
       unlink(my_addr.sun_path);
-      socket_thread_open = 0;
+      socket_thread_open &=  ~1;
       buffp[socketscript_data.bnum]->script_open = 0;
       sem_destroy(&socketscript_data.sem);
       pthread_exit(NULL);
@@ -7713,6 +7744,124 @@ void *readsocket_thread_routine(void *buff){
     //    printf("address is: %s\n",from.sun_path);
     sendto(fds,socketscript_data.oline,strnlen(socketscript_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
     fprintf(stderr,"%s\n",socketscript_data.oline);
+
+  }while (1);
+
+
+}
+
+void socket_script2(GtkAction *action, dbuff *buff){
+  // open a socket for remote control
+  pthread_t socket_thread;
+  int i;
+  short pnum;
+
+  struct stat buf;
+  
+  if (buff->script_open != 0){
+    popup_msg("This buffer has a script thread open already!",TRUE);
+    return;
+  }
+
+  if (socket_thread_open & 2){
+    popup_msg("Socket thread already listening",TRUE);
+    return;
+  }
+  /*  if (no_acq == TRUE){
+    popup_msg("Can't open socket in no_acq mode",TRUE);
+    return;
+    } */
+
+  for (i=0;i<MAX_BUFFERS;i++){
+    if (buffp[i] != NULL)
+      if (am_i_queued(i)){
+	popup_msg("Queueing active, can't run scripts",TRUE);
+	return;
+      }
+  }
+
+  fds2 = socket(AF_INET,SOCK_DGRAM,0); // udp
+  if (fds2 == 0){
+    popup_msg("Can't open socket",TRUE);
+    return;
+  }
+
+  memset((char *) &my_addr2,0,sizeof(struct sockaddr));
+  my_addr2.sin_family = AF_INET;
+  pnum = 5612;
+  my_addr2.sin_port = htons(pnum); // port 5612?
+  my_addr2.sin_addr.s_addr = htonl(INADDR_ANY);
+  if (bind(fds2,(struct sockaddr *)&my_addr2,sizeof(struct sockaddr)) != 0){
+    popup_msg("Couldn't bind socket",TRUE);
+    return;
+  }
+  
+  socket_thread_open |= 2;
+  buff->script_open = 1;
+  
+  pthread_create(&socket_thread,NULL,&readsocket2_thread_routine,buff);
+
+  fprintf(stderr,"done creating socket thread, returning\n");
+  return;
+
+}
+
+void *readsocket2_thread_routine(void *buff){
+  unsigned int rlen;
+  int rval;
+#ifndef MINGW
+  socklen_t fromlen;
+#else
+  int fromlen;
+#endif
+
+  // this signal stuff shouldn't be necessary - signals blocked in xnmr.c before threads
+  // created.
+  sigset_t sigset;
+
+#ifndef MINGW
+  sigemptyset(&sigset);
+  sigaddset(&sigset,SIG_UI_ACQ);
+  sigaddset(&sigset,SIGQUIT);
+  sigaddset(&sigset,SIGTERM);
+  sigaddset(&sigset,SIGINT);
+  sigaddset(&sigset,SIGTTIN); // if we try to read while in background.
+   // SIGTSTP is if you CTRL-Z
+
+  pthread_sigmask(SIG_BLOCK,&sigset,NULL);
+#endif
+
+  socketscript2_data.bnum = ((dbuff *)buff)->buffnum;
+  sem_init(&socketscript2_data.sem,0,0);
+  socketscript2_data.source = 3; // tells it that we're from socket2
+
+  do{
+    fromlen = 108; 
+    rlen = recvfrom(fds2,socketscript2_data.iline,200,0,(struct sockaddr *)&from2,&fromlen);
+    socketscript2_data.iline[rlen] = 0;
+
+    fprintf(stderr,"got input: %s\n",socketscript2_data.iline);
+
+    //    gdk_threads_enter();
+    //    rval = script_handler(iline,oline,2,&bnum); // the 2 says we're from a socket
+    //    gdk_threads_leave();
+    g_idle_add((GSourceFunc) script_handler,&socketscript2_data);
+    sem_wait(&socketscript2_data.sem);
+    rval = socketscript2_data.rval;
+    if (rval == 0){ 
+      sendto(fds2,socketscript2_data.oline,strnlen(socketscript2_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from2,sizeof(struct sockaddr));
+      fprintf(stderr,"%s\n",socketscript2_data.oline);
+      fprintf(stderr,"readsocket2_thread_routine exiting\n");
+
+      socket_thread_open &= ~2;
+      buffp[socketscript2_data.bnum]->script_open = 0;
+      sem_destroy(&socketscript2_data.sem);
+      pthread_exit(NULL);
+    }
+    //    printf("address is: %s\n",from.sun_path);
+    fprintf(stderr,"returning: %s\n",socketscript2_data.oline);
+    rval = sendto(fds2,socketscript2_data.oline,strnlen(socketscript2_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from2,sizeof(struct sockaddr));
+    if (rval == -1 ) perror("sento");
 
   }while (1);
 
@@ -7827,7 +7976,7 @@ void script_handler(script_data *myscript_data){
 	return;
       }
       strcpy(myscript_data->oline,"ACQ STARTED");
-      script_widgets.acquire_notify = myscript_data->source; // one for stdout, will be 2 for socket.
+      script_widgets.acquire_notify = myscript_data->source; // one for stdout, will be 2 for socket, 3 for udp socket
       script_return(myscript_data,1);
       return;
     }
@@ -7892,7 +8041,7 @@ void script_handler(script_data *myscript_data){
 
 
       /* we have to make the directory */
-#ifndef WIN
+#ifndef MINGW
       if( mkdir( input+5, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
 #else
       if( mkdir( input+5) != 0 ) {
@@ -8349,7 +8498,6 @@ void script_handler(script_data *myscript_data){
 
 
 }
-#endif
 
 void scale_data(dbuff *buff,int pt,float scale){
   int i,j;
@@ -8618,4 +8766,5 @@ void zero_points_handler(dbuff *buff, GdkEventButton * action, GtkWidget *widget
 
     else fprintf(stderr,"zero_points_handler got unknown action: \n");
   }
+
 

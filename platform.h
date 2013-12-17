@@ -1,4 +1,4 @@
-#ifdef WIN
+#ifdef MINGW
 
 #define PATH_SEP '\\'
 #define DPATH_SEP "\\"
