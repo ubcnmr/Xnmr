@@ -431,6 +431,7 @@ void set_acqn_labels(int start)
 
 
 
+
 gint upload_and_draw_canvas_with_process( dbuff *buff )
 {
 
