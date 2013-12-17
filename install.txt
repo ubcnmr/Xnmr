@@ -52,3 +52,16 @@ ln -s /usr/src/Xnmr/current/libxnmr.so /usr/local/lib/libxnmr.so
    (if it doesn't exist) a directory called prog Into that directory,
    copy: generic_2d and generic 2d.param from /usr/src/Xnmr/current/prog
 
+
+
+MACOS:
+use Makefile-mac
+use macports to install gtk3, gcc48 (or newer - but update the makefile)
+
+Should work easily.
+
+WINDOWS:
+1) install gtk3 all-in-one bundle
+2) to build on windows, install mingw, add posix thread option.
+3) mingw32-make -f Makefile-win
+

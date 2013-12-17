@@ -71,7 +71,7 @@ reload wrapper                             (from end of acquisition)
  *  Global Variable for this modules
  */
 
-#ifdef MINGW
+#if defined ( MINGw ) || defined ( MACOS )
 size_t strnlen(const char *s, size_t maxlen)
 {
   size_t ct;
