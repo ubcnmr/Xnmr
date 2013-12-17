@@ -76,7 +76,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   snprintf(filter_name,PATH_LENGTH,"/usr/share/Xnmr/filters/%d.imp",sw);
   fprintf(stderr,"setup_dsp: filter_name is %s\n",filter_name);
   
-  fptr1 = fopen(filter_name, "rt");
+  fptr1 = fopen(filter_name, "r");
   if ( fptr1 == NULL){
     fprintf (stderr,"filter file not found\n");
     return -1;

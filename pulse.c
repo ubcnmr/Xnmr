@@ -1420,11 +1420,11 @@ int is_a_float_device(int device_id)
     path_strcat(s,data_shm->pulse_exec_path);
 
 
-    fs = fopen(s,"r");
+    fs = fopen(s,"rb");
     if (fs == NULL){
       path_strcpy(s,SYS_PROG_PATH);
       path_strcat(s,data_shm->pulse_exec_path);
-      fs = fopen(s,"r");
+      fs = fopen(s,"rb");
     }
     if (fs == NULL){
       fprintf(stderr,"couldn't find my own executable??\n");

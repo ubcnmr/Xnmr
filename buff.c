@@ -3864,7 +3864,7 @@ gint do_load( dbuff* buff, char* path, int fid )
   }
   //Now we have to load the data, this is easy
     
-  fstream = fopen( fileN, "r" );
+  fstream = fopen( fileN, "rb" );
   
   if( fstream == NULL ) {
     perror( "do_load: couldn't open data file" );
@@ -4054,7 +4054,7 @@ gint do_save( dbuff* buff, char* path )
   path_strcat( fileN, DPATH_SEP "data" );
 
   //fprintf(stderr, "creating data file: %s\n", fileN );
-  fstream = fopen( fileN, "w" );
+  fstream = fopen( fileN, "wb" );
   
   fwrite( buff->data, sizeof( float ), buff->npts*buff->npts2*2, fstream ); 
   
@@ -5021,7 +5021,7 @@ int file_append(GtkAction *action, dbuff *buff)
 
   path_strcpy(s,buff->param_set.save_path);
   path_strcat(s , DPATH_SEP "data");
-  fstream = fopen(s,"a");
+  fstream = fopen(s,"ab");
   if (fstream == NULL){
     popup_msg("Can't open data for append",TRUE);
     return 0;
