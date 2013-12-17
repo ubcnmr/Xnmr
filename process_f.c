@@ -2766,7 +2766,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     
     // copy out
     for(i=0;i<buff->npts;i++){
-
+      
       if (is_symm){
 	for (j=0;j<buff->npts2/2;j++){
 	  new_data[j*2] = buff->data[(j+buff->npts2/2)*buff->npts*2+2*i];
@@ -2827,6 +2827,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 	  new_data[j*2] = buff->data[j*buff->npts*2+i];
 	  new_data[j*2+1] = 0.;
 	}
+	new_data[0] /= 2.;
       }
       // do the ft
 

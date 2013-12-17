@@ -1,3 +1,4 @@
+//#define GTK_DISABLE_DEPRECATED
 /* buff.c
  *
  * window buffer implementation for the Xnmr project
@@ -4717,11 +4718,17 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	  do{
 	    fgets(linebuff,200,infile);
 	  }while(linebuff[0] == '#');
-	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
+
+	  //	    	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
+		  //		  	  if (eof == 2) counter += 1;
+	  eof=sscanf(linebuff,"%f",&num1);
 	  if (eof == 1) counter += 1;
 	}while (eof == 1);
-	//	  if (eof == 2) counter += 1;
-	//	}while (eof == 2);
+
+	//	  eof=sscanf(linebuff,"%f ",&num1);
+	//  if (eof == 1) counter += 1;
+	//	}while (eof == 1);
+
 	printf("will try to load in: %i lines, real part only.\n",counter);
 	rewind(infile);
 	buff_resize(buff,counter,1);
@@ -4729,7 +4736,11 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	  do{
 	    fgets(linebuff,200,infile);
 	  }while(linebuff[0] == '#');
-	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
+	  // two column data (time, val)
+	  //	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
+	  // buff->data[2*i] = num2;
+	  // single column data: val only.
+	  eof=sscanf(linebuff,"%f",&num1);
 	  buff->data[2*i] = num1;
 	  buff->data[2*i+1] = 0.;
 	}

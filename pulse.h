@@ -114,6 +114,7 @@ float get_dwell();
 
 int get_npts();
 
+unsigned int get_event_no();
 
 
 
