@@ -2398,4 +2398,7 @@ void start_noisy_loop(){
 
 }
 
-
+// this is for testing of hardware-assisted looping
+unsigned int get_event_no(){
+  return prog_shm->no_events;
+}
