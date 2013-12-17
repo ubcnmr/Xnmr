@@ -7756,7 +7756,6 @@ void socket_script2(GtkAction *action, dbuff *buff){
   int i;
   short pnum;
 
-  struct stat buf;
   
   if (buff->script_open != 0){
     popup_msg("This buffer has a script thread open already!",TRUE);
