@@ -20,17 +20,21 @@
 
 #include <gtk/gtk.h>
 #include <signal.h>
+#ifndef WIN
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <sys/types.h>
 #include <sys/errno.h>
 #include <sys/wait.h>
+#endif
+#include <sys/types.h>
 #include <stdio.h>
 
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#ifndef WIN
 #include <pthread.h>
+#endif
 
 /*
  *  Global Variables
@@ -45,7 +49,7 @@ struct timeval last_time, current_time;
 
 
 
-
+#ifndef WIN
 void *sig_handler_thread_routine(void *dummy)
 { 
   sigset_t sigset;
@@ -362,6 +366,7 @@ int send_sig_acq( char sig )
   return -1;  
 
 }
+#endif
 
 
 void set_acqn_labels(int start)
@@ -426,7 +431,6 @@ void set_acqn_labels(int start)
 
 
 }
-
 
 
 
@@ -826,6 +830,7 @@ int upload_data( dbuff* buff )    //uploads the shm data to the active buffer, r
   return 0;
   }
 
+#ifndef WIN
 
 gint release_ipc_stuff()
 {
@@ -839,7 +844,7 @@ gint release_ipc_stuff()
   release_shm();
   return 0;
 }
-
+#endif
 
 void last_draw(){
   struct timezone tz;

@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <glib.h>
 
+#include "platform.h"
 #include "param_utils.h"
 #include "shm_data.h"
 
@@ -430,8 +431,8 @@ void make_path( char* s )
 
   c = s[ strlen( s )-1 ];
 
-  if( c != '/' )
-    path_strcat( s, "/" );
+  if( c != PATH_SEP )
+    path_strcat( s, DPATH_SEP );
   return;
 
 }
@@ -550,7 +551,11 @@ void param_strcat(char *dest, char *source){
 
 void path_strcpy(char *dest,const char*source){
   // again assume that dest string is of length PATH_LENGTH
-
+  
+  if (source ==  NULL){
+    printf("FixMe: got a null path in path_strcpy\n"); 
+    return;
+  }
   if ( strlen(source) >= PATH_LENGTH){
     fprintf(stderr,"Overrun while copy string %s into %s\n",source,dest);
     strncpy(dest,source,PATH_LENGTH-1);

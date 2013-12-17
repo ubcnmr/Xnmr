@@ -12,8 +12,9 @@
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <math.h>
+#ifndef WIN
 #include <semaphore.h>
-
+#endif
 #include "param_f.h"
 #include "process_f.h"
 #include "xnmr_types.h"
@@ -88,7 +89,7 @@ enum
     N_COLUMNS,
   };
 
-
+#ifndef WIN
 typedef struct{
   char iline[200];
   char oline[200];
@@ -98,7 +99,7 @@ typedef struct{
   int bnum;
 } script_data;
 /* global variables */
-
+#endif
 extern int current;
 extern int last_current;
 extern int num_buffs;
@@ -270,6 +271,7 @@ void queue_window(GtkAction *action, dbuff *buff);
 void remove_queue(GtkWidget *widget, gpointer dum);
 void set_queue_label();
 
+#ifndef WIN
 void readscript(GtkAction *action,dbuff *buff);
 void *readscript_thread_routine(void *buff);
 void *readsocket_thread_routine(void *buff);
@@ -277,7 +279,7 @@ void *readsocket_thread_routine(void *buff);
 void script_handler(script_data *myscript_data);
 gint script_notify_acq_complete();
 void socket_script(GtkAction *action,dbuff *buff);
-
+#endif
 void shim_integrate(GtkWidget *action, dbuff *buff);
 gint do_shim_integrate(dbuff *buff,double *int1,double *int2,double *int3);
 void scale_data(dbuff *buff,int pt,float scale);

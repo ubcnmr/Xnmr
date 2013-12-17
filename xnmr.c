@@ -151,12 +151,16 @@ n) cursor_busy and cursor_normal borked?
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <signal.h>
+#ifndef WIN
 #include <sys/wait.h>
+#endif
 #include <stdio.h>
 #include <gtk/gtk.h>
 #include <getopt.h>
 #include <string.h>
+#ifndef WIN
 #include <sys/shm.h>
+#endif
 #include <unistd.h>
 /*
  *  Global Variables
@@ -216,6 +220,7 @@ int main(int argc,char *argv[])
   }
   ;
 
+#ifndef WIN
   //first, we have to block SIGUSR1 in case ACQ is already launched and running
   // or just not enable the signals till later?
   //block_signal();
@@ -224,14 +229,14 @@ int main(int argc,char *argv[])
     
     sigemptyset(&sigset);
     sigaddset(&sigset,SIG_UI_ACQ);
-    sigaddset(&sigset,SIGQUIT);;
+    sigaddset(&sigset,SIGQUIT);
     sigaddset(&sigset,SIGTERM);
     sigaddset(&sigset,SIGINT);
     sigaddset(&sigset,SIGTTIN);
     
     sigprocmask(SIG_BLOCK,&sigset,NULL);
   }
-
+#endif
 
   /* initialize the gtk stuff */
 
@@ -264,7 +269,7 @@ int main(int argc,char *argv[])
 
 #if GTK_MAJOR_VERSION == 2
   gtk_rc_parse("/usr/share/Xnmr/config/xnmrrc");
-  path_strcpy(command,getenv("HOME"));
+  path_strcpy(command,getenv(HOMEP));
   path_strcat(command,"/.xnmrrc");
 	 
   //  fprintf(stderr,"looking for rc file: %s\n",command);
@@ -325,6 +330,7 @@ int main(int argc,char *argv[])
 
 
   result_shm=-1;
+#ifndef WIN
   if (!no_acq){
 
     result_shm = xnmr_init_shm();  //this tells us whether acq is already launched
@@ -393,6 +399,9 @@ int main(int argc,char *argv[])
 	  } */
     }
   }
+#else
+  no_acq = TRUE;
+#endif
 
   /* build the notebook/panel window */
   panwindow=gtk_window_new( GTK_WINDOW_TOPLEVEL );
@@ -412,7 +421,7 @@ int main(int argc,char *argv[])
 
   //  gtk_window_set_position(GTK_WINDOW(panwindow),GTK_WIN_POS_NONE);
   //  gtk_window_set_gravity(GTK_WINDOW(panwindow),GDK_GRAVITY_NORTH_WEST);
-  gtk_window_set_icon_from_file(GTK_WINDOW(panwindow),"/usr/share/Xnmr/xnmr_buff_icon.png",NULL);
+  gtk_window_set_icon_from_file(GTK_WINDOW(panwindow),ICON_PATH,NULL);
 
   // want size of buffer window to set placement of panel window.
   // so postpone placing this window
@@ -421,23 +430,31 @@ int main(int argc,char *argv[])
 
   /* create a first buffer */
 
-
-  path_strcpy(command,getenv("HOME"));
+#ifndef WIN
+  path_strcpy(command,getenv(HOMEP));
   make_path( command);
   path_strcat(command,"Xnmr/data/");
   result = chdir(command);
 
   if (result == -1){
     fprintf(stderr,"creating directories...");
-    path_strcpy (command,getenv("HOME"));
+    path_strcpy (command,getenv(HOMEP));
     path_strcat(command,"/Xnmr");
+#ifndef WIN
     result = mkdir(command,0755);
+#else
+    result = mkdir(command);
+#endif
     if (result != 0) perror("making ~/Xnmr:");
-    path_strcat(command,"/data");
+    path_strcat(command,DPATH_SEP "data");
+#ifndef WIN
     result = mkdir(command,0755);
+#else 
+    result = mkdir(command);
+#endif
     if (result != 0) perror("making ~/Xnmr/data:");
   }
-
+#endif
   /* build the queue window */
 
   queue.dialog = gtk_dialog_new();
@@ -1202,7 +1219,9 @@ white set up below  */
   if (no_acq ==TRUE){
     signal( SIGINT,  do_destroy_all );
     signal( SIGTERM,  do_destroy_all );
+#ifndef WIN
     signal( SIGQUIT,  do_destroy_all ); // this is ordinary ^C or kill
+#endif
   }
 
   show_active_border(); 

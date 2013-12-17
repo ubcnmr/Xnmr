@@ -43,13 +43,17 @@ reload wrapper                             (from end of acquisition)
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef WIN
 #include <wordexp.h>
+#endif
 #include <string.h>
 #include <signal.h>
+#ifndef WIN
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <semaphore.h>
+#endif
 #include "buff.h"
 #include "xnmr.h"
 #include "xnmr_ipc.h"
@@ -94,9 +98,9 @@ GtkWidget* int_label;
 char doing_s2n=0;
 char doing_int=0;
 GtkWidget *setsf1dialog;
-
+#ifndef WIN
 script_data socketscript_data,readscript_data;
-
+#endif 
 
 /*need a pivot point on phase change */
 /* need to be able to  to bigger and smaller first order phases 
@@ -165,9 +169,12 @@ dbuff *create_buff(int num){
     { "clearspline",NULL,"Clear Spline Points",NULL,"Clear the spline points",G_CALLBACK(clear_spline)},
     { "zeropoints",NULL,"Zero Points",NULL,"Zero Points",G_CALLBACK(zero_points)},
     { "queueexpt",NULL,"Queue _Experiment",NULL,"Queue this experiment",G_CALLBACK(queue_expt)},
-    { "queuewindow",NULL,"Queue _Window",NULL,"Display the queue window",G_CALLBACK(queue_window)},
+    { "queuewindow",NULL,"Queue _Window",NULL,"Display the queue window",G_CALLBACK(queue_window)}
+#ifndef WIN
+    ,
     { "readscript",NULL,"Read from stdin",NULL,"Read from stdin",G_CALLBACK(readscript)},
     { "socketscript",NULL,"Open Socket for script",NULL,"Open Socket for script",G_CALLBACK(socket_script)}
+#endif
     };
 
  static const char *ui_description =
@@ -230,10 +237,12 @@ dbuff *create_buff(int num){
    "   <menu action='HardwareMenu'>"
    "    <menuitem action='ResetDSP'/>"
    "   </menu>"
+#ifndef WIN
    "   <menu action='ScriptingMenu'>"
    "    <menuitem action='readscript'/>"
    "    <menuitem action='socketscript'/>"
    "   </menu>"
+#endif
    " </menubar>"
    "</ui>";
 
@@ -367,8 +376,8 @@ dbuff *create_buff(int num){
     buff->process_data[CR].val=9; //this is the default cross correlation bits
     }
 
-    path_strcpy(s,getenv("HOME"));
-    path_strcat(s,"/Xnmr/data/");
+    path_strcpy(s,getenv(HOMEP));
+    path_strcat(s,DPATH_SEP "Xnmr" DPATH_SEP "data" DPATH_SEP);
     put_name_in_buff(buff,s);
     //    fprintf(stderr,"special buff creation put %s in save\n",buff->param_set.save_path);
 
@@ -524,7 +533,7 @@ dbuff *create_buff(int num){
     gtk_window_set_gravity(GTK_WINDOW(window),GDK_GRAVITY_NORTH_WEST);
     gtk_window_move(GTK_WINDOW(window),(count-1)*50,0);
 
-    gtk_window_set_icon_from_file(GTK_WINDOW(window),"/usr/share/Xnmr/xnmr_buff_icon.png",NULL);
+    gtk_window_set_icon_from_file(GTK_WINDOW(window),ICON_PATH,NULL);
 
     buff->win.window=window;
     g_signal_connect (G_OBJECT(window),"delete_event", //was "destroy"
@@ -1554,7 +1563,7 @@ void file_open(GtkAction *action,dbuff *buff)
     if (buff != NULL){
       
       // here we need to strip out a potential trailing /
-      if (filename[strlen(filename)-1] == '/' ) filename[strlen(filename)-1] = 0;
+      if (filename[strlen(filename)-1] == PATH_SEP ) filename[strlen(filename)-1] = 0;
       //      fprintf(stderr,"path is: %s\n",filename);
       
       do_load( buff, filename,0);
@@ -1657,10 +1666,10 @@ gint destroy_buff(GtkWidget *widget,GdkEventAny *event,dbuff *buff)
 
 
   num_buffs -=1;
-
+#ifndef WIN
   if (num_buffs == 0 && no_acq == FALSE)
     release_ipc_stuff(); // this detaches shared mem and sets our pid to -1 in it.
-
+#endif
   /* free up all the things we alloc'd */
 
   g_free(buff->data);
@@ -1758,7 +1767,7 @@ void file_save(GtkAction *action,dbuff *buff)
 
   CHECK_ACTIVE(buff);
   fprintf(stderr,"in file_save, using path: %s\n",buff->param_set.save_path);
-  if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == '/'){
+  if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == PATH_SEP){
     popup_msg("Invalid file name",TRUE);
     return;
   }
@@ -2506,9 +2515,8 @@ void integrate_from_file( dbuff *buff, int action, GtkWidget *widget )
   int i_pt1,i_pt2,eo;
    FILE *f_int;
    char filename[PATH_LENGTH];
-
-   path_strcpy(filename,getenv("HOME"));
-   path_strcat(filename,"/Xnmr/prog/integrate_from_file_parameters.txt");
+   path_strcpy(filename,getenv(HOMEP));
+   path_strcat(filename, DPATH_SEP "Xnmr" DPATH_SEP "prog" DPATH_SEP "integrate_from_file_parameters.txt");
    //   f_int = fopen("/usr/people/nmruser/Xnmr/prog/integrate_from_file_parameters.txt","r");
    f_int = fopen(filename,"r");
    if ( f_int == NULL){
@@ -3686,8 +3694,9 @@ gint do_load( dbuff* buff, char* path, int fid )
 
   // but only if this isn't the users temp file.
   //  fprintf(stderr,"in do_load: %s\n",path);
-  path_strcpy(s,getenv("HOME"));
-  path_strcat(s,"/Xnmr/data/acq_temp");
+#ifndef WIN
+  path_strcpy(s,getenv(HOMEP));
+  path_strcat(s, DPATH_SEP "Xnmr" DPATH_SEP "data" DPATH_SEP "acq_temp");
   if (strcmp(s,path) !=0 ){
  
     // and the whole thing will go into the reload spot at the end
@@ -3695,9 +3704,12 @@ gint do_load( dbuff* buff, char* path, int fid )
     //     fprintf(stderr,"do_load: put %s in save_path\n",buff->param_set.save_path);
   }
   //  else fprintf(stderr,"not putting path into save path, because its the acq_temp file\n");
+#else
+    put_name_in_buff(buff,path);
+#endif
   
   path_strcpy( fileN, path);
-  path_strcat( fileN, "/params" );
+  path_strcat( fileN, DPATH_SEP "params" );
 
   //fprintf(stderr, "opening parameter file: %s\n", fileN );
   fstream = fopen( fileN, "r" );
@@ -3717,7 +3729,7 @@ gint do_load( dbuff* buff, char* path, int fid )
   // need to figure out if we're going to read the data or the fid before we resize:
   if (fid == 1){
     path_strcpy( fileN, path);
-    path_strcat( fileN, "/data.fid" );
+    path_strcat( fileN, DPATH_SEP "data.fid" );
     if (stat(fileN,&sbuf) != 0){
       fid = 0;
     }
@@ -3815,7 +3827,7 @@ gint do_load( dbuff* buff, char* path, int fid )
      
   // load the proc_parameters
   path_strcpy( fileN, path);
-  path_strcat( fileN, "/proc_params" );
+  path_strcat( fileN, DPATH_SEP "proc_params" );
   fstream = fopen( fileN, "r" );
   
   if( fstream != NULL ) {
@@ -3843,12 +3855,12 @@ gint do_load( dbuff* buff, char* path, int fid )
   
   if (fid == 1){
     path_strcpy( fileN, path);
-    path_strcat( fileN, "/data.fid" );
+    path_strcat( fileN, DPATH_SEP "data.fid" );
     buff->flags = 0;
   }
   else{
     path_strcpy( fileN, path);
-    path_strcat( fileN, "/data" );
+    path_strcat( fileN, DPATH_SEP "data" );
   }
   //Now we have to load the data, this is easy
     
@@ -3897,7 +3909,7 @@ gint check_overwrite( dbuff* buff, char* path )
   FILE *file;
   // if check_overwrite gets something with a trailing /, it should barf.
 
-  if (path[strlen(path)-1] == '/'){
+  if (path[strlen(path)-1] == PATH_SEP){
     popup_msg("Invalid filename",TRUE);
     return 0;
   }
@@ -3926,8 +3938,11 @@ gint check_overwrite( dbuff* buff, char* path )
   // since the filechooser widget seems to create the directory for us on save_as.
   // it is possible this will still fail...
 
-
+#ifndef WIN
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
+#else
+  if( mkdir( path ) != 0 ) {
+#endif
     if( errno != EEXIST ) {
       popup_msg("check_overwrite can't mkdir?",TRUE);
       return FALSE ;
@@ -3937,7 +3952,7 @@ gint check_overwrite( dbuff* buff, char* path )
       // now see if this is an Xnmr directory, should contain a data file
       
       path_strcpy(mypath,path);
-      path_strcat(mypath,"/data");
+      path_strcat(mypath,DPATH_SEP "data");
       file = fopen(mypath,"rb");
       if (file != NULL){
 	fclose(file);
@@ -3976,7 +3991,7 @@ gint do_save( dbuff* buff, char* path )
   struct stat sbuf;
 
   path_strcpy( fileN, path);
-  path_strcat( fileN, "/params" );
+  path_strcat( fileN, DPATH_SEP "params" );
 
   //  fprintf(stderr, "creating parameter file: %s\n", fileN );
   fstream = fopen( fileN, "w" );
@@ -4007,7 +4022,7 @@ gint do_save( dbuff* buff, char* path )
 
   // save proc params
   path_strcpy( fileN, path);
-  path_strcat( fileN, "/proc_params" );
+  path_strcat( fileN, DPATH_SEP "proc_params" );
   fstream = fopen( fileN, "w" );
 
   fprintf(fstream,"PH: %f %f %f %f\n",buff->phase0_app,buff->phase1_app,
@@ -4023,20 +4038,20 @@ gint do_save( dbuff* buff, char* path )
   // if this is a save_as, it still preserves the original data.
   
   path_strcpy(fileS,buff->path_for_reload);
-  path_strcat(fileS,"/data.fid");
+  path_strcat(fileS,DPATH_SEP "data.fid");
   if( stat(fileS,&sbuf) != 0 ){ // it doesn't exist
       path_strcpy(fileS,buff->path_for_reload);
-      path_strcat(fileS,"/data");
+      path_strcat(fileS, DPATH_SEP "data");
 
       path_strcpy(fileN,path);
-      path_strcat(fileN,"/data.fid"); 
-      sprintf(command,"cp -p %s %s",fileS,fileN);
+      path_strcat(fileN,DPATH_SEP "data.fid"); 
+      sprintf(command,COPY_COMM,fileS,fileN);
       system(command);
     }
  
 
   path_strcpy( fileN, path);
-  path_strcat( fileN, "/data" );
+  path_strcat( fileN, DPATH_SEP "data" );
 
   //fprintf(stderr, "creating data file: %s\n", fileN );
   fstream = fopen( fileN, "w" );
@@ -4049,23 +4064,23 @@ gint do_save( dbuff* buff, char* path )
   // now, if we had a reload path and its different from the save path, 
   // find the pulse program and copy it, if it exists:
   path_strcpy(fileN,path);
-  path_strcat(fileN,"/program"); // destination
+  path_strcat(fileN,DPATH_SEP "program"); // destination
 
   path_strcpy(fileS,buff->path_for_reload);
-  path_strcat(fileS,"/program");
+  path_strcat(fileS,DPATH_SEP "program");
   if (strncmp(fileS,fileN,PATH_LENGTH) != 0){
-    sprintf(command,"cp -p %s %s",fileS,fileN);
+    sprintf(command,COPY_COMM,fileS,fileN);
     system(command);
   }
 
   // same with backup of fid
   path_strcpy(fileN,path);
-  path_strcat(fileN,"/data.fid"); // destination
+  path_strcat(fileN,DPATH_SEP "data.fid"); // destination
 
   path_strcpy(fileS,buff->path_for_reload);
-  path_strcat(fileS,"/data.fid");
+  path_strcat(fileS,DPATH_SEP "data.fid");
   if (strncmp(fileS,fileN,PATH_LENGTH) != 0){
-    sprintf(command,"cp -p %s %s",fileS,fileN);
+    sprintf(command,COPY_COMM,fileS,fileN);
     system(command);
   }
 
@@ -4698,7 +4713,7 @@ void file_import_text(GtkAction *action,dbuff *buff){
     if (buff != NULL){
       
       // here we need to strip out a potential trailing /
-      if (filename[strlen(filename)-1] == '/' ) filename[strlen(filename)-1] = 0;
+      if (filename[strlen(filename)-1] == PATH_SEP ) filename[strlen(filename)-1] = 0;
       //      fprintf(stderr,"path is: %s\n",filename);
       
       //      do_load( buff, filename,0);
@@ -4890,7 +4905,7 @@ int file_append(GtkAction *action, dbuff *buff)
   }
 // first need to build a filename - same algorithm as for save
   path_strcpy(s,buff->param_set.save_path);
-  path_strcat(s , "/params");
+  path_strcat(s , DPATH_SEP "params");
 
   fprintf(stderr,"append file, using path %s\n",s);
 
@@ -5005,7 +5020,7 @@ int file_append(GtkAction *action, dbuff *buff)
 // actually append the data.
 
   path_strcpy(s,buff->param_set.save_path);
-  path_strcat(s , "/data");
+  path_strcat(s , DPATH_SEP "data");
   fstream = fopen(s,"a");
   if (fstream == NULL){
     popup_msg("Can't open data for append",TRUE);
@@ -5017,7 +5032,7 @@ int file_append(GtkAction *action, dbuff *buff)
 
   // write to data.fid as well
   path_strcpy(s,buff->param_set.save_path);
-  path_strcat(s , "/data.fid");
+  path_strcat(s , DPATH_SEP "data.fid");
   fstream = fopen(s,"a");
   if (fstream == NULL){
     popup_msg("Can't open data.fid for append",TRUE);
@@ -5037,13 +5052,14 @@ int file_append(GtkAction *action, dbuff *buff)
 
 gint set_cwd(char *dir)
 {
+#ifndef WIN
   wordexp_t word;
+#endif
   // dir comes back fixed - ie expanded for any ".."'s or "~"'s in the pathname
 
   int result;
-  
-  // fprintf(stderr,"in set_cwd with arg: %s, old working dir was %s\n",dir,getcwd(old_dir,PATH_LENGTH));
-  
+  //  fprintf(stderr,"in set_cwd with arg: %s, old working dir was %s\n",dir,getcwd(old_dir,PATH_LENGTH));
+#ifndef WIN
   result = wordexp(dir, &word, WRDE_NOCMD|WRDE_UNDEF);
   //  fprintf(stderr,"in set_cwd: %s  dir is: %s\n",word.we_wordv[0],dir);
   if (result == 0){
@@ -5051,6 +5067,7 @@ gint set_cwd(char *dir)
     wordfree(&word);
   }
   else
+#endif
     result = chdir(dir);
   
   if ( result !=0 )
@@ -5070,7 +5087,7 @@ void update_param_win_title(parameter_set_t *param_set)
 
   strcpy(s,"Xnmr: ");
   path_strcpy(s+6,param_set->save_path);
-  s2 = strrchr(s,'/');
+  s2 = strrchr(s,PATH_SEP);
   if (s2 != NULL){
     *s2=0;
     gtk_window_set_title(GTK_WINDOW(panwindow),s);
@@ -5086,22 +5103,22 @@ gint put_name_in_buff(dbuff *buff,char *fname)
   // fname should be fully qualified and not have a trailing /
   path_strcpy(name,"");
   path_strcpy( dir, fname);
-  s2 = strrchr(dir,'/');
+  s2 = strrchr(dir,PATH_SEP);
   if (s2 !=NULL){
     path_strcpy(name,s2+1);
     *s2 = 0;
-  
+    printf("in put_name_in_buff, cd'ing to: %s\n",dir);
     set_cwd( dir );
   }
   //else path_strcpy( name,fname); //so we don't segfault if we get a name with no /
 
   path_strcpy(buff->param_set.save_path,dir);
-  path_strcat(buff->param_set.save_path,"/");
+  path_strcat(buff->param_set.save_path,DPATH_SEP);
   path_strcat(buff->param_set.save_path,name);
   
   
 
-  //  fprintf(stderr,"put name in buff: %s\n",buff->param_set.save_path);
+  fprintf(stderr,"put name in buff: %s\n",buff->param_set.save_path);
   
   if ( buff->buffnum == current )
     update_param_win_title(&buff->param_set);
@@ -5160,8 +5177,8 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   // copy path names into places, unless its acq_temp.
   
   // This is for start-up while running, copies path out of shm
-  path_strcpy(s,getenv("HOME"));
-  path_strcat(s,"/Xnmr/data/acq_temp");
+  path_strcpy(s,getenv(HOMEP));
+  path_strcat(s,DPATH_SEP "Xnmr" DPATH_SEP "data" DPATH_SEP "acq_temp");
   if (strcmp(s,data_shm->save_data_path) !=0){
     put_name_in_buff(buff,data_shm->save_data_path);
     //       	fprintf(stderr,"special buff creation put %s in save\n",buff->param_set.save_path);
@@ -7314,12 +7331,16 @@ void queue_expt(GtkAction *action, dbuff *buff){
 
   path_strcpy(path,buff->param_set.save_path);
   
-  if (path[strlen(path)-1] == '/'){
+  if (path[strlen(path)-1] == PATH_SEP){
     popup_msg("Invalid filename",TRUE);
     return;
   }
 
+#ifndef WIN
   if( mkdir( path, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
+#else
+  if( mkdir( path ) != 0 ) {
+#endif
     if( errno != EEXIST ) {
       popup_msg("Unable to create save file!",TRUE);
       return;
@@ -7457,7 +7478,7 @@ void set_queue_label(){
 
 
 
-
+#ifndef WIN
 // remote control/scripting starts here...
 int socket_thread_open = 0;
 int interactive_thread_open = 0;
@@ -7824,11 +7845,11 @@ void script_handler(script_data *myscript_data){
 	script_return(myscript_data,0);
 	return;
       }
-      if (input[5] != '/'){
+      if (input[5] != PATH_SEP){
 	char s3[PATH_LENGTH];
 	path_strcpy(s3,input+5);
 	getcwd(input+5,PATH_LENGTH-5);
-	path_strcat(input,"/");
+	path_strcat(input,DPATH_SEP);
 	path_strcat(input,s3);
 	fprintf(stderr,"fixed filename to: %s\n",input);
       }
@@ -7860,18 +7881,22 @@ void script_handler(script_data *myscript_data){
 	return;
       }
 
-      if (input[5] != '/'){
+      if (input[5] != PATH_SEP){
 	char s3[PATH_LENGTH];
 	path_strcpy(s3,input+5);
 	getcwd(input+5,PATH_LENGTH-5);
-	path_strcat(input,"/");
+	path_strcat(input,DPATH_SEP);
 	path_strcat(input,s3);
 	fprintf(stderr,"fixed filename to: %s\n",input);
       }
 
 
       /* we have to make the directory */
+#ifndef WIN
       if( mkdir( input+5, S_IRWXU | S_IRWXG | S_IRWXO ) != 0 ) {
+#else
+      if( mkdir( input+5) != 0 ) {
+#endif
 	if( errno != EEXIST ) {
 	  strcpy(myscript_data->oline,"CANT MKDIR");
 	  script_return(myscript_data,0);
@@ -8324,6 +8349,7 @@ void script_handler(script_data *myscript_data){
 
 
 }
+#endif
 
 void scale_data(dbuff *buff,int pt,float scale){
   int i,j;

@@ -14,15 +14,8 @@ CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNO
 #For cygwin, change every libxnmr.so to libxnmr.dll
 
 
-<<<<<<< Makefile
-#CC = icc
-#CC=clang
-#CFLAGS = -g  -O2   -Wall   -floop-interchange -floop-strip-mine -floop-block `pkg-config --cflags gthread-2.0 gtk+-2.0`
-CFLAGS = -g  -O2   -Wall   `pkg-config --cflags gthread-2.0 gtk+-2.0`
 
 
-=======
->>>>>>> 1.30
 #O3 causes serious problems with rtai!
 
 # for icc:

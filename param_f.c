@@ -455,7 +455,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     else if (widget == save_text_box){
 
       path_strcpy(s, current_param_set->save_path);
-      lpath = strrchr(s,'/');
+      lpath = strrchr(s,PATH_SEP);
       if (lpath != NULL)
 	*lpath = 0;
       else lpath = s-1; // in case our save path has no / in it?
@@ -510,21 +510,21 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
       
       // then look for any other / (at end)
-      lpath = strrchr(s,'/');      
+      lpath = strrchr(s,PATH_SEP);      
       if (lpath != NULL){
 	*lpath = 0;
 	path_strcpy(s2,lpath+1);
 	result = set_cwd(s);
 	if (result != 0) {
 	  popup_msg("Directory not found",TRUE);
-	  lpath = strrchr(current_param_set->save_path,'/');
+	  lpath = strrchr(current_param_set->save_path,PATH_SEP);
 	  //	  norecur = 1;
 	  gtk_entry_set_text(GTK_ENTRY(save_text_box),lpath+1);
 	  //	  norecur = 0;
 	  return FALSE; 
 	}
 	path_strcpy(current_param_set->save_path,getcwd(s,PATH_LENGTH));
-	path_strcat(current_param_set->save_path,"/");
+	path_strcat(current_param_set->save_path,DPATH_SEP);
 	path_strcat(current_param_set->save_path,s2);
 	//	norecur = 1;
 	gtk_entry_set_text(GTK_ENTRY(save_text_box),s2);
@@ -532,7 +532,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
       }
       else { // just a straightforward change of filename
-	lpath = strrchr(current_param_set->save_path,'/');
+	lpath = strrchr(current_param_set->save_path,PATH_SEP);
 	//	norecur = 1;
 	gtk_entry_set_text(GTK_ENTRY(save_text_box),s);
 	//	norecur = 0;
@@ -987,15 +987,15 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
     //    fprintf(stderr,"in load_param_file with %s\n",fileN);
     // first look in ~/Xnmr/prog/  then in /usr/share/Xnmr/prog/
-    path_strcpy(s,getenv("HOME"));
-    path_strcat(s,"/Xnmr/prog/");
+    path_strcpy(s,getenv(HOMEP));
+    path_strcat(s,DPATH_SEP "Xnmr" DPATH_SEP "prog" DPATH_SEP);
     path_strcat(s , fileN);
     
     //    fprintf(stderr,"now looking in: %s\n",s);
     fs = fopen( s, "r" ); 
     
     if( fs == NULL ) { 
-      path_strcpy(s,"/usr/share/Xnmr/prog/");
+      path_strcpy(s,SYS_PROG_PATH);
       path_strcat(s,fileN);
       //      fprintf(stderr,"now looking in: %s\n",s);
       fs = fopen( s, "r" ); 
@@ -1271,7 +1271,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_entry_set_text( GTK_ENTRY( prog_text_box ), param_set->exec_path ); 
 
     path_strcpy(s, param_set->save_path);
-    lpath = strrchr(s,'/');
+    lpath = strrchr(s,PATH_SEP);
     if (lpath != NULL)
       *lpath = 0;
     else lpath = s-1; // in case our save path has no / in it?

@@ -68,7 +68,7 @@ int  setup_channels(){
 }
 
 
-
+#ifndef WIN
 
 gint kill_button_clicked(GtkWidget *widget, gpointer *data)
 {
@@ -188,12 +188,12 @@ gint start_button_toggled( GtkWidget *widget, gpointer *data )
       send_paths(); // part of this is repeated below.
 
       if (data_shm->mode == NORMAL_MODE_NOSAVE) { // means its a start, not start and save
-	path_strcpy( s, getenv("HOME"));
-	path_strcat( s,"/Xnmr/data/acq_temp");
+	path_strcpy( s, getenv(HOMEP));
+	path_strcat( s,DPATH_SEP "Xnmr" DPATH_SEP "data" DPATH_SEP "acq_temp");
 	path_strcpy( data_shm->save_data_path, s); 
       }
       else  // its a start and save, check to make sure filename is valid
-	if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == '/'){
+	if (buff->param_set.save_path[strlen(buff->param_set.save_path)-1] == PATH_SEP){
 	  popup_msg("Invalid file name",TRUE);
 	  norecur = 1;
 	  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),FALSE); 
@@ -470,7 +470,7 @@ gint repeat_p_button_toggled( GtkWidget *widget, gpointer *data )
 
 }
 
-
+#endif
 
 GtkWidget* create_panels()
 
@@ -525,7 +525,9 @@ GtkWidget* create_panels()
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button ), TRUE );
       acq_in_progress = ACQ_RUNNING;
     }
+#ifndef WIN
     g_signal_connect(G_OBJECT(start_button),"toggled",G_CALLBACK(start_button_toggled), NULL);
+#endif
   }
   else
     gtk_widget_set_sensitive(GTK_WIDGET(start_button),FALSE);
@@ -542,7 +544,9 @@ GtkWidget* create_panels()
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( start_button_nosave ), TRUE );
       acq_in_progress = ACQ_RUNNING;
     }
+#ifndef WIN
     g_signal_connect(G_OBJECT(start_button_nosave),"toggled",G_CALLBACK(start_button_toggled),NULL);
+#endif
   }
   else
     gtk_widget_set_sensitive(GTK_WIDGET(start_button_nosave),FALSE);
@@ -557,8 +561,9 @@ GtkWidget* create_panels()
       gtk_toggle_button_set_active( GTK_TOGGLE_BUTTON( repeat_button ), TRUE );
       acq_in_progress = ACQ_REPEATING;
     }
-
+#ifndef WIN
     g_signal_connect(G_OBJECT(repeat_button),"toggled",G_CALLBACK(repeat_button_toggled), NULL);
+#endif
   }
   else
     gtk_widget_set_sensitive(GTK_WIDGET(repeat_button),FALSE);
@@ -575,7 +580,9 @@ GtkWidget* create_panels()
 
   repeat_p_button = gtk_toggle_button_new_with_label( "Repeat and Process" );
   if(no_acq ==FALSE){
+#ifndef WIN
     g_signal_connect(G_OBJECT(repeat_p_button),"toggled",G_CALLBACK(repeat_p_button_toggled), NULL);
+#endif
   }
   else
     gtk_widget_set_sensitive(GTK_WIDGET(repeat_p_button),FALSE);
@@ -589,7 +596,9 @@ GtkWidget* create_panels()
   
   button = gtk_button_new_with_label("Kill");
   if( no_acq == FALSE ){
+#ifndef WIN
   g_signal_connect( G_OBJECT( button ), "clicked", G_CALLBACK( kill_button_clicked ), NULL );
+#endif
   }
   else
     gtk_widget_set_sensitive(GTK_WIDGET(button),FALSE);

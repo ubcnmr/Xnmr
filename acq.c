@@ -72,6 +72,7 @@ volatile RTIME t1,t2;
  *
  */
 
+#include "platform.h"
 #include <math.h>
 #include <signal.h>
 #include <sys/ipc.h>
@@ -504,13 +505,13 @@ int start_pprog()
     //    seteuid(ruid);  // these two will give up root privileges.
     //    setegid(rgid);
 
-    path_strcpy(s,getenv("HOME"));
+    path_strcpy(s,getenv(HOMEP));
     path_strcat(s,"/Xnmr/prog/");
     path_strcat(s,data_shm->pulse_exec_path);
 
     fs = fopen(s,"rb");
     if (fs == NULL){
-      path_strcpy(s,"/usr/share/Xnmr/prog/");
+      path_strcpy(s,SYS_PROG_PATH);
       path_strcat(s,data_shm->pulse_exec_path);
       fs = fopen(s,"rb");
     }

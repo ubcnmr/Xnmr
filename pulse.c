@@ -78,6 +78,7 @@ notes: phase_sweep starts off at -5 deg, so you'll want to left shift to there b
 
    */
 
+#include "platform.h"
  #include <sys/mman.h> 
  #include <stdarg.h> 
  #include <string.h> 
@@ -1414,14 +1415,14 @@ int is_a_float_device(int device_id)
    err = stat("/usr/share/Xnmr/config/h_config.h",&other_buff);
    // now find out who I am.  There must be a better way!!!
 
-    path_strcpy(s,getenv("HOME"));
+    path_strcpy(s,getenv(HOMEP));
     path_strcat(s,"/Xnmr/prog/");
     path_strcat(s,data_shm->pulse_exec_path);
 
 
     fs = fopen(s,"r");
     if (fs == NULL){
-      path_strcpy(s,"/usr/share/Xnmr/prog/");
+      path_strcpy(s,SYS_PROG_PATH);
       path_strcat(s,data_shm->pulse_exec_path);
       fs = fopen(s,"r");
     }

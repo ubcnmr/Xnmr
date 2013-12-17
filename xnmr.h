@@ -75,7 +75,10 @@ GtkWidget * gtk_vbox_new_wrap(gboolean homo, gint spacing);
 
 #define CHECK_ACTIVE( var )   if (var->buffnum != current) make_active(var)
 
+#include "platform.h"
+
 #endif
+
 
 
 

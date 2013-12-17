@@ -1629,7 +1629,7 @@ gint do_cross_correlate( GtkWidget *widget, double *bits ){
     popup_msg("do_cross_correlate panic! buff is null!",TRUE);
     return 0;
   }
-
+#ifndef WIN
   if (strcasestr(buff->param_set.exec_path,"frank")){
     printf("doing frank cross correlate\n");
     return do_cross_correlate_frank(widget,bits);
@@ -1644,7 +1644,7 @@ gint do_cross_correlate( GtkWidget *widget, double *bits ){
       return do_cross_correlate_mlbs(widget,bits);
     }
       
-
+#endif
 
 
 }
