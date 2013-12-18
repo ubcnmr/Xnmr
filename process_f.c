@@ -661,6 +661,7 @@ gint do_left_shift(GtkWidget * widget,double *val)
   if (shift ==0) return 0;
   if (shift > 0){
     for( j=0; j<buff->npts2; j++ ){
+      
       for( i=shift; i<buff->npts; i++ ) {
 	buff->data[2*(i-shift)+j*2*buff->npts]=
 	  buff->data[2*i+j*2*buff->npts];
@@ -671,6 +672,24 @@ gint do_left_shift(GtkWidget * widget,double *val)
 	buff->data[2*i+j*2*buff->npts]=0.;
 	buff->data[2*i+1+j*2*buff->npts]=0.;
       }
+      
+      /* do circular shift for now */
+      /*
+      float temp_buff[shift*2];
+      for (i=0;i<shift*2;i++)
+	temp_buff[i]=buff->data[i+j*2*buff->npts];
+      for( i=shift; i<buff->npts; i++ ) {
+	buff->data[2*(i-shift)+j*2*buff->npts]=
+	  buff->data[2*i+j*2*buff->npts];
+	buff->data[2*(i-shift)+1+j*2*buff->npts]=
+	  buff->data[2*i+1+j*2*buff->npts];
+      }
+      for(i=0;i<shift*2;i++)
+	buff->data[i+2*(buff->npts-shift) +j*2*buff->npts] = temp_buff[i];
+      */
+
+
+
     }
   }
   else

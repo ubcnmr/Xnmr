@@ -1564,6 +1564,7 @@ void file_open(GtkAction *action,dbuff *buff)
 
   gtk_window_set_keep_above(GTK_WINDOW(filew),TRUE);
   gtk_file_chooser_set_local_only(GTK_FILE_CHOOSER(filew),TRUE);
+  gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filew), get_current_dir_name());
 
   if (gtk_dialog_run(GTK_DIALOG(filew)) == -GTK_RESPONSE_ACCEPT) {
     char *filename;
@@ -1808,7 +1809,7 @@ void file_save_as(GtkAction *action, dbuff *buff)
   //  gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(filew),TRUE);
   gtk_window_set_keep_above(GTK_WINDOW(filew),TRUE);
   gtk_file_chooser_set_local_only(GTK_FILE_CHOOSER(filew),TRUE);
-
+  gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(filew), get_current_dir_name());
   /*
   if (gtk_dialog_run(GTK_DIALOG(filew)) == GTK_RESPONSE_ACCEPT){
     char *filename;
