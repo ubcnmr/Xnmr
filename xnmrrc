@@ -28,7 +28,6 @@ widget "*mybutton*" style "cbutton"
 #widget_class "*GtkToggleButton*" style "button"
 #widget_class "*GtkRadioButton*" style "button2"
 
-
 #widget_class "*GtkButton*" style "button"
 #widget_class "*GtkRadioButton*" style "button"
 

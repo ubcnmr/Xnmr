@@ -1529,7 +1529,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     gtk_box_pack_start(GTK_BOX(hbox1),button,TRUE,TRUE,0);
     gtk_widget_show( button ); 
 
-    popup_data.num_adj = (GtkAdjustment *) gtk_adjustment_new( 0,1,100,1,5,0 ); 
+    popup_data.num_adj = (GtkAdjustment *) gtk_adjustment_new( 0,1,1024,1,5,0 ); 
     button = gtk_spin_button_new( GTK_ADJUSTMENT( popup_data.num_adj ),  0.5, 0 ); 
     g_signal_connect( G_OBJECT( popup_data.num_adj ), "value_changed", G_CALLBACK( resize_popup ), NULL ); 
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( button ), GTK_UPDATE_IF_VALID ); 

@@ -7,7 +7,7 @@
  *
  * UBC Physics
  * April, 2000
- * 
+ *
  * written by: Scott Nelson, Carl Michal
  */
 

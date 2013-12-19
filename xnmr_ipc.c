@@ -386,18 +386,22 @@ void set_acqn_labels(int start)
   gtk_label_set_text( GTK_LABEL (acq_label), s );
   //  snprintf( s,UTIL_LEN, "na2 %d / %d", data_shm->last_acqn_2d+1, data_shm->num_acqs_2d );
   //  gtk_label_set_text( GTK_LABEL (acq_2d_label), s );
-  
-   // this is an ugly hack...
+  // this is an ugly hack...
   if (start == 1 && data_shm->time_remaining == 0)
     do{
       usleep(20);
       count += 1;
     }while (count < 50 && data_shm->time_remaining == 0 );
+#ifdef MSL200
+  hour = (int) (data_shm->time_remaining/3600.);
+  min = (int) (data_shm->time_remaining/60. - hour*60.);
+  sec = (int) (data_shm->time_remaining*1.0 - hour*3600. - min*60.);
+#else
   hour = (int) (data_shm->time_remaining/3600./CLOCK_SPEED);
   min = (int) (data_shm->time_remaining/60./CLOCK_SPEED - hour*60.);
   sec = (int) (data_shm->time_remaining*1.0/CLOCK_SPEED - hour*3600. - min*60.);
+#endif
   //  printf("in set_acqn_labels, time remaining is: %f\n",data_shm->time_remaining/20000000.);
-
 
   // set completion time label:
   /*
@@ -409,8 +413,13 @@ void set_acqn_labels(int start)
 
   */
   gettimeofday(&tv,&tz);
+#ifdef MSL200
+  my_time = tv.tv_sec+tv.tv_usec/1e6 +data_shm->time_remaining;
+  completion_time = (time_t) my_time;
+#else
   my_time = tv.tv_sec*1e6+tv.tv_usec +data_shm->time_remaining*1e6/CLOCK_SPEED;
   completion_time = (time_t) (my_time/1e6);
+#endif
   comp_time = ctime(&completion_time);
   //  fprintf(stderr,"%s\n",comp_time);
   if(strlen(comp_time)>6) comp_time[strlen(comp_time)-6] = 0; // get rid of the year
@@ -431,7 +440,6 @@ void set_acqn_labels(int start)
 
 
 }
-
 
 
 

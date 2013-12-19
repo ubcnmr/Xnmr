@@ -64,7 +64,10 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
       return 1;
   }
 
-
+  for( i=0; i<14; i++){
+    for(j=1; j<7; j++)
+      contr[i][j] = 0;
+  }
 
   // otherwise, build a file name to look for a filter.
   
@@ -74,7 +77,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   //  DSPpass = 0;
   
   snprintf(filter_name,PATH_LENGTH,"/usr/share/Xnmr/filters/%d.imp",sw);
-  fprintf(stderr,"setup_dsp: filter_name is %s\n",filter_name);
+  //  fprintf(stderr,"setup_dsp: filter_name is %s\n",filter_name);
   
   fptr1 = fopen(filter_name, "r");
   if ( fptr1 == NULL){
@@ -96,7 +99,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   fscanf(fptr1,"%d&",&value);
   contr[10][0]=value-1; //RCF decimation
   //  fprintf(stderr,"RCF dec: %d\n",value);
-  //  mrcf=value; // not used
+  //  mrcf=value; //not used
   
   fscanf(fptr1,"%ld",&lvalue);
   clk = lvalue;
@@ -167,7 +170,7 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   contr [2] [1]=255;
   contr [2] [2]=255;
   contr [2] [3]=255;
-  contr [2] [4]=15; // what the heck is this?
+  contr [2] [4]=0; // what the heck is this?
   // 3 is the frequency, set elsewhere.
   // phase offset
   phase = (int)floor(dsp_ph/360. * (double)0xffff);    //recast dsp_phase for transfer
@@ -185,29 +188,30 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   contr [11] [1]=0;
   contr [12] [0] = taps -1; 
   contr [13] [0]=0; // reserved, but 0
-  
+  /* done above
   for( i=0; i<2; i++){
     for(j=1; j<5; j++)
       contr [i] [j] = 0;
   }
+  */
   for (i=0; i<14; i++){
     contr [i] [5] =i;
     contr [i] [6] =3;
-  }  
+  }
+  /* done above
   for(i=5; i<14; i++){
     for( j=1; j<5; j++)
       contr [i] [j] = 0;
   }
-  
+  */
 
   // look out for under sampling:
   if ((freq > DEFAULT_RCVR_CLK/2.) && (freq < DEFAULT_RCVR_CLK)) freq=DEFAULT_RCVR_CLK-freq;
   // 0-30 and 60-90 work by themselves
   //  fprintf(stderr,"receiver trying to get freq:%f\n",freq);
   div = freq/(double)clk;
-  nco = pow(2.0,32.0)*div;
-
-  fprintf (stderr,"receiver: NCO = %lu, freq is: %12.8f \n", nco,(double)((double) clk) * nco/pow(2.0,32.0));
+  nco = (1ULL<<32)*div;
+//  fprintf (stderr,"receiver: NCO = %lu, freq is: %12.8f \n", nco,(double)((double) clk) * nco/pow(2.0,32.0));
   bb=nco;
   
   // load the frequency bytes
@@ -350,6 +354,3 @@ int read_fifo(int npts,int *data, int mode){
 void dsp_close_port(){
   dsp_close_port_epp();
 }
-
-
-

@@ -80,8 +80,8 @@ gint do_left_shift_and_display(GtkWidget * widget,GtkAdjustment *val);
 gint do_left_shift_2d(GtkWidget * widget,double *val);
 gint do_left_shift_2d_and_display(GtkWidget * widget,GtkAdjustment *val);
 
-gint do_shim_filter(GtkWidget * widget,double *val);
-gint do_shim_filter_and_display(GtkWidget * widget,GtkWidget *val);
+gint do_truncate(GtkWidget * widget,double *val);
+gint do_truncate_and_display(GtkWidget * widget,GtkAdjustment *val);
 
 gint do_phase_and_display_wrapper( GtkWidget* widget, double *data );
 gint do_phase_wrapper( GtkWidget* widget, double *data );
@@ -121,6 +121,8 @@ gint do_hayashi1_and_display(GtkWidget *widget, double *spare);
 
 
 gchar psrb(int bits,int init);
+float get_frank_seq(int n); // here n is sqrt(sequence length)
+float get_chu_seq(int n); // here n is the sequence length.
 
 
 /*

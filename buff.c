@@ -474,8 +474,7 @@ dbuff *create_buff(int num){
     // put some data into the buffer.
     {
       float fr;
-      float ii=0.5;
-      ii=0.;
+      float ii=0.;
       fr = 6.75/buff->npts;
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->npts;i++){ // should initialize to 0 
@@ -827,7 +826,11 @@ dbuff *create_buff(int num){
     }
     else{ // defaults:
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but1a),TRUE);
+#ifdef MSL200
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but2b),TRUE);
+#else
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but2c),TRUE);
+#endif
     }
 
 
@@ -877,8 +880,7 @@ dbuff *create_buff(int num){
   }
   else return NULL;
 }
-
-//gtk3
+// gtk3
 #if GTK_MAJOR_VERSION == 2
 gint expose_event(GtkWidget *widget,GdkEventExpose *event,dbuff *buff)
 #else
@@ -897,7 +899,7 @@ gint expose_event(GtkWidget *widget,cairo_t *event,dbuff *buff)
   cairo_set_source_surface(event,buff->win.surface,0,0);
   cairo_paint(event);
 #endif
-  
+
 return FALSE; 
 }
 
@@ -4745,16 +4747,11 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	  do{
 	    fgets(linebuff,200,infile);
 	  }while(linebuff[0] == '#');
-
-	  //	    	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
-		  //		  	  if (eof == 2) counter += 1;
+	  //	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
+	  //	  if (eof == 2) counter += 1;
 	  eof=sscanf(linebuff,"%f",&num1);
 	  if (eof == 1) counter += 1;
 	}while (eof == 1);
-
-	//	  eof=sscanf(linebuff,"%f ",&num1);
-	//  if (eof == 1) counter += 1;
-	//	}while (eof == 1);
 
 	printf("will try to load in: %i lines, real part only.\n",counter);
 	rewind(infile);

@@ -3,7 +3,7 @@ main(){
 char cdata[8];
 unsigned int *dummy,*dum2,*dum3;
 
-int i,j;
+ int i,j;
 
  dum2 = (unsigned int *) &cdata[0];
  dum3 = (unsigned int *) &cdata[4];

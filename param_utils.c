@@ -198,7 +198,6 @@ int is_2d_param( char* params, char* name )
 
   start = strstr( params, PARAMETER_2D_BREAK );
   
-
   if( start == NULL )  // if no 2d break exists, its not a 2d param
     return 0;
 
@@ -479,7 +478,7 @@ int pfetch_float( parameter_set_t *param_set, char* name, double* var, unsigned 
 
 return FALSE;
 }
-
+/*
 int pfetch_int( parameter_set_t *param_set, char* name, int* var, unsigned int acqn_2d )
 
 {
@@ -518,7 +517,7 @@ int pfetch_int( parameter_set_t *param_set, char* name, int* var, unsigned int a
 
 return FALSE;
 }
-
+*/
 
 void path_strcat(char *dest, char *source){
   // routine assumes that the dest string is of length PATH_LENGTH.

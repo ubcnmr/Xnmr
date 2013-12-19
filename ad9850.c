@@ -78,8 +78,6 @@ int reset_ad9850(){
 int setup_ad9850()
 {
   unsigned long nco,clk=120000000;
-  ///CLOCK
-  //  unsigned long nco,clk=100000000;
   double an;
   int i;
   unsigned char status,bb[4];
@@ -92,8 +90,6 @@ int setup_ad9850()
     return 0;
   }
 
-  //    an = 21093750.; // gives an integral frequency
-  ///CLOCK - ok!  same value!
     an = 21093750.; // gives an integral frequency
     //an = 21000000.;
 

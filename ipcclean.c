@@ -46,6 +46,7 @@ int main()
   progid = shmget( PROG_SHM_KEY, sizeof( struct prog_shm_t ), 0);
   msgqid = msgget( MSG_KEY, 0 );     
 
+  printf("dataid: %x, progid: %x, msgqid: %x\n",dataid,progid,msgqid);
   shmctl ( progid, IPC_RMID, NULL ); 
   shmctl ( dataid, IPC_RMID, NULL );
   msgctl( msgqid, IPC_RMID, NULL );

@@ -661,7 +661,6 @@ gint do_left_shift(GtkWidget * widget,double *val)
   if (shift ==0) return 0;
   if (shift > 0){
     for( j=0; j<buff->npts2; j++ ){
-      
       for( i=shift; i<buff->npts; i++ ) {
 	buff->data[2*(i-shift)+j*2*buff->npts]=
 	  buff->data[2*i+j*2*buff->npts];
@@ -672,7 +671,7 @@ gint do_left_shift(GtkWidget * widget,double *val)
 	buff->data[2*i+j*2*buff->npts]=0.;
 	buff->data[2*i+1+j*2*buff->npts]=0.;
       }
-      
+
       /* do circular shift for now */
       /*
       float temp_buff[shift*2];
@@ -687,9 +686,6 @@ gint do_left_shift(GtkWidget * widget,double *val)
       for(i=0;i<shift*2;i++)
 	buff->data[i+2*(buff->npts-shift) +j*2*buff->npts] = temp_buff[i];
       */
-
-
-
     }
   }
   else
@@ -705,10 +701,6 @@ gint do_left_shift(GtkWidget * widget,double *val)
 	buff->data[2*i+1+j*2*buff->npts]=0.;
       }
     }
-
-
-
-    
 
   return 0;
 
@@ -1536,6 +1528,9 @@ float get_chu_seq(int n){
     return 0.;
   }
 
+  if (pos == -1)
+    pos = n/2;
+
   pos += 1;
   pos = pos %n;
   if (n %2 == 0)
@@ -1566,7 +1561,7 @@ float get_frank_seq(int n){
       f = 0;
   }
   pos = pos % n;
-  phase = 360.*pos*f/n;
+  phase = 360.*pos*(f+n/2)/n;
   np=phase/360.;
   phase=phase-np*360;
   //  fprintf(stderr,"pos: %i, phase: %f\n",pos,phase);
@@ -1767,7 +1762,163 @@ gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
   return 0;
 }
 
+// new version for single pass through.
+gint do_cross_correlate_frank( GtkWidget *widget, double *bits ){
 
+  int i, j,k;
+  dbuff *buff;
+  float *new_data;
+  float *mreg,pha;
+  int num_seq;
+  int xsize; // the size of the data set we'll be cross correlating.
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_cross_correlate panic! buff is null!",TRUE);
+    return 0;
+  }
+  
+  // for frank, *bits is the sqrt of the length of the sequence.
+  
+  if (buff->npts < (int) (*bits * *bits) ){
+    popup_msg("do_cross_correlate: too few points\n",TRUE);
+    return 0;
+  }
+  num_seq = (int) buff->npts/ (*bits * *bits); // how many sequences we actually will use in the correlation.
+
+  //  xsize = (int)(*bits* *bits)*num_seq;  // how many points we'll use
+  xsize = (int)(*bits* *bits);  // length of the sequence
+    
+  new_data = g_malloc(sizeof(float) * buff->npts*2);
+  //reals are stored in: buff->data[2*i+j*2*buff->npts]
+  //imag in:             buff->data[2*i+1+j*2*buff->npts]
+
+  // array for storing bit coefficients
+  mreg = g_malloc(sizeof(float) * xsize*2);
+
+
+  //  fprintf(stderr,"in do_cross_correlate, bits: %i\n",(int) *bits);
+  get_frank_seq(-1); // reset it.
+  for (i=0;i<xsize;i++){
+    pha  = get_frank_seq((int) *bits);
+    //    printf("phase: %f\n",pha);
+    mreg[2*i]=cos(M_PI*pha/180.);
+    mreg[2*i+1]=sin(M_PI*pha/180.);
+  }
+  for( j=0; j<buff->npts2; j++ ){  // j loops through the 2d records
+
+    // copy the data to new_data
+    for(i=0;i< buff->npts ;i++) {
+      new_data[2*i] = buff->data[2*i+j*2*buff->npts];
+      new_data[2*i+1] = buff->data[2*i+j*2*buff->npts+1];
+    }
+
+    // do the cross-correlation:
+    for (i = 0 ; i < xsize ; i++){ 
+      buff->data[2*i+j*2*buff->npts]=0.;
+      buff->data[2*i+j*2*buff->npts+1]=0.;
+      for( k = 0 ; k < 2*xsize ; k++ ){
+	buff->data[2*i+j*2*buff->npts] += mreg[2*(k%xsize)]*new_data[2*((k+i)%(2*xsize))]-mreg[2*(k%xsize)+1]*new_data[2*((k+i)%(2*xsize))+1];
+	buff->data[2*i+j*2*buff->npts+1] += mreg[2*(k%xsize)]*new_data[2*((k+i)%(2*xsize))+1]+mreg[2*(k%xsize)+1]*new_data[2*((k+i)%(2*xsize))];
+      }
+
+    }
+    //    for (i= (int)(*bits* *bits);i<buff->npts;i++){
+    //      buff->data[2*i+j*2*buff->npts]= 0.;
+    //      buff->data[2*i+j*2*buff->npts+1]= 0.;
+    //    }
+
+
+  }
+
+  buff_resize(buff,xsize, buff->npts2);
+  if (widget !=NULL || upload_buff == current) update_npts(buff->npts); 
+
+  g_free(mreg);
+  g_free(new_data);
+  return 0;
+}
+// new version for single pass through.
+gint do_cross_correlate_chu( GtkWidget *widget, double *bits ){
+
+  int i, j,k;
+  dbuff *buff;
+  float *new_data;
+  float *mreg,pha;
+  int xsize; // the size of the data set we'll be cross correlating.
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+  if (buff == NULL){
+    popup_msg("do_cross_correlate panic! buff is null!",TRUE);
+    return 0;
+  }
+  
+  // for chu, *bits is the length of the sequence
+  
+  if (buff->npts < (int) (*bits *2) ){
+    popup_msg("do_cross_correlate: too few points\n",TRUE);
+    return 0;
+  }
+
+  xsize = (int)(*bits);  // length of the sequence
+    
+  new_data = g_malloc(sizeof(float) * buff->npts*2);
+  //reals are stored in: buff->data[2*i+j*2*buff->npts]
+  //imag in:             buff->data[2*i+1+j*2*buff->npts]
+
+  // array for storing bit coefficients
+  mreg = g_malloc(sizeof(float) * xsize*2);
+
+
+  //  fprintf(stderr,"in do_cross_correlate, bits: %i\n",(int) *bits);
+  get_chu_seq(-1); // reset it.
+  for (i=0;i<xsize;i++){
+    pha  = get_chu_seq((int) *bits);
+    //    printf("phase: %f\n",pha);
+    mreg[2*i]=cos(M_PI*pha/180.);
+    mreg[2*i+1]=sin(M_PI*pha/180.);
+  }
+  for( j=0; j<buff->npts2; j++ ){  // j loops through the 2d records
+
+    // copy the data to new_data
+    for(i=0;i< buff->npts ;i++) {
+      new_data[2*i] = buff->data[2*i+j*2*buff->npts];
+      new_data[2*i+1] = buff->data[2*i+j*2*buff->npts+1];
+    }
+
+    // do the cross-correlation:
+    for (i = 0 ; i < xsize ; i++){ 
+      buff->data[2*i+j*2*buff->npts]=0.;
+      buff->data[2*i+j*2*buff->npts+1]=0.;
+      for( k = 0 ; k < 2*xsize ; k++ ){
+	buff->data[2*i+j*2*buff->npts] += mreg[2*(k%xsize)]*new_data[2*((k+i)%(2*xsize))]-mreg[2*(k%xsize)+1]*new_data[2*((k+i)%(2*xsize))+1];
+	buff->data[2*i+j*2*buff->npts+1] += mreg[2*(k%xsize)]*new_data[2*((k+i)%(2*xsize))+1]+mreg[2*(k%xsize)+1]*new_data[2*((k+i)%(2*xsize))];
+      }
+
+    }
+    //    for (i= (int)(*bits* *bits);i<buff->npts;i++){
+    //      buff->data[2*i+j*2*buff->npts]= 0.;
+    //      buff->data[2*i+j*2*buff->npts+1]= 0.;
+    //    }
+
+
+  }
+
+  buff_resize(buff,xsize, buff->npts2);
+  if (widget !=NULL || upload_buff == current) update_npts(buff->npts); 
+
+  g_free(mreg);
+  g_free(new_data);
+  return 0;
+}
+
+/* original for two passes with small pulses
 gint do_cross_correlate_frank( GtkWidget *widget, double *bits ){
 // this is the frank version
 
@@ -1847,8 +1998,10 @@ gint do_cross_correlate_frank( GtkWidget *widget, double *bits ){
   g_free(mreg);
   return 0;
 }
+*/
 
 
+/*
 gint do_cross_correlate_chu( GtkWidget *widget, double *bits ){
 // this is the chu version
 
@@ -1928,7 +2081,7 @@ gint do_cross_correlate_chu( GtkWidget *widget, double *bits ){
   g_free(mreg);
   return 0;
 }
-
+*/
 
 GtkWidget* create_process_frame_2d()
 
@@ -2230,6 +2383,8 @@ GtkWidget* create_process_frame_2d()
   return frame;
 }
 
+
+
 gint do_zero_fill_2d(GtkWidget * widget,double *val)
 {
   int new_npts2,old_npts2,acq_points2;
@@ -2318,7 +2473,6 @@ gint do_zero_fill_2d_and_display(GtkWidget * widget,GtkAdjustment *adj)
 
 
 //un
-
 
 gint unscramble_2d_and_display( GtkWidget *widget, double *unused )
 {
@@ -2693,9 +2847,105 @@ gint do_hayashi1(GtkWidget *widget, double *unused)
 }
 
 
+/*
+gint unwind_2d_and_display( GtkWidget *widget, double *unused )
+{
+  dbuff *buff;
+  gint result;
+
+  if( widget == NULL ) 
+    buff = buffp[ upload_buff ];
+  else 
+    buff = buffp[ current ];
+
+  result = unwind_2d( widget, unused );
+
+  draw_canvas( buff );
+   return result;
+}
 
 
-/////
+gint unwind_2d(GtkWidget *widget, double *unused)
+
+{
+  // unwind some phase from the second dimension 
+  //  for crackpot autoshimming feature. 
+
+  dbuff *buff;
+  int i,j;
+  float re,im,freq,phase;
+  float mag,ph;
+  double tau;
+  int npts,npts2;
+
+  if( widget == NULL ) {
+    buff = buffp[ upload_buff ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",upload_buff );
+  }
+  else {
+    buff = buffp[ current ];
+    // fprintf(stderr,"do_ft- on buffer %i\n",current );
+  }
+  if (buff == NULL){
+    popup_msg("unwind_2d panic! buff is null!",TRUE);
+    return 0;
+  }
+  
+   
+  if (buff->is_hyper == FALSE){
+    popup_msg("Not hyper, can't unwind phase",TRUE);
+    return TRUE;
+  }
+  
+  // need to find a tau in the parameter set.
+
+  i = pfetch_float(&buff->param_set,"tau",&tau,0);
+  if (i == 0) {
+    popup_msg("no parameter tau found for phase unwind",TRUE);
+    return TRUE;
+  }
+  fprintf(stderr,"got tau: %lf\n",tau);
+  
+  npts = buff->npts;
+  npts2 = buff->npts2;
+  
+  for (i=0;i<npts;i++){
+    // what's the freq at this point?
+    freq = - ( (double) i * 1./buff->param_set.dwell*1e6/npts
+	       - (double) 1./buff->param_set.dwell*1e6/2.);
+    // so the phase to unwind is:
+    phase = freq*tau*2*M_PI;
+    
+    for(j=0;j<npts2/2;j++){
+      re = buff->data[(2*j)*npts*2+2*i];
+      im = buff->data[(2*j+1)*npts*2+2*i];
+      mag = sqrt(re*re+im*im);
+      ph = atan2(im,re);
+      ph = ph-phase;
+      buff->data[(2*j)*npts*2+2*i] = mag*cos(ph);
+      buff->data[(2*j+1)*npts*2+2*i] = mag*sin(ph);
+      
+      re = buff->data[(2*j)*npts*2+2*i+1];
+      im = buff->data[(2*j+1)*npts*2+2*i+1];
+      mag = sqrt(re*re+im*im);
+      ph = atan2(im,re);
+      ph = ph-phase;
+      buff->data[(2*j)*npts*2+2*i+1] = mag*cos(ph);
+      buff->data[(2*j+1)*npts*2+2*i+1] = mag*sin(ph);
+      
+      
+      
+      
+    }
+  }
+  
+  
+  return TRUE;
+  
+}
+*/
+
+
 gint do_ft_2d_and_display( GtkWidget *widget, double *unused )
 {
   dbuff *buff;
@@ -2768,7 +3018,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
   else
     spared=2.0;
   do_zero_fill_2d(widget,&spared);
- 
+
     //  fprintf(stderr,"in 2dft just did zero fill\n");
   cursor_busy(buff);
 
@@ -2781,11 +3031,10 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     printf("doing true_complex FT2d\n");
     new_data = g_malloc(buff->npts2*sizeof(float)*2);
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
-    
-    
+
     // copy out
     for(i=0;i<buff->npts;i++){
-      
+
       if (is_symm){
 	for (j=0;j<buff->npts2/2;j++){
 	  new_data[j*2] = buff->data[(j+buff->npts2/2)*buff->npts*2+2*i];
@@ -2826,7 +3075,6 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
 
     for(i=0;i<buff->npts*2  ;i++){
-
       if (is_symm){
 	// copy out from center 1/2.
 	for(j=0;j<buff->npts2/2;j++){
@@ -2846,7 +3094,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 	  new_data[j*2] = buff->data[j*buff->npts*2+i];
 	  new_data[j*2+1] = 0.;
 	}
-	new_data[0] /= 2.;
+	//	new_data[0] /= 2.;
       }
       // do the ft
 
@@ -2857,7 +3105,7 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
       // naw dont.  Not doing this only ever introduces a baseline offset.
 
       four1(new_data-1,buff->npts2/2,1);
-	
+
       // descramble
       for(j=0;j<buff->npts2/2;j++){
 	spare=new_data[j]/scale;
@@ -2870,26 +3118,24 @@ gint do_ft_2d(GtkWidget *widget, double *unused)
 	buff->data[2*j*buff->npts*2+i] = new_data[2*j];
 	buff->data[(2*j+1)*buff->npts*2+i] = new_data[2*j+1];
       }
-
     }
       
     // turn on the is_hyper_flag!
-  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),TRUE);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),TRUE);
 
   }
   else {// is hypercomplex
     new_data = g_malloc(buff->npts2 * sizeof(float));
     //  fprintf(stderr,"2dft did malloc, 2dnpts = %i\n",buff->npts2);
     if (new_data == NULL) fprintf(stderr,"failed to malloc!\n");
-    // copy out
     for(i=0;i<buff->npts*2  ;i++){
       for(j=0;j<buff->npts2/2;j++){
 	new_data[j*2] = buff->data[2*j*buff->npts*2+i];
 	new_data[j*2+1] = buff->data[(2*j+1)*buff->npts*2+i];
       }
       // do the ft
-      if (buff->flags & FT_FLAG2 & !is_symm)
-	new_data[0] /= 2.;
+      //      if (buff->flags & FT_FLAG2 & !is_symm)
+      //	new_data[0] /= 2.;
 
       if (is_symm)
 	for(j=0;j<buff->npts2/2;j++){

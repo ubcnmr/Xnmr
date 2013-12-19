@@ -3,22 +3,13 @@
 # UBC Physics
 
 # can use -DNOHARDWARE to allow software simulated acqs (if /dev/PP_irq0 exists)
+# For cygwin, add -DCYGWIN and change every libxnmr.so to libxnmr.dll
 
 #CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-2.0`  -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED -DGSEAL_ENABLE
-
 #CFLAGS = -g  -O2   -Wall  `pkg-config --cflags  gtk+-2.0`  -Wno-unused-result -DNOHARDWARE
-#CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result -DNOHARDWARE
-CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-3.0` -Wno-unused-result 
-
-#For cygwin, add -DCYGWIN
-#For cygwin, change every libxnmr.so to libxnmr.dll
-
-
+CFLAGS = -g  -O2 -Wall `pkg-config --cflags gtk+-3.0` -Wno-unused-result 
 
 #O3 causes serious problems with rtai!
-
-# for icc:
-#CFLAGS =    -O3 -axP -ipo  `pkg-config --cflags gthread-2.0 gtk+-2.0` 
 
 all:  libxnmr.so Xnmr acq Xnmr_preproc
 
@@ -34,27 +25,25 @@ libxnmr.so: pulse.o param_utils.o four1.o
 Xnmr_preproc: Xnmr_preproc.c
 	$(CC) $(CFLAGS)  -o Xnmr_preproc Xnmr_preproc.c
 
-
-
-# added -L/usr/realtime/lib and -lpthread for rtai
+#  added -L/usr/realtime/lib and -lpthread for rtai to link and -I/usr/realtime/include/ for compile
 acq: acq.o pulse_hardware.o  dsp.o adepp.o ad9850.o 
-	$(CC) $(CFLAGS) -L/usr/realtime/lib -L. -o acq acq.o pulse_hardware.o dsp.o adepp.o ad9850.o -lm -lpthread  -lxnmr
+	$(CC) -L. -o acq acq.o pulse_hardware.o dsp.o adepp.o ad9850.o -lm -lpthread  -lxnmr
 	@echo ""
 	@echo "Don't forget to make acq suid!!!"
 	@echo ""
+
 Xnmr: xnmr.o buff.o panel.o process_f.o param_f.o xnmr_ipc.o  spline.o\
- splint.o nrutil.o  
+ splint.o nrutil.o libxnmr.so
 	$(CC) $(CFLAGS)  -L. xnmr.o   buff.o  panel.o process_f.o param_f.o\
  xnmr_ipc.o  spline.o splint.o nrutil.o -o Xnmr \
-`pkg-config --libs  gtk+-3.0`  -lm -lport -lgfortran  -lxnmr 
+`pkg-config --libs gtk+-3.0`  -lm -lport -lgfortran  -lxnmr 
 # This used to be necessary: -Xlinker -defsym -Xlinker MAIN__=main 
-
 # the -Xlinker -defsym -Xlinker MAIN__=main   passes: '-defsym MAIN__=main' to the linker, let us use 
 # fortran and C together.  The -lportP has the nonlinear fitting routine, and lf2c is necessary for fortran
 
-#  added -I/usr/realtime/include/ for rtai
 acq.o: acq.c acq.h shm_data.h shm_prog.h h_config.h p_signals.h pulse_hardware.h param_utils.h dsp.h ad9850.h
-	$(CC) -I/usr/realtime/include/ $(CFLAGS) -c acq.c
+	$(CC) $(CFLAGS) -c acq.c
+
 pulse_hardware.o: pulse_hardware.c pulse_hardware.h shm_prog.h h_config.h param_utils.h p_signals.h
 	$(CC) -O1 $(CFLAGS) -c pulse_hardware.c
 dsp.o: dsp.h dsp.c shm_data.h adepp.c adepp.h param_utils.h
@@ -68,7 +57,7 @@ xnmr.o: xnmr.c xnmr.h panel.h buff.h param_f.h xnmr_ipc.h p_signals.h
 buff.o: buff.c xnmr.h buff.h param_f.h panel.h param_utils.h xnmr_ipc.h p_signals.h
 	$(CC) $(CFLAGS) -c buff.c
 four1.o: four1.c
-	$(CC) $(CFLAGS) -fPIC -c four1.c
+	$(CC) $(CFLAGS) -fpic -c four1.c
 spline.o: spline.c
 	$(CC) $(CFLAGS) -c spline.c
 splint.o: splint.c
@@ -84,9 +73,9 @@ param_f.o: param_f.c param_f.h xnmr_ipc.h shm_data.h panel.h xnmr_ipc.h param_ut
 xnmr_ipc.o: xnmr_ipc.c xnmr_ipc.h shm_data.h p_signals.h process_f.h panel.h buff.h xnmr.h h_config.h param_f.h
 	$(CC) $(CFLAGS) -c xnmr_ipc.c
 pulse.o: pulse.c pulse.h h_config.h shm_data.h shm_prog.h p_signals.h param_utils.h
-	$(CC) -fPIC $(CFLAGS) -c pulse.c
+	$(CC) -fpic $(CFLAGS) -c pulse.c
 param_utils.o: param_utils.h param_utils.c shm_data.h
-	$(CC) -fPIC $(CFLAGS) -c param_utils.c
+	$(CC) -fpic $(CFLAGS) -c param_utils.c
 
 ipcclean: ipcclean.c shm_data.h shm_prog.h
 	$(CC) $(CFLAGS) -o ipcclean ipcclean.c
