@@ -7554,7 +7554,7 @@ void *readscript_thread_routine(void *buff){
   readscript_data.source = 1; // tells it that we're from stdin
   do{
     //    fprintf(stderr,"in readscript, waiting for input\n");
-    dummy = fgets(readscript_data.iline,200,stdin);
+    dummy = fgets(readscript_data.iline,PATH_LENGTH,stdin);
     //    fprintf(stderr,"returned from read\n");
     if (dummy == NULL && errno == EIO){ // fgets failed - probably we're in the background
       //the SIGTTIN never gets delivered, even if we wait for it.
@@ -7717,7 +7717,7 @@ void *readsocket_thread_routine(void *buff){
   do{
     //    rlen = recvfrom(fds,socketscript_data.iline,200,0,NULL,0);
     fromlen = 108; 
-    rlen = recvfrom(fds,socketscript_data.iline,200,0,(struct sockaddr *)&from,&fromlen);
+    rlen = recvfrom(fds,socketscript_data.iline,PATH_LENGTH,0,(struct sockaddr *)&from,&fromlen);
     socketscript_data.iline[rlen] = 0;
 
     fprintf(stderr,"got input: %s\n",socketscript_data.iline);
@@ -7834,7 +7834,7 @@ void *readsocket2_thread_routine(void *buff){
 
   do{
     fromlen = 108; 
-    rlen = recvfrom(fds2,socketscript2_data.iline,200,0,(struct sockaddr *)&from2,&fromlen);
+    rlen = recvfrom(fds2,socketscript2_data.iline,PATH_LENGTH,0,(struct sockaddr *)&from2,&fromlen);
     socketscript2_data.iline[rlen] = 0;
 
     fprintf(stderr,"got input: %s\n",socketscript2_data.iline);
@@ -7986,7 +7986,7 @@ void script_handler(script_data *myscript_data){
 	*s2 = 0;
       }
 
-      if (strnlen(input,200) < 6){
+      if (strnlen(input,PATH_LENGTH) < 6){
 	strcpy(myscript_data->oline,"NO FILENAME");
 	script_return(myscript_data,0);
 	return;
@@ -8021,7 +8021,7 @@ void script_handler(script_data *myscript_data){
 	*s2 = 0;
       }
       
-      if (strnlen(input,200) < 6){
+      if (strnlen(input,PATH_LENGTH) < 6){
 	strcpy(myscript_data->oline,"NO FILENAME");
 	script_return(myscript_data,0);
 	return;

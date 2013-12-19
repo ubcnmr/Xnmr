@@ -18,12 +18,12 @@
 
 
 int tell_xnmr(char *iline){
-  char buff[200];
-  strncpy(buff,iline,200);
-  strncat(buff,"\n",200);
+  char buff[800];
+  strncpy(buff,iline,800);
+  strncat(buff,"\n",800);
   printf("telling Xnmr: %s\n",buff);
 
-  sendto(fd,buff,strnlen(buff,200),0,(struct sockaddr *)&wr_addr,SUN_LEN(&wr_addr));
+  sendto(fd,buff,strnlen(buff,800),0,(struct sockaddr *)&wr_addr,SUN_LEN(&wr_addr));
   return 0;
 }
 
@@ -31,7 +31,7 @@ int read_xnmr(char *oline){
   int rlen,fromlen;
   fromlen = 108;
 
-  rlen=recvfrom(fd,oline,200,0,(struct sockaddr *)&wr_addr,&fromlen);
+  rlen=recvfrom(fd,oline,800,0,(struct sockaddr *)&wr_addr,&fromlen);
   oline[rlen] = 0;
   printf("received from Xnmr: %s\n",oline);
 }
@@ -39,7 +39,7 @@ int read_xnmr(char *oline){
 
 int tell_shims(char *message){
   printf("telling shims: %s\n",message);
-  sendto(fds,message,strnlen(message,200),0,(struct sockaddr *) &wr_addrs,SUN_LEN(&wr_addrs));
+  sendto(fds,message,strnlen(message,800),0,(struct sockaddr *) &wr_addrs,SUN_LEN(&wr_addrs));
   return 0;
 }
 
@@ -47,7 +47,7 @@ int read_shims(char *oline){
   int rlen,fromlen;
   fromlen = 108;
 
-  rlen=recvfrom(fds,oline,200,0,(struct sockaddr *)&wr_addrs,&fromlen);
+  rlen=recvfrom(fds,oline,800,0,(struct sockaddr *)&wr_addrs,&fromlen);
   oline[rlen] = 0;
   printf("received from shims: %s\n",oline);
 }
@@ -56,7 +56,7 @@ main(){
 
   struct stat buf;
   int i;
-  char iline[200],oline[200];
+  char iline[800],oline[800];
 
 
   i = stat("/tmp/Xnmr_remote",&buf);

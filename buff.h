@@ -88,8 +88,8 @@ enum
   };
 
 typedef struct{
-  char iline[200];
-  char oline[200];
+  char iline[PATH_LENGTH];
+  char oline[PATH_LENGTH];
   unsigned char source;
   unsigned char rval;
   sem_t sem;

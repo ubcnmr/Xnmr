@@ -478,7 +478,7 @@ int pfetch_float( parameter_set_t *param_set, char* name, double* var, unsigned 
 
 return FALSE;
 }
-/*
+
 int pfetch_int( parameter_set_t *param_set, char* name, int* var, unsigned int acqn_2d )
 
 {
@@ -517,7 +517,6 @@ int pfetch_int( parameter_set_t *param_set, char* name, int* var, unsigned int a
 
 return FALSE;
 }
-*/
 
 void path_strcat(char *dest, char *source){
   // routine assumes that the dest string is of length PATH_LENGTH.
