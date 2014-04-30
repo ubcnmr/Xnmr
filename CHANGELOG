@@ -1,3 +1,10 @@
+April 30, 2014.
+	Imported project from cvs into git repository. 
+	Imported with git cvsimport -r Oldbranches -d /usr2/src/cvsroot -C /usr/src/GIT XNMR Xnmr
+	The pulseblaster branch from cvs was made by diffing the two
+	branches and applying to a new pulseblaster branch in git.
+
+	
 pp0.99.4 Aug 2004
  - added add/subtract window (needs gtk+-2.4
  - fix a bunch of possible crashes on closing the scales dialog 
@@ -42,3 +49,5 @@ pp0.99.1
 - major rewrite of pulse program generation - should be way more efficient.
 - going back in time now possible (store_position, jump_to_stored, return_to_present
 - other???
+
+
