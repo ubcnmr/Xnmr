@@ -6942,7 +6942,8 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 	calc_spectrum_residuals(&n,&p,x,&n,v,ui,spect,&dummy);	
 
 	chi2 = 0.;
-	for (i=i1*(1+include_imag);i<=i2*(1+include_imag);i++)
+	//	for (i=i1*(1+include_imag);i<=i2*(1+include_imag);i++) messed up!
+	for (i = 0;i<n;i++)
 	  chi2 += v[i]*v[i];
 	chi2 = yscale*sqrt(chi2/(i2-i1+1.)/(1.+include_imag));
 
