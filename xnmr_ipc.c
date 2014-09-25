@@ -690,9 +690,11 @@ gint acq_signal_handler()
 	upload_and_draw_canvas(buffp[ upload_buff ] );
 	break;
       case ACQ_RUNNING:    
+	result = acq_in_progress;
+	acq_in_progress = ACQ_STOPPED;
 	reload_wrapper( buffp[ upload_buff ] );
 	set_acqn_labels(0);
-
+	acq_in_progress=result;
 	path_strcpy(buffp[upload_buff]->path_for_reload,data_shm->save_data_path);
 	// provide user a bell so they know we're done.
 	printf("\a");
@@ -717,7 +719,7 @@ gint acq_signal_handler()
     case P_PROGRAM_ACQ_TIMEOUT:
     case ACQ_FILE_ERROR:
     case PERMISSION_ERROR:
-
+      // This stuff happens for errors and ACQ_DONE stops!
       // provide user a bell so they know we're done with error.
       printf("\a");
       fflush(stdout);

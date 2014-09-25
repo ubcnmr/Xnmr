@@ -82,7 +82,7 @@ ln -s /usr/src/Xnmr/current/pulse.h /usr/share/Xnmr/include/pulse.h
 rm /usr/share/Xnmr/config/h_config.h
 rm /usr/share/Xnmr/config/pulse_hardware.h
 rm /usr/share/Xnmr/config/xnmrrc
-rm /usr/share/Xnmr/xnmr_icon.png
+rm /usr/share/Xnmr/xnmr_buff_icon.png
 
 ln -s /usr/src/Xnmr/current/h_config.h /usr/share/Xnmr/config/h_config.h
 ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
