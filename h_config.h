@@ -106,7 +106,6 @@
 #define GRADY            43 // -1     0  0  0  0
 #define GRADZ            44 // -1     0  0  0  0
 
-
 #undef H_CONFIG_PARSE
 
 
@@ -147,11 +146,10 @@
 
 #define ACQ_TRIG AD_STAQ
 
-#define SCOPE_TRIG BNC_5
 
-#define RFA_BLNK BNC_2
-#define RFB_BLNK BNC_2
-#define RFC_BLNK BNC_3
+#define RFA_BLNK BNC_4
+#define RFB_BLNK BNC_4
+#define RFC_BLNK BNC_5
 
 
 #ifdef CHANNEL1_A 

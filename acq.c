@@ -6,10 +6,10 @@
 
 // can define NOHARDWARE here or do it in the Makefile.
 // for simulator mode, want NOHARDWARE, but /dev/PP_irq0 must exist
-#define NOHARDWARE
-#define NO_RT_SCHED
+//#define NOHARDWARE
+//#define NO_RT_SCHED
 
-//#define OLD_PORT_INTERRUPT 
+#define OLD_PORT_INTERRUPT 
 
 //#define RTAI_INTERRUPT
 
