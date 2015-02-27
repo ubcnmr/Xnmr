@@ -5,9 +5,12 @@
 # can use -DNOHARDWARE to allow software simulated acqs (if /dev/PP_irq0 exists)
 # For cygwin, add -DCYGWIN and change every libxnmr.so to libxnmr.dll
 
-#CFLAGS = -g  -O2   -Wall  `pkg-config --cflags gtk+-2.0`  -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED -DGSEAL_ENABLE
-#CFLAGS = -g  -O2   -Wall  `pkg-config --cflags  gtk+-2.0`  -Wno-unused-result -DNOHARDWARE
-CFLAGS = -g  -O2 -Wall `pkg-config --cflags gtk+-3.0` -Wno-unused-result 
+
+GTK_VERSION=gtk+-2.0
+
+#CFLAGS = -g  -O2   -Wall  `pkg-config --cflags $(GTK_VERSION)`  -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED -DGSEAL_ENABLE
+#CFLAGS = -g  -O2   -Wall  `pkg-config --cflags  $(GTK_VERSION)`  -Wno-unused-result #-DNOHARDWARE
+CFLAGS = -g  -O2 -Wall `pkg-config --cflags $(GTK_VERSION)` -Wno-unused-result 
 
 #O3 causes serious problems with rtai!
 
@@ -36,10 +39,12 @@ Xnmr: xnmr.o buff.o panel.o process_f.o param_f.o xnmr_ipc.o  spline.o\
  splint.o nrutil.o libxnmr.so
 	$(CC) $(CFLAGS)  -L. xnmr.o   buff.o  panel.o process_f.o param_f.o\
  xnmr_ipc.o  spline.o splint.o nrutil.o -o Xnmr \
-`pkg-config --libs gtk+-3.0`  -lm -lport -lgfortran  -lxnmr 
+`pkg-config --libs $(GTK_VERSION)`  -lm -lport -lgfortran  -lxnmr 
+
 # This used to be necessary: -Xlinker -defsym -Xlinker MAIN__=main 
 # the -Xlinker -defsym -Xlinker MAIN__=main   passes: '-defsym MAIN__=main' to the linker, let us use 
 # fortran and C together.  The -lportP has the nonlinear fitting routine, and lf2c is necessary for fortran
+#now -lgfortran seems to do the job.
 
 acq.o: acq.c acq.h shm_data.h shm_prog.h h_config.h p_signals.h pulse_hardware.h param_utils.h dsp.h ad9850.h
 	$(CC) $(CFLAGS) -c acq.c

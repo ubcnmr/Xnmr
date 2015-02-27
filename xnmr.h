@@ -14,6 +14,9 @@
 #include <math.h>
 #include "buff.h"
 
+#if GTK_MAJOR_VERSION == 2
+#define GdkRGBA GdkColor
+#endif
 
 #define MAX_BUFFERS 50
 //NUM_COLOURS should be n*4+1 (17,21,25 etc)
@@ -22,7 +25,6 @@
 
 
 /* global variables */
-
 extern GdkRGBA  colours[NUM_COLOURS+EXTRA_COLOURS];
 extern phase_data_struct  phase_data;
 extern add_sub_struct add_sub;

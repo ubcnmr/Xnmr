@@ -140,7 +140,6 @@ n) cursor_busy and cursor_normal borked?
 */
 
 
-
 #include "xnmr.h"
 #include "buff.h"
 #include "panel.h"
@@ -166,6 +165,9 @@ n) cursor_busy and cursor_normal borked?
  *  Global Variables
  */
 
+#if GTK_MAJOR_VERSION == 2
+#define GdkRGBA GdkColor
+#endif
 
 GdkRGBA colours[NUM_COLOURS+EXTRA_COLOURS]; // matches in xnmr.h
 //GdkGC *colourgc;
@@ -948,11 +950,13 @@ int main(int argc,char *argv[])
   /* do some color stuff */
   
   // colourgc=gdk_gc_new(buffp[0]->win.canvas->window);
-
+  
   colours[RED].red=1.;
   colours[RED].blue=0;
   colours[RED].green=0;
+#if GTK_MAJOR_VERSION > 2
   colours[RED].alpha=1.; // red 
+#endif
   // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[RED],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
@@ -960,7 +964,9 @@ int main(int argc,char *argv[])
   colours[BLUE].red=0;
   colours[BLUE].blue=1.;
   colours[BLUE].green=0;
+#if GTK_MAJOR_VERSION > 2
   colours[BLUE].alpha=1.; // blue 
+#endif
   // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLUE],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
@@ -968,7 +974,9 @@ int main(int argc,char *argv[])
   colours[GREEN].red=0;
   colours[GREEN].blue=0;
   colours[GREEN].green=1.;
+#if GTK_MAJOR_VERSION > 2
   colours[GREEN].alpha = 1.;// green
+#endif
   // fprintf(stderr,"pixel: %li\n",colours[GREEN].pixel);
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[GREEN],FALSE,TRUE);
   // fprintf(stderr,"pixel: %li\n",colours[GREEN].pixel);
@@ -976,13 +984,17 @@ int main(int argc,char *argv[])
   colours[WHITE].red=1.;
   colours[WHITE].blue=1.;
   colours[WHITE].green=1.;
-  colours[WHITE].alpha=1.;;
+#if GTK_MAJOR_VERSION > 2
+  colours[WHITE].alpha=1.;
+ #endif
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[WHITE],FALSE,TRUE);
 
   colours[BLACK].red=0;
   colours[BLACK].blue=0;
   colours[BLACK].green=0;
+#if GTK_MAJOR_VERSION > 2
   colours[BLACK].alpha=1;
+#endif
   //  gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLACK],FALSE,TRUE);
 
 
@@ -992,7 +1004,9 @@ int main(int argc,char *argv[])
     colours[ic].blue = 0.;
     colours[ic].green = i/(NUM_COLOURS/4.);
     
+#if GTK_MAJOR_VERSION > 2
     colours[ic].alpha = 1.;
+#endif
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     
     //    gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
@@ -1006,7 +1020,9 @@ int main(int argc,char *argv[])
     colours[ic].green = 1.;
 
 
+#if GTK_MAJOR_VERSION > 2
     colours[ic].alpha = 1.;
+#endif
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
     //		    &colours[ic],FALSE,TRUE);
@@ -1021,7 +1037,9 @@ int main(int argc,char *argv[])
     colours[ic].blue = i/(NUM_COLOURS/4.);
     colours[ic].green = 1.;
     
+#if GTK_MAJOR_VERSION > 2
     colours[ic].alpha = 1.;
+#endif
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
     //		    &colours[ic],FALSE,TRUE);
@@ -1034,7 +1052,9 @@ int main(int argc,char *argv[])
     colours[ic].green = (1.0-i/(NUM_COLOURS/4.));
 
 
+#if GTK_MAJOR_VERSION > 2
     colours[ic].alpha = 1.;
+#endif
     //    fprintf(stderr,"r g b %i %i %i %li\n",colours[ic].red,colours[ic].green, colours[ic].blue,colours[ic].pixel);
     //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),
     //		    &colours[ic],FALSE,TRUE);

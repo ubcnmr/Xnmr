@@ -66,6 +66,9 @@ reload wrapper                             (from end of acquisition)
 #include "param_utils.h"
 #include "nr.h"
 
+#if GTK_MAJOR_VERSION == 2
+#define GdkRGBA GdkColor
+#endif
 
 /*
  *  Global Variable for this modules
@@ -608,7 +611,6 @@ dbuff *create_buff(int num){
     g_signal_connect(darea,"draw",
 		     G_CALLBACK (expose_event),buff);
 #endif
-
     g_signal_connect(G_OBJECT(darea),"configure_event",
 		       G_CALLBACK (configure_event),buff);
 
@@ -1153,7 +1155,6 @@ void draw_line_segments(dbuff *buff, GdkPoint *dpoints, int ndpoints){
       cairo_line_to(buff->win.cr,dpoints[i].x+0.5,dpoints[i].y+0.5);
     cairo_stroke(buff->win.cr);
 }
-
 void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
 		    ,float *data,int npts, GdkRGBA *col,int ri){
   int x,y,i1,i2,x2,y2,exint,eyint,i;
