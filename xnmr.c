@@ -950,12 +950,12 @@ int main(int argc,char *argv[])
   /* do some color stuff */
   
   // colourgc=gdk_gc_new(buffp[0]->win.canvas->window);
-  
+
   colours[RED].red=1.;
   colours[RED].blue=0;
   colours[RED].green=0;
 #if GTK_MAJOR_VERSION > 2
-  colours[RED].alpha=1.; // red 
+  colours[RED].alpha=1.; // red
 #endif
   // fprintf(stderr,"pixel: %li\n",colours[RED].pixel);
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[RED],FALSE,TRUE);
@@ -965,7 +965,7 @@ int main(int argc,char *argv[])
   colours[BLUE].blue=1.;
   colours[BLUE].green=0;
 #if GTK_MAJOR_VERSION > 2
-  colours[BLUE].alpha=1.; // blue 
+  colours[BLUE].alpha=1.; // blue
 #endif
   // fprintf(stderr,"pixel: %li\n",colours[BLUE].pixel);
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[BLUE],FALSE,TRUE);
@@ -986,7 +986,7 @@ int main(int argc,char *argv[])
   colours[WHITE].green=1.;
 #if GTK_MAJOR_VERSION > 2
   colours[WHITE].alpha=1.;
- #endif
+#endif
   //gdk_colormap_alloc_color(gtk_widget_get_colormap(buffp[0]->win.canvas),&colours[WHITE],FALSE,TRUE);
 
   colours[BLACK].red=0;
