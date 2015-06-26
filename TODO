@@ -1,5 +1,10 @@
 still to do:
 
+BUGS to find:
+- somewhere is socket handling code, there is a memory overrun or something. When auto shimming on the 200,
+eventually, get a can't find filter file message that makes no sense!
+
+
 - should ensure that rf amplitude gets set to zero if the pulse is turned off,
   and turned back on for the next pulse.  
   Ick.  Probably easiest to do this in Xnmr_preproc?
