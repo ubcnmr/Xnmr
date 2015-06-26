@@ -7607,11 +7607,11 @@ gint script_notify_acq_complete(){
   }
   if (script_widgets.acquire_notify == 2){
     script_widgets.acquire_notify = 0;
-    sendto(fds,mess,13,0,(struct sockaddr *)&from,SUN_LEN(&from));
+    sendto(fds,mess,13,0,(struct sockaddr *)&from,sizeof(from));
   }
   if (script_widgets.acquire_notify == 3){ // udp socket
     script_widgets.acquire_notify = 0;
-    sendto(fds2,mess,13,0,(struct sockaddr *)&from2,sizeof(struct sockaddr));
+    sendto(fds2,mess,13,0,(struct sockaddr *)&from2,sizeof(from2));
   }
 
 
@@ -7716,7 +7716,7 @@ void *readsocket_thread_routine(void *buff){
 
   do{
     //    rlen = recvfrom(fds,socketscript_data.iline,200,0,NULL,0);
-    fromlen = 108; 
+    fromlen = sizeof(from);
     rlen = recvfrom(fds,socketscript_data.iline,PATH_LENGTH,0,(struct sockaddr *)&from,&fromlen);
     socketscript_data.iline[rlen] = 0;
 
@@ -7729,7 +7729,7 @@ void *readsocket_thread_routine(void *buff){
     sem_wait(&socketscript_data.sem);
     rval = socketscript_data.rval;
     if (rval == 0){ 
-      sendto(fds,socketscript_data.oline,strnlen(socketscript_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
+      sendto(fds,socketscript_data.oline,strnlen(socketscript_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from,sizeof(from));
       fprintf(stderr,"%s\n",socketscript_data.oline);
       fprintf(stderr,"readsocket_thread_routine exiting\n");
 
@@ -7740,7 +7740,7 @@ void *readsocket_thread_routine(void *buff){
       pthread_exit(NULL);
     }
     //    printf("address is: %s\n",from.sun_path);
-    sendto(fds,socketscript_data.oline,strnlen(socketscript_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from,SUN_LEN(&from));
+    sendto(fds,socketscript_data.oline,strnlen(socketscript_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from,sizeof(from));
     fprintf(stderr,"%s\n",socketscript_data.oline);
 
   }while (1);
@@ -7833,7 +7833,7 @@ void *readsocket2_thread_routine(void *buff){
   socketscript2_data.source = 3; // tells it that we're from socket2
 
   do{
-    fromlen = 108; 
+    fromlen = sizeof(from2); 
     rlen = recvfrom(fds2,socketscript2_data.iline,PATH_LENGTH,0,(struct sockaddr *)&from2,&fromlen);
     socketscript2_data.iline[rlen] = 0;
 
@@ -7846,7 +7846,7 @@ void *readsocket2_thread_routine(void *buff){
     sem_wait(&socketscript2_data.sem);
     rval = socketscript2_data.rval;
     if (rval == 0){ 
-      sendto(fds2,socketscript2_data.oline,strnlen(socketscript2_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from2,sizeof(struct sockaddr));
+      sendto(fds2,socketscript2_data.oline,strnlen(socketscript2_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from2,sizeof(from2));
       fprintf(stderr,"%s\n",socketscript2_data.oline);
       fprintf(stderr,"readsocket2_thread_routine exiting\n");
 
@@ -7857,7 +7857,7 @@ void *readsocket2_thread_routine(void *buff){
     }
     //    printf("address is: %s\n",from.sun_path);
     fprintf(stderr,"returning: %s\n",socketscript2_data.oline);
-    rval = sendto(fds2,socketscript2_data.oline,strnlen(socketscript2_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from2,sizeof(struct sockaddr));
+    rval = sendto(fds2,socketscript2_data.oline,strnlen(socketscript2_data.oline,PATH_LENGTH),0,(struct sockaddr *)&from2,sizeof(from2));
     if (rval == -1 ) perror("sento");
 
   }while (1);
