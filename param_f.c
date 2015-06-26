@@ -370,7 +370,7 @@ void update_acqs(int acqs){
   void update_2d_buttons_from_buff( dbuff* buff )  //This method updates the 2d parameters as the user moves through records in the buffer. 
 
   { 
-    int i; 
+    int i;
 
     if (&buff->param_set != current_param_set){
       popup_msg("Panic:  update_2d_buttons_from_buff, got a buffer that's not current?",TRUE);
@@ -391,7 +391,7 @@ void update_acqs(int acqs){
 
         case 'F': 
   	if( buff->disp.record < current_param_set->parameter[i].size ) 
-  	  gtk_adjustment_set_value( GTK_ADJUSTMENT( param_button[i].adj ), current_param_set->parameter[i].f_val_2d[ buff->disp.record ] ); 
+  	  gtk_adjustment_set_value( GTK_ADJUSTMENT( param_button[i].adj ), current_param_set->parameter[i].f_val_2d[ buff->disp.record ] );
   	break; 
 
         default: 

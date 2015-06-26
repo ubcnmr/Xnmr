@@ -3129,7 +3129,7 @@ void make_active(dbuff *buff){
     show_process_frame( buff->process_data );
     show_active_border(); 
     gdk_window_raise(gtk_widget_get_window(buff->win.window));
-    if (upload_buff == current)
+    if (upload_buff == current  && acq_in_progress != ACQ_STOPPED)
       update_2d_buttons();
     else
       update_2d_buttons_from_buff(buff);
