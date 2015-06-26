@@ -485,13 +485,13 @@ dbuff *create_buff(int num){
 	  =cos(-10*fr*(i+ii)*2*M_PI)*exp(-i/180.0)/(j+1);
 	buff->data[2*i+1+2*buff->npts*j]
 	  =sin(-10*fr*(i+ii)*2*M_PI)*exp(-i/180.)/(j+1);
-
+	/*
 	// add a second peak
 	buff->data[2*i+2*buff->npts*j]
 	  +=cos(17.5*fr*(i+ii)*2*M_PI)*exp(-i/180.0)/(j+1);
 	buff->data[2*i+1+2*buff->npts*j]
 	  +=sin(17.5*fr*(i+ii)*2*M_PI)*exp(-i/180.)/(j+1);
-
+	*/
       }
     }
 
@@ -875,7 +875,7 @@ dbuff *create_buff(int num){
     gtk_combo_box_text_insert_text(GTK_COMBO_BOX_TEXT(fit_data.d_buff),inum+1,s);
     
     add_sub.index[inum] = num;
-    buff->flags = FT_FLAG;
+    //    buff->flags = FT_FLAG; // no, its time domain!
     
     return buff;
     
@@ -5228,12 +5228,10 @@ void clone_from_acq(GtkAction *action,dbuff *buff )
   
 }
 
-void sf1delete(GtkWidget *widget,dbuff *buff){
-
+ void sf1delete(dbuff *buff,GtkWidget *widget){
 
   buff->win.press_pend = 0;
   
-
   g_signal_handlers_disconnect_by_func (G_OBJECT (buff->win.darea), 
 					G_CALLBACK( set_sf1_press_event), buff);
   g_signal_handlers_unblock_by_func(G_OBJECT(buff->win.darea),
@@ -5255,7 +5253,7 @@ void set_sf1_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
   char s[PARAM_NAME_LEN];
 
 
-  sf1delete(widget,buff);
+  sf1delete(buff,widget);
   
 
   point = pix_to_x(buff, event->x);
@@ -5398,7 +5396,7 @@ void set_sf1(GtkAction *action,dbuff *buff)
   setsf1label = gtk_label_new("Click on the new carrier frequency");
   gtk_container_set_border_width( GTK_CONTAINER(setsf1dialog), 5 ); 
   gtk_box_pack_start ( GTK_BOX(gtk_dialog_get_content_area( GTK_DIALOG(setsf1dialog)) ), setsf1label, FALSE, FALSE, 5 ); 
-  g_signal_connect(G_OBJECT(setsf1dialog),"delete_event",G_CALLBACK(sf1delete),buff);
+  g_signal_connect_swapped(G_OBJECT(setsf1dialog),"delete_event",G_CALLBACK(sf1delete),buff);
   gtk_window_set_transient_for(GTK_WINDOW(setsf1dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(setsf1dialog),GTK_WIN_POS_CENTER_ON_PARENT);
 
