@@ -478,7 +478,7 @@ dbuff *create_buff(int num){
     {
       float fr;
       float ii=0.;
-      fr = 6.75/buff->npts;
+      fr = .75/buff->npts;
     for(j=0;j<buff->npts2;j++)
       for(i=0;i<buff->npts;i++){ // should initialize to 0 
 	buff->data[2*i+2*buff->npts*j]
@@ -1157,7 +1157,7 @@ void draw_line_segments(dbuff *buff, GdkPoint *dpoints, int ndpoints){
 }
 void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
 		    ,float *data,int npts, GdkRGBA *col,int ri){
-  int x,y,i1,i2,x2,y2,exint,eyint,i;
+  int x,y,i1,i2,x2,y2,exint,eyint,i,pts_to_plot;
   /* first point */
 
   // ri is real or imag = 0 or 1
@@ -1203,46 +1203,99 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     fprintf(stderr,"in draw_oned and isn't a row or a column\n");
     return;
   }
- 
+  struct timeval start_time,end_time;
+  struct timezone tz;
+  float d_time;
+  
+  gettimeofday(&start_time,&tz);
 
-  x= 1;
-  y=(int)  -((data[i1*2+ri]
-	      +buff->disp.yoffset)*buff->win.sizey
-	     *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
-  /*
-  y = MIN(y,buff->win.sizey);
-  y = MAX(y,1);
-  */
+  if ((i2 - i1 +1) < 2*buff->win.sizex){
+    x= 1;
+    y=(int)  -((data[i1*2+ri]
+		+buff->disp.yoffset)*buff->win.sizey
+	       *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+    
+    y = MIN(y,buff->win.sizey);
+    y = MAX(y,1);
 
- // new way: much faster!
- dpoints[0].x = x+exint;
- dpoints[0].y = y+eyint;
-
-
- for(i=i1+1;i<=i2;i++){
-   // this x2 value looks like it goes from 1 to sizex - that's right!
-   // since the 0 col is reserved for a coloured border
-   x2= (i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
-   y2=(int) -((data[i*2+ri]
+    dpoints[0].x = x+exint;
+    dpoints[0].y = y+eyint;
+    
+    for(i=i1+1;i<=i2;i++){
+      // this x2 value looks like it goes from 1 to sizex - that's right!
+      // since the 0 col is reserved for a coloured border
+      x2= (i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
+      y2=(int) -((data[i*2+ri]
+		  +buff->disp.yoffset)*buff->win.sizey*
+		 buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+      
+      y2 = MIN(y2,buff->win.sizey);
+      y2 = MAX(y2,1);
+      
+      dpoints[i-i1].x = x2+exint;
+      dpoints[i-i1].y = y2+eyint;
+    }
+    pts_to_plot=i2-i1+1;
+  }
+  else{
+    printf("too many points, use alternate routine\n");
+    int k,j,is,ie,ymax,ymin,yfirst;
+    for (k=1;k<=buff->win.sizex;k++){ // step through the x pixels
+      // find the data points that correspond to this pixel:
+      is = (k-1)*(i2-i1)/(buff->win.sizex-1)+i1;
+      ie = (k)*(i2-i1)/(buff->win.sizex-1)+i1-1;
+      //      if (ie<is) ie = is;
+      if (ie > i2) ie = i2;
+      
+      ymax = (int) -((data[is*2+ri]
 	       +buff->disp.yoffset)*buff->win.sizey*
-	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
-   /*
-   y2 = MIN(y2,buff->win.sizey);
-   y2 = MAX(y2,1);
-   */
-   dpoints[i-i1].x = x2+exint;
-   dpoints[i-i1].y = y2+eyint;
- }
- cairo_set_source_rgb(buff->win.cr,col->red,col->green,col->blue);
- // printf("in draw_row_trace, drawing lines with %i points\n",i2-i1);
- draw_line_segments(buff,dpoints,i2-i1+1);
- if (i2-i1+1 < 128 && buff->disp.points){
-   draw_points(buff->win.cr,buff->win.surface,dpoints,i2-i1+1);
+		 buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+      ymin = ymax;
+      yfirst = ymin;
+      for (j=is+1;j<=ie;j++){
+	y2 = (int) -((data[j*2+ri]
+	       +buff->disp.yoffset)*buff->win.sizey*
+		 buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	ymax = MAX(ymax,y2);
+	ymin = MIN(ymin,y2);
 
- }
- // this duplicates a bit, but should ensure its always right.
- show_active_border();
-
+      }
+      ymax = MIN(ymax,buff->win.sizey);
+      ymax = MAX(ymax,1);
+      ymin = MIN(ymin,buff->win.sizey);
+      ymin = MAX(ymin,1);
+      if (yfirst < y2){ // rising, plot min then max
+	dpoints[2*k-2].x= k+exint;
+	dpoints[2*k-2].y= ymin+eyint;
+	dpoints[2*k-1].x= k+exint;
+	dpoints[2*k-1].y= ymax+eyint;
+      }
+      else{ // falling, plot max then min.
+	dpoints[2*k-2].x= k+exint;
+	dpoints[2*k-2].y= ymax+eyint;
+	dpoints[2*k-1].x= k+exint;
+	dpoints[2*k-1].y= ymin+eyint;
+      }
+    
+    }
+    pts_to_plot = 2*buff->win.sizex;
+    
+  }
+  cairo_set_source_rgb(buff->win.cr,col->red,col->green,col->blue);
+  // printf("in draw_row_trace, drawing lines with %i points\n",i2-i1);
+  draw_line_segments(buff,dpoints,pts_to_plot);
+  if (i2-i1+1 < 128 && buff->disp.points){
+    draw_points(buff->win.cr,buff->win.surface,dpoints,i2-i1+1);
+    
+  }
+  // this duplicates a bit, but should ensure its always right.
+  show_active_border();
+  
+  gettimeofday(&end_time,&tz);
+  d_time=(end_time.tv_sec-start_time.tv_sec)*1e6+(end_time.tv_usec-start_time.tv_usec);
+  fprintf(stderr,"took: %f us to draw the trace\n",d_time); 
+  
+ 
 }
 
 
