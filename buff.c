@@ -1203,12 +1203,13 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     fprintf(stderr,"in draw_oned and isn't a row or a column\n");
     return;
   }
+  /*
   struct timeval start_time,end_time;
   struct timezone tz;
   float d_time;
   
   gettimeofday(&start_time,&tz);
-
+  */
   if ((i2 - i1 +1) < 2*buff->win.sizex){
     x= 1;
     y=(int)  -((data[i1*2+ri]
@@ -1238,7 +1239,7 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     pts_to_plot=i2-i1+1;
   }
   else{
-    printf("too many points, use alternate routine\n");
+    //    printf("too many points, use alternate routine\n");
     int k,j,is,ie,ymax,ymin,yfirst;
     for (k=1;k<=buff->win.sizex;k++){ // step through the x pixels
       // find the data points that correspond to this pixel:
@@ -1290,11 +1291,11 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
   }
   // this duplicates a bit, but should ensure its always right.
   show_active_border();
-  
+  /*  
   gettimeofday(&end_time,&tz);
   d_time=(end_time.tv_sec-start_time.tv_sec)*1e6+(end_time.tv_usec-start_time.tv_usec);
   fprintf(stderr,"took: %f us to draw the trace\n",d_time); 
-  
+  */
  
 }
 
