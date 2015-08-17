@@ -261,8 +261,6 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
   contr [7] [0] = (0x1f & ssf[1]);
   contr [9] [0] = (0x07 & ssf[2]);
 
-
-
   // if we're changing frequency, do the whole deal
   if (freq != last_freq || force_setup == 1){
     /*    if (force_setup == 1)
@@ -287,35 +285,34 @@ int setup_dsp(int sw, int p,double freq,int dgain, double dsp_ph, char force_set
     writing (contr,1); // take out of soft reset
   //  fprintf(stderr,"\nAD6620 taken out of soft reset\n");
   }
-  else if (sw != last_sw ){ // this isn't recommended in the ad6620 manual
-    fprintf(stderr,"got new sw, updating taps, ntaps, and decimations\n");
-    select_device(DSP);
-    writing(rcf_c,taps);
-    writing( &(contr [6]),1); // decimations:
-    writing( &(contr [8]),1);
-    writing( &(contr [10]),1);
-    writing(&(contr [5]),1); //scale factors
-    writing(&(contr [7]),1);
-    writing(&(contr [9]),1);
-    writing(&(contr [12]),1); // number of taps
+  else{
+    if (sw != last_sw ){ // this isn't recommended in the ad6620 manual
+      fprintf(stderr,"got new sw, updating taps, ntaps, and decimations\n");
+      select_device(DSP);
+      writing(rcf_c,taps);
+      writing( &(contr [6]),1); // decimations:
+      writing( &(contr [8]),1);
+      writing( &(contr [10]),1);
+      writing(&(contr [5]),1); //scale factors
+      writing(&(contr [7]),1);
+      writing(&(contr [9]),1);
+      writing(&(contr [12]),1); // number of taps
+    }
+    if (dgain != last_dgain ){ 
+      // we're just changing gain - just write the scale factors
+      fprintf(stderr,"Skipped most programming of DSP, updating scale factors only\n");
+      select_device(DSP);
+      writing(&(contr [5]),1);
+      writing(&(contr [7]),1);
+      writing(&(contr [9]),1);
+    }
+    if (dsp_ph != last_dsp_ph ){ 
+      // we're just changing dsp_ph - just write the phases
+      fprintf(stderr,"Skipped most programming of DSP, updating NCO phase only\n");
+      select_device(DSP);
+      writing(&(contr [4]),1);
+    }
   }
-  else if (dgain != last_dgain ){ 
-    // we're just changing gain - just write the scale factors
-    fprintf(stderr,"Skipped most programming of DSP, updating scale factors only\n");
-    select_device(DSP);
-    writing(&(contr [5]),1);
-    writing(&(contr [7]),1);
-    writing(&(contr [9]),1);
-  }
-  else if (dsp_ph != last_dsp_ph ){ 
-    // we're just changing dsp_ph - just write the phases
-    fprintf(stderr,"Skipped most programming of DSP, updating NCO phase only\n");
-    select_device(DSP);
-    writing(&(contr [4]),1);
-  }
-
-
-
 
   //************** capture data into fifo ************//
   
