@@ -1005,7 +1005,7 @@ void draw_raster(dbuff *buff)
 
 {
 
-  int i1,i2,j1,j2,ci;
+  int i1,i2,j1,j2,ci,k;
   int j,i,npts1,yp1,yp2,xp1,xp2,npts2;
   float max,min,da;
   
@@ -1068,7 +1068,7 @@ void draw_raster(dbuff *buff)
    otherwise, step through data points and draw rectangles */
   /* our colours are in 0 -> NUM_COLOURS-1 */
 
-  if (i2-i1 < buff->win.sizex){  /* here we'll step through data */
+  if (i2-i1 < buff->win.sizex){  /* here we'll step through data and draw rectangles */
     yp1=buff->win.sizey+1;
     for(j=j1;j<=j2;j+=(1+buff->is_hyper)){
       yp2=buff->win.sizey - (j+1+buff->is_hyper-j1)
@@ -1084,7 +1084,7 @@ void draw_raster(dbuff *buff)
 	ci=NUM_COLOURS-ci;
 
 	cairo_set_source_rgb(buff->win.cr,colours[ci-1].red,colours[ci-1].green,colours[ci-1].blue);
-	cairo_rectangle(buff->win.cr,xp1,yp2,xp2-xp1,yp1-yp2);
+	cairo_rectangle(buff->win.cr,xp1,yp2,xp2-xp1,yp1-yp2-0.25);
 	cairo_fill(buff->win.cr);
 
 	
@@ -1101,13 +1101,13 @@ void draw_raster(dbuff *buff)
   }
   else {  /* now, if there are more points than pixels */
     yp1=buff->win.sizey+1;
-    for(j=j1;j<=j2;j+=(1+buff->is_hyper)){
+    for(j=j1;j<=j2;j+=(1+buff->is_hyper)){ // step through the records in j:
       yp2=buff->win.sizey - (j+1+buff->is_hyper-j1)
 	*buff->win.sizey/(j2+1+buff->is_hyper-j1)+1;
-      xp1= 1;
-      for(i=i1;i<=i2;i++){
-	xp2=(i+1-i1)*buff->win.sizex/(i2+1-i1)+1;
-	da=buff->data[2*i+j*npts1*2];
+
+      for (k=1;k<=buff->win.sizex;k++){
+	i = (k-1)*(i2-i1)/(buff->win.sizex-1)+i1; // first data point for this pixel. Drop others.
+      	da=buff->data[2*i+j*npts1*2];
 	//	ci=(int) floor((da-min)/(max-min)*(NUM_COLOURS-1) +.5);
 	if (max == min) ci = 0;
 	else
@@ -1115,16 +1115,18 @@ void draw_raster(dbuff *buff)
 	ci=NUM_COLOURS-ci;
 	
 	cairo_set_source_rgb(buff->win.cr,colours[ci-1].red,colours[ci-1].green,colours[ci-1].blue);
-	cairo_rectangle(buff->win.cr,xp1,yp2,xp2-xp1,yp1-yp2);
-	cairo_fill(buff->win.cr);
+	cairo_move_to(buff->win.cr,k+0.5,yp1+0.5);
+	cairo_line_to(buff->win.cr,k+0.5,yp2+0.5);
+	cairo_stroke(buff->win.cr);
+	//	cairo_rectangle(buff->win.cr,xp1,yp2,xp2-xp1,yp1-yp2);
+	//	cairo_fill(buff->win.cr);
 
 	//	gdk_gc_set_foreground(colourgc,&colours[ci-1]);
 	/* and draw the rectangle */
 	//	gdk_draw_rectangle(buff->win.pixmap
 	//		   ,colourgc,TRUE,
 	//		   xp1,yp2,xp2-xp1,yp1-yp2);
-	xp1=xp2;
-	
+
       }
       yp1=yp2;
     }
@@ -1214,7 +1216,7 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
     x= 1;
     y=(int)  -((data[i1*2+ri]
 		+buff->disp.yoffset)*buff->win.sizey
-	       *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	       *buff->disp.yscale/2.-buff->win.sizey/2.)+1;
     
     y = MIN(y,buff->win.sizey);
     y = MAX(y,1);
@@ -1228,8 +1230,8 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
       x2= (i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
       y2=(int) -((data[i*2+ri]
 		  +buff->disp.yoffset)*buff->win.sizey*
-		 buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
-      
+		 buff->disp.yscale/2.-buff->win.sizey/2.)+1;
+      if (data[i*2+ri] == 0.) printf("row data is zero, pixel is: %i\n",y2);
       y2 = MIN(y2,buff->win.sizey);
       y2 = MAX(y2,1);
       
@@ -1250,13 +1252,14 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
       
       ymax = (int) -((data[is*2+ri]
 	       +buff->disp.yoffset)*buff->win.sizey*
-		 buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+		 buff->disp.yscale/2.-buff->win.sizey/2.)+1;
       ymin = ymax;
       yfirst = ymin;
+      y2=yfirst;
       for (j=is+1;j<=ie;j++){
 	y2 = (int) -((data[j*2+ri]
 	       +buff->disp.yoffset)*buff->win.sizey*
-		 buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+		 buff->disp.yscale/2.-buff->win.sizey/2.)+1;
 	ymax = MAX(ymax,y2);
 	ymin = MIN(ymin,y2);
 
@@ -1337,8 +1340,10 @@ void draw_oned(dbuff *buff,float extraxoff,float extrayoff,float *data
   }
 
   if(buff->disp.base){
-    y=-buff->disp.yoffset*buff->win.sizey*buff->disp.yscale/2.
-      +buff->win.sizey/2.+1.5;
+
+    y=(int) (-buff->disp.yoffset*buff->win.sizey*buff->disp.yscale/2.
+	     +buff->win.sizey/2.+1);
+    printf("row trace base, pixel is %i\n",y);
     cairo_set_source_rgb(buff->win.cr,0.,0.,0.);
     cairo_move_to(buff->win.cr,1+exint,y+eyint+0.5);
     cairo_line_to(buff->win.cr,buff->win.sizex+exint,y+eyint+0.5);
@@ -1399,7 +1404,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     x= 1;
     y=(int) -((data[recadd*i1+2*buff->disp.record2]
 	       +buff->disp.yoffset)*buff->win.sizey
-	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1;
     /*
     y = MIN(y,buff->win.sizey);
     y = MAX(y,1); */
@@ -1413,7 +1418,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       x2=(i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
       y2=(int) -((data[recadd*i+2*buff->disp.record2]
 		  +buff->disp.yoffset)*buff->win.sizey*
-	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      buff->disp.yscale/2.-buff->win.sizey/2.)+1;
       /*
       y2 = MIN(y2,buff->win.sizey);
       y2 = MAX(y2,1); */
@@ -1439,7 +1444,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     x= 1;
     y=(int) -((data[recadd*(i1+1)+2*buff->disp.record2]
 	       +buff->disp.yoffset)*buff->win.sizey
-	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1;
     /*
     y = MIN(y,buff->win.sizey);
     y = MAX(y,1); */
@@ -1454,7 +1459,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       x2=(i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
       y2=(int) -((data[recadd*(i+1)+2*buff->disp.record2]
 		  +buff->disp.yoffset)*buff->win.sizey*
-	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      buff->disp.yscale/2.-buff->win.sizey/2.)+1;
       /*
       y2 = MIN(y2,buff->win.sizey);
       y2 = MAX(y2,1); */
@@ -1479,7 +1484,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		    +(data[recadd*i1+2*buff->disp.record2])
 		    *(data[recadd*i1+2*buff->disp.record2]))
 	       +buff->disp.yoffset)*buff->win.sizey
-	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1;
     /*
     y = MIN(y,buff->win.sizey);
     y = MAX(y,1); */
@@ -1496,7 +1501,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		       +(data[recadd*i+2*buff->disp.record2])
 		       *(data[recadd*i+2*buff->disp.record2]))
 		  +buff->disp.yoffset)*buff->win.sizey*
-	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5; 
+	      buff->disp.yscale/2.-buff->win.sizey/2.)+1; 
      /*      y2 = MIN(y2,buff->win.sizey);
 	      y2 = MAX(y2,1); */
       dpoints[ndpoints].x = x2+exint;
@@ -1515,7 +1520,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
     x= 1;
     y=(int) -((data[recadd*i1+2*buff->disp.record2+1]
 	       +buff->disp.yoffset)*buff->win.sizey
-	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1;
     /*
     y = MIN(y,buff->win.sizey);
     y = MAX(y,1); */
@@ -1530,7 +1535,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
       x2=(i-i1)*(buff->win.sizex-1)/(i2-i1)+1;
       y2=(int) -((data[recadd*i+2*buff->disp.record2+1]
 		  +buff->disp.yoffset)*buff->win.sizey*
-	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      buff->disp.yscale/2.-buff->win.sizey/2.)+1;
       /*
       y2 = MIN(y2,buff->win.sizey);
       y2 = MAX(y2,1); */
@@ -1552,7 +1557,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		    +(data[recadd*i1+2*buff->disp.record2+1])
 		    *(data[recadd*i1+2*buff->disp.record2+1]))
 	       +buff->disp.yoffset)*buff->win.sizey
-	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      *buff->disp.yscale/2.-buff->win.sizey/2.)+1;
     /*
     y = MIN(y,buff->win.sizey);
     y = MAX(y,1); */
@@ -1570,7 +1575,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 		       +(data[recadd*i+2*buff->disp.record2+1])
 		       *(data[recadd*i+2*buff->disp.record2+1]))
 		  +buff->disp.yoffset)*buff->win.sizey*
-	      buff->disp.yscale/2.-buff->win.sizey/2.)+1.5;
+	      buff->disp.yscale/2.-buff->win.sizey/2.)+1;
       /*
       y2 = MIN(y2,buff->win.sizey);
       y2 = MAX(y2,1); */
@@ -1586,8 +1591,8 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
    } 
    
   if(buff->disp.base){
-    y=-buff->disp.yoffset*buff->win.sizey*buff->disp.yscale/2.
-      +buff->win.sizey/2.+1.5;
+    y=(int) (-buff->disp.yoffset*buff->win.sizey*buff->disp.yscale/2.
+	     +buff->win.sizey/2.)+1;
 
     cairo_set_source_rgb(buff->win.cr,0.,0.,0.);
     cairo_move_to(buff->win.cr,1+exint,eyint+y+0.5);
@@ -2711,11 +2716,11 @@ gint expand_press_event (GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
     if (buff->disp.dispstyle == RASTER){ //draw line horizontally too !
       rect.x=1;
-      rect.y=sizey+1-yval;
+      rect.y=sizey+2-yval;
       rect.width=sizex;
       rect.height=1;
       cairo_set_source_rgb(buff->win.cr,0,0,1.);
-      cairo_move_to(buff->win.cr,1,sizey+1-yval+0.5);
+      cairo_move_to(buff->win.cr,1,sizey+1-yval+1+0.5);
       cairo_line_to(buff->win.cr,1+sizex,sizey+1-yval+1+0.5);
 	//      gdk_draw_line(buff->win.pixmap,colourgc,1,
 	//                  rect.y,sizex,rect.y);
