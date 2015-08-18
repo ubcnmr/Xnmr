@@ -1231,7 +1231,6 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
       y2=(int) -((data[i*2+ri]
 		  +buff->disp.yoffset)*buff->win.sizey*
 		 buff->disp.yscale/2.-buff->win.sizey/2.)+1;
-      if (data[i*2+ri] == 0.) printf("row data is zero, pixel is: %i\n",y2);
       y2 = MIN(y2,buff->win.sizey);
       y2 = MAX(y2,1);
       
@@ -1343,7 +1342,6 @@ void draw_oned(dbuff *buff,float extraxoff,float extrayoff,float *data
 
     y=(int) (-buff->disp.yoffset*buff->win.sizey*buff->disp.yscale/2.
 	     +buff->win.sizey/2.+1);
-    printf("row trace base, pixel is %i\n",y);
     cairo_set_source_rgb(buff->win.cr,0.,0.,0.);
     cairo_move_to(buff->win.cr,1+exint,y+eyint+0.5);
     cairo_line_to(buff->win.cr,buff->win.sizex+exint,y+eyint+0.5);
