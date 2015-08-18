@@ -1,8 +1,6 @@
 still to do:
 
 BUGS to find:
-- somewhere is socket handling code, there is a memory overrun or something. When auto shimming on the 200,
-eventually, get a can't find filter file message that makes no sense!
 
 
 - should ensure that rf amplitude gets set to zero if the pulse is turned off,
@@ -70,6 +68,9 @@ still to do in the far future (maybe?):
 
 
 done:
+- somewhere is socket handling code, there is a memory overrun or something. When auto shimming on the 200,
+eventually, get a can't find filter file message that makes no sense!
+This was actually a bug in libspinapi! It leaked file descriptors!
 - some sort of flag needs to be drawn in the acq buffer.
 - fitting!
 - queueing experiments, sigh...
