@@ -1738,6 +1738,8 @@ gint phase_changed(GtkAdjustment *widget,gpointer *data)
 	draw_vertical(buff,&colours[BLUE],phase_data.pivot,-1);
       }
       gtk_widget_queue_draw_area(buff->win.darea,rect.x,rect.y,rect.width,rect.height);
+      while (gtk_events_pending())
+	gtk_main_iteration();
     } /* end phase 0 adjust */
   return 0;  
 }
