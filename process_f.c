@@ -1568,7 +1568,69 @@ float get_frank_seq(int n){
   return phase;
 }
 
-gchar psrb(int bits,int init){
+/*
+
+   First version based on taps listed in The Art of Electronics later
+   added entries for sequences that require more than two taps.  Got
+   the taps out of mseq.m.
+
+mseq.m is:
+% (c) Giedrius T. Buracas, SNL-B, Salk Institute
+% Register values are taken from: WDT Davies, System Identification
+% for self-adaptive control. Wiley-Interscience, 1970
+% When using mseq code for design of FMRI experiments, please, cite:
+% G.T.Buracas & G.M.Boynton (2002) Efficient Design of Event-Related fMRI
+% Experiments Using M-sequences. NeuroImage, 16, 801-813.
+
+*/
+
+char psrb(int bits,int init){
+  static char inited = 0;
+  static int reg=0; /* the register we're gonna use */
+  static int inited_bits=0;
+  static int ntaps[PSRBMAX]=    {0,0,2,2,2,2,2,4,2,2,2, 4, 4, 4, 2, 4, 2, 2};
+  static int m[3][PSRBMAX] =   {{0,0,2,3,3,5,6,7,5,7,9,11,12,13,14,15,14,11},
+				{0,0,0,0,0,0,0,2,0,0,0, 8,10, 8, 0,13, 0, 0},
+				{0,0,0,0,0,0,0,1,0,0,0, 6, 9, 4, 0, 4, 0, 0}};
+  int i,j;
+  char first;
+
+  if (bits < 3 || bits > PSRBMAX){
+    printf("psrb error: bits = %i. bailing\n",bits);
+    return 0;
+  }
+  if (inited == 0 && init == 0){
+    printf("psrb error.  Not init'ed yet, and init = 0.  Initing anyway\n");
+    init = 1;
+  }
+
+  if (init == 0 && inited_bits != bits){
+    printf("psrb error.  Inited but with wrong number of bits.  Re-initing\n");
+    init = 1;
+  }
+
+  if(init == 1){
+    inited_bits= bits;
+    for (i=0;i<bits;i++){
+      reg += 1 << i;
+    }
+    inited = 1;
+    return -5;
+
+  }
+
+  /* do the shifting: */
+
+  first = (  (reg >> (bits-1)) ^ (reg >> ((m[0][bits-1])-1))  ) & 1;
+  for (j=1;j<ntaps[bits-1]-1;j++)
+    first = (first ^ (reg >> (m[j][bits-1]-1)) ) & 1;
+  reg = (reg << 1) + first;
+  return (reg>> ((bits-1))&1);
+
+}
+
+
+gchar psrb_o(int bits,int init){
   // routine that generates a pseudo random bit sequence.  See Horowitz and Hill
   // pg 657 or CM-I-98
 
@@ -1716,13 +1778,11 @@ gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
   for (i=1;i<xsize;i++)
     mreg[i]=psrb(num_bits,0);
 
-
   for( j=0; j<buff->npts2; j++ ){  // j loops through the 2d records
 
     // do the reals:
     for(i=0;i< xsize ;i++) 
-      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts];
-
+      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts]/xsize;
 
     // do the cross-correlation:
     for (i = 0 ; i < len[num_bits-1] ; i++){ 
@@ -1735,10 +1795,9 @@ gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
       buff->data[2*i+j*2*buff->npts]= 0.;
 
 
-
     // now the imag:
     for(i=0;i<xsize;i++) 
-      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts+1];
+      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts+1]/xsize;
 
     // do the cross-correlation:
     for (i=0;i< len[num_bits-1];i++){ 
@@ -1750,7 +1809,6 @@ gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
     for (i=len[num_bits-1];i<buff->npts;i++)
       buff->data[2*i+j*2*buff->npts+1]=0.;
  
-
   }
   fprintf(stderr,"cross_correlate: avg1/n %f 2: %f\n",avg1/len[num_bits-1],avg2/len[num_bits-1]);
   fprintf(stderr,"cross_correlate: len[num_bits]: %i\n",len[num_bits-1]);
