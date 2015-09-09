@@ -1729,7 +1729,7 @@ gint do_cross_correlate( GtkWidget *widget, double *bits ){
 gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
 // this is the new mlbs version
 {
-  static int len[PSRBMAX] = {0,0,7,15,31,63,127,0,511,1023,2047,0,0,0,32767,0,131071,262143};
+  static int len[PSRBMAX] = {0,0,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,0,131071,262143};
 
   int i, j,k;
   dbuff *buff;
