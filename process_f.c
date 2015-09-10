@@ -1732,7 +1732,7 @@ gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
 
   int i, j,k;
   dbuff *buff;
-  float *new_data;
+  double *new_data;
   char *mreg;
   float avg1=0.,avg2=0.;
   int num_seq;
@@ -1763,7 +1763,7 @@ gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
     popup_msg("do_cross_correlate: too few points for mlbs\n",TRUE);
     return 0;
   }
-  new_data = g_malloc(sizeof(float) * xsize);
+  new_data = g_malloc(sizeof(double) * len[num_bits-1]);
   //reals are stored in: buff->data[2*i+j*2*buff->npts]
   //imag in:             buff->data[2*i+1+j*2*buff->npts]
 
@@ -1780,31 +1780,32 @@ gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
   for( j=0; j<buff->npts2; j++ ){  // j loops through the 2d records
 
     // do the reals:
-    for(i=0;i< xsize ;i++) 
-      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts]/xsize;
+    //    for(i=0;i< xsize ;i++) 
+    //      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts]/xsize;
 
     // do the cross-correlation:
     for (i = 0 ; i < len[num_bits-1] ; i++){ 
-      buff->data[2*i+j*2*buff->npts]=0.;
+      new_data[i]=0.;
       for( k = 0 ; k < xsize ; k++ ){
-	buff->data[2*i+j*2*buff->npts] += mreg[k]*new_data[(k+i)%xsize];
+	new_data[i] += mreg[k] *buff->data[2*((i+k)%xsize)+j*2*buff->npts];
       }
     }
+    for(i=0;i< len[num_bits-1] ;i++) 
+      buff->data[2*(i%buff->npts)+j*2*buff->npts] = new_data[i]/xsize ;
     for (i=len[num_bits-1];i<buff->npts;i++)
       buff->data[2*i+j*2*buff->npts]= 0.;
 
-
+    
     // now the imag:
-    for(i=0;i<xsize;i++) 
-      new_data[i] = buff->data[2*(i%buff->npts)+j*2*buff->npts+1]/xsize;
-
     // do the cross-correlation:
     for (i=0;i< len[num_bits-1];i++){ 
-      buff->data[2*i+j*2*buff->npts+1]=0.;
+      new_data[i]=0.;
       for(k=0;k<xsize;k++){
-	buff->data[2*i+j*2*buff->npts+1] += mreg[k]*new_data[(k+i)%xsize];
+	new_data[i] += mreg[k] *buff->data[2*((i+k)%xsize)+1+j*2*buff->npts];
       }
     }
+    for(i=0;i<len[num_bits-1];i++) 
+      buff->data[2*(i%buff->npts)+j*2*buff->npts+1] = new_data[i]/xsize;
     for (i=len[num_bits-1];i<buff->npts;i++)
       buff->data[2*i+j*2*buff->npts+1]=0.;
  
