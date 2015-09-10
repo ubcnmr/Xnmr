@@ -1610,13 +1610,12 @@ char psrb(int bits,int init){
   }
 
   if(init == 1){
+    reg = 0;
     inited_bits= bits;
     for (i=0;i<bits;i++){
       reg += 1 << i;
     }
     inited = 1;
-    return -5;
-
   }
 
   /* do the shifting: */
@@ -1625,7 +1624,7 @@ char psrb(int bits,int init){
   for (j=1;j<ntaps[bits-1]-1;j++)
     first = (first ^ (reg >> (m[j][bits-1]-1)) ) & 1;
   reg = (reg << 1) + first;
-  return (reg>> ((bits-1))&1);
+  return (reg>> ((bits-1))&1)*2-1;
 
 }
 
@@ -1729,7 +1728,7 @@ gint do_cross_correlate( GtkWidget *widget, double *bits ){
 gint do_cross_correlate_mlbs( GtkWidget *widget, double *bits )
 // this is the new mlbs version
 {
-  static int len[PSRBMAX] = {0,0,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,0,131071,262143};
+  static int len[PSRBMAX] = {0,0,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535,131071,262143};
 
   int i, j,k;
   dbuff *buff;
