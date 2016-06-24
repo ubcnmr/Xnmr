@@ -15,9 +15,13 @@
 
 // we should read the first two of these out of /proc/pci
 
-#define PULSE_PORT 0xb000
-#define AD9850_PORT 0x0378
-#define DSP_PORT 0xb400
+//#define PULSE_PORT 0x0378
+//#define AD9850_PORT 0xd010
+//#define DSP_PORT 0xd000
+
+#define PULSE_PORT 0xd000
+#define AD9850_PORT 0x378
+#define DSP_PORT 0xd010
 
 
 
@@ -872,7 +876,7 @@ int run()
   //  fprintf(stderr,"on open of /dev/PP_irq0, got fd: %i\n",int_fd);
 #endif
 
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
   i = iopl(3);
   //  fprintf(stderr,"just called iopl\n");
   if (i != 0 ){
@@ -995,7 +999,7 @@ else{
 
 
   if (done == NOT_DONE){
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
     i = init_pulse_hardware( PULSE_PORT );
 #else
     fprintf(stderr,"would have init_pulse_hardware\n");
@@ -1229,7 +1233,7 @@ else{
 	//download pulse program to pulse programmer hardware
 	if( done >= 0 ) {
 	  //	fprintf(stderr,"acq: about to send to hardware\n");
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
 	  i = pulse_hardware_send( prog_shm );
 #else
 	  i=0;
@@ -1251,7 +1255,7 @@ else{
 
 	  //	  send_sig_ui( NEW_DATA_READY );
 
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
 	  pulse_hardware_load_timer();
 #endif
 	}
@@ -1335,7 +1339,7 @@ else{
 	  //start pulse programmer
 	  if( done >= 0 ) {
 	    //	fprintf(stderr, "acq: starting pulse programmer hardware\n" );
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
 	    
 	    
 	    i = pulse_hardware_start(0);
@@ -1549,7 +1553,7 @@ else{
 	  // for noisy, we reset completely each 2d block.
 
 
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
 	  ph_clear_EPP_port(); // yes - every block
 #else
 	  fprintf(stderr,"would have cleared pulse hardware\n");
@@ -1646,7 +1650,7 @@ else{
 	  if( done >= 0 ) {
 	    //	fprintf(stderr,"acq: about to send to hardware\n");
 	    old_start_pos = prog_shm->noisy_start_pos; // save this for later!
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
 	    i = pulse_hardware_send( prog_shm );
 #else
 	    i=0;
@@ -1667,7 +1671,7 @@ else{
 
 	  }
   
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
 	  if ( done >= 0);
 	  pulse_hardware_load_timer(); //every block for noisy.
 #endif
@@ -1720,7 +1724,7 @@ else{
 	  //start pulse programmer
 	  if( done >= 0 ) {
 	    //	fprintf(stderr, "acq: starting pulse programmer hardware\n" );
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
 	    
 	    i = pulse_hardware_start(0); 
 #else
@@ -1835,7 +1839,7 @@ else{
 		
 	    if (done >=0 && end_1d_loop == 0){
 	      // restart !
-#ifndef NOHARDWARE
+#ifndef RNOHARDWARE
 	      i = pulse_hardware_start(old_start_pos);
 #else
 	      fprintf(stderr,"would have restarted\n");
