@@ -2352,7 +2352,7 @@ void signal2noiseold(GtkAction *action, dbuff *buff)
 
 
 
-void int_delete(GtkWidget *widget,dbuff *buff){
+void int_delete(GtkWidget *widget,GdkEventAny *event,dbuff *buff){
   //  fprintf(stderr,"in int_delete\n");
   buff->win.press_pend = 0;
   doing_int = 0;
@@ -2397,6 +2397,8 @@ void integrate(GtkAction *action, dbuff *buff)
   gtk_window_set_transient_for(GTK_WINDOW(int_dialog),GTK_WINDOW(panwindow));
   gtk_window_set_position(GTK_WINDOW(int_dialog),GTK_WIN_POS_CENTER_ON_PARENT);
 
+
+  // catch closing of the dialog:
   gtk_widget_show_all (int_dialog); 
 
 
@@ -2560,7 +2562,7 @@ void integrate_press_event(GtkWidget *widget, GdkEventButton *event,dbuff *buff)
 
 
       // disconnect our event
-      int_delete(widget,buff);
+      int_delete(widget,NULL,buff);
 
       //      fprintf(stderr,"about to do_integrate\n");
       do_integrate(i_pt1,i_pt2,buff);
@@ -4347,14 +4349,14 @@ void file_export(GtkAction *action,dbuff *buff)
     if (buff->flags & FT_FLAG){
       fprintf(fstream,"#point, Hz, real, imag\n");
       for(i = i1 ; i <= i2 ; i++ )
-	fprintf(fstream,"%i %f %f %f\n",i, 
+	fprintf(fstream,"%i %g %g %g\n",i, 
 		-1./buff->param_set.dwell*1e6*((float) i-(float)npts/2.0)/(float)npts,
 		buff->data[i*2+j],buff->data[i*2+1+j]);
     }
     else{
       fprintf(fstream,"#point, us, real, imag\n");
       for(i = i1 ; i <= i2 ; i++ )
-	fprintf(fstream,"%i %f %f %f\n",i,i*buff->param_set.dwell,
+	fprintf(fstream,"%i %g %g %g\n",i,i*buff->param_set.dwell,
 	      buff->data[i*2+j],buff->data[i*2+1+j]);
     }
     
@@ -4404,16 +4406,16 @@ void file_export(GtkAction *action,dbuff *buff)
       fprintf(fstream,"%i ",i);
       if (hd != 0){
 	if (buff->flags &FT_FLAG2)
-	  fprintf(fstream,"%f ",-(((float)i)*sw2/buff->npts2-(float)sw2/2.));
+	  fprintf(fstream,"%g ",-(((float)i)*sw2/buff->npts2-(float)sw2/2.));
 	else
-	  fprintf(fstream,"%f ",((float)i)*dwell2/(1+buff->is_hyper));
+	  fprintf(fstream,"%g ",((float)i)*dwell2/(1+buff->is_hyper));
 
       }
       if (buff->is_hyper)
-	fprintf(fstream,"%f %f\n",buff->data[i*j+2* buff->disp.record2],
+	fprintf(fstream,"%g %g\n",buff->data[i*j+2* buff->disp.record2],
 		buff->data[(i+1)*j+2* buff->disp.record2]);
       else
-	fprintf(fstream,"%f\n",buff->data[i*j+2*buff->disp.record2]);
+	fprintf(fstream,"%g\n",buff->data[i*j+2*buff->disp.record2]);
 
     }
       
@@ -4474,16 +4476,16 @@ void file_export(GtkAction *action,dbuff *buff)
       for(i=i1;i<=i2;i++){
 	fprintf(fstream,"%i ",i);
 	if (buff->flags & FT_FLAG)
-	  fprintf(fstream,"%f %i ",-1./buff->param_set.dwell*1e6*((float)i-(float)npts/2.)/(float)npts,j);
+	  fprintf(fstream,"%g %i ",-1./buff->param_set.dwell*1e6*((float)i-(float)npts/2.)/(float)npts,j);
 	else
-	  fprintf(fstream,"%f %i ",buff->param_set.dwell*i/1e6,j);
+	  fprintf(fstream,"%g %i ",buff->param_set.dwell*i/1e6,j);
 	if (hd != 0){
 	  if(buff->flags & FT_FLAG2)
-	    fprintf(fstream,"%f ",-(((float)j)*sw2/buff->npts2-(float)sw2/2.));
+	    fprintf(fstream,"%g ",-(((float)j)*sw2/buff->npts2-(float)sw2/2.));
 	  else
-	    fprintf(fstream,"%f ",((float)j)*dwell2/(1+buff->is_hyper));
+	    fprintf(fstream,"%g ",((float)j)*dwell2/(1+buff->is_hyper));
 	}
-	fprintf(fstream,"%f %f\n",buff->data[j*2*npts+2*i],buff->data[j*2*npts+2*i+1]);
+	fprintf(fstream,"%g %g\n",buff->data[j*2*npts+2*i],buff->data[j*2*npts+2*i+1]);
       }
       fprintf(fstream,"\n");
     }
