@@ -21,6 +21,28 @@ static int last_word = 0;  // last words read from dsp
 
 unsigned char mask;
 
+
+void reset_timeout(){
+  unsigned   char b;
+  b = inb(SPP_STAT+port);
+  outb(b | 0x01,SPP_STAT+port); // from parport_pc - try to clear timeout bit.
+  outb(b & 0xfe,SPP_STAT+port);
+  b = inb(SPP_STAT+port);
+  if (b & 1){
+    printf("failed to reset timeout bit\n");
+  }
+  else printf("succeeded at resetting timeout bit\n");
+  
+}
+void check_timeout(char *s){
+  unsigned char b;
+      b = inb(SPP_STAT+port);
+    if (b & 1){
+      printf("\n%s, timeout bit is set\n",s);
+      reset_timeout();
+    }
+}
+
 int initialize_dsp_epp(int p)
 // Must be called before any epp related functions
 { 
@@ -90,6 +112,7 @@ void select_device(unsigned char address)
 {
   mask = DSP_NCS | DSP_NWR | DSP_NRD | DSP_NRESET | address;
   outb(mask, EPP_ADDR+port);
+
 }
 
 // On the AD board, fifo control is achieved by an address write
@@ -124,7 +147,6 @@ void start_acquire_dsp()
 // MR_OFF and R_OFF and FIFO should be set; other values don't matter
 // Post: fifo begins to acquire data
 {
-
   reset_fifo();
   mask = FIFO | FIFO_OFF | MR_OFF | STAQ_ON | DSP_NRESET;
   outb(mask, EPP_ADDR+port);

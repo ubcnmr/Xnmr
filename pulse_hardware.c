@@ -77,6 +77,8 @@ int ph_clear_EPP_timeout()
   if (ph_base >0){
     inb( ph_base + SPP_STAT );                 
     b=inb( ph_base + SPP_STAT );            //read in the status register
+
+    if (b) printf("in clear_EPP_timeout, timeout bit was high\n");
     
     outb( b | 0x01, ph_base + SPP_STAT );    // write bit 0 to 1
     outb( b & 0xfe, ph_base + SPP_STAT );    //write bit 0 to 0, leave the rest the same
@@ -143,8 +145,8 @@ int pulse_hardware_send( struct prog_shm_t* program )
 
 #endif
 
-
-      cbl = (unsigned long *) &chip_buffer[0];
+    ph_clear_EPP_timeout();
+   cbl = (unsigned long *) &chip_buffer[0];
       
  
   //write to Pulse hardware control port
@@ -246,7 +248,7 @@ int pulse_hardware_send( struct prog_shm_t* program )
 #endif
   if( ph_check_EPP_timeout() == 1 ) {
    fprintf(stderr, "EPP timeout occurred on port %x\n", ph_base );
-    return -1;
+   return -1;
   }
 
   return 0;
