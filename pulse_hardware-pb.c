@@ -38,7 +38,7 @@ int stop_pulseblaster()
   // this does an init - hopefully its good enough to reset the board properly.
   // doesn't look like it!
   int i;
-  char *errs;
+  const char *errs;
   //  printf("in stop_pulseblaster\n");
   for (i=NUM_BOARDS-1;i>=0;i--){ // start the first one last.
     if (pb_select_board(i) != 0){
@@ -72,7 +72,7 @@ int stop_pulseblaster()
 
 int check_hardware_running(){
 
-  char *errs;
+  const char *errs;
   int rval,i;
   int running = 1;
 
@@ -97,7 +97,7 @@ int check_hardware_running(){
 int init_pulse_hardware( int interrupt_port )
 {
   int count,i;
-  char *errs;
+  const char *errs;
   count = pb_count_boards();
   // check to make sure we have as many as we're supposed to
   if (count != NUM_BOARDS)
@@ -127,7 +127,7 @@ int pulse_hardware_send( struct prog_shm_t* program )
 
 
   int i,j;
-  char *errs;
+  const char *errs;
 #ifdef TIMING
   int byte_count=0;
   int overhead=0;
@@ -194,7 +194,7 @@ int pulse_hardware_send( struct prog_shm_t* program )
 int pulse_hardware_start(int start_address)
 {
   int i;
-  char * errs;
+  const char * errs;
   int rval;
   
   for (i=NUM_BOARDS-1;i>=0;i--){
@@ -238,7 +238,7 @@ int pulse_hardware_start(int start_address)
 int free_pulse_hardware(int interrupt_port)
 {
   int i;
-  char *errs;
+  const char *errs;
   for (i=0;i<NUM_BOARDS;i++){
     pb_select_board(i);
     //    printf("closing board: %i\n",i);
