@@ -64,12 +64,14 @@ rm /usr/share/Xnmr/include/shm_data.h
 rm /usr/share/Xnmr/include/pulse.h
 rm /usr/share/Xnmr/include/pulse-pb.h
 
-ln -s /usr/src/Xnmr/filters /usr/share/Xnmr/filters
-ln -s /usr/src/Xnmr/current/p_signals.h /usr/share/Xnmr/include/p_signals.h
-ln -s /usr/src/Xnmr/current/param_utils.h /usr/share/Xnmr/include/param_utils.h
-ln -s /usr/src/Xnmr/current/shm_data.h /usr/share/Xnmr/include/shm_data.h
-ln -s /usr/src/Xnmr/current/pulse.h /usr/share/Xnmr/include/pulse.h
-ln -s /usr/src/Xnmr/current/pulse-pb.h /usr/share/Xnmr/include/pulse-pb.h
+ln -s $PWD/filters /usr/share/Xnmr/filters
+
+ln -s $PWD/filters /usr/share/Xnmr/filters
+ln -s $PWD/p_signals.h /usr/share/Xnmr/include/p_signals.h
+ln -s $PWD/param_utils.h /usr/share/Xnmr/include/param_utils.h
+ln -s $PWD/shm_data.h /usr/share/Xnmr/include/shm_data.h
+ln -s $PWD/pulse.h /usr/share/Xnmr/include/pulse.h
+ln -s $PWD/pulse-pb.h /usr/share/Xnmr/include/pulse-pb.h
 
 rm /usr/share/Xnmr/config/h_config.h
 rm /usr/share/Xnmr/config/h_config-pb.h
@@ -78,12 +80,12 @@ rm /usr/share/Xnmr/config/pulse_hardware-pb.h
 rm /usr/share/Xnmr/config/xnmrrc
 rm /usr/share/Xnmr/xnmr_buff_icon.png
 
-ln -s /usr/src/Xnmr/current/h_config.h /usr/share/Xnmr/config/h_config.h
-ln -s /usr/src/Xnmr/current/h_config-pb.h /usr/share/Xnmr/config/h_config-pb.h
-ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
-ln -s /usr/src/Xnmr/current/pulse_hardware-pb.h /usr/share/Xnmr/config/pulse_hardware-pb.h
-ln -s /usr/src/Xnmr/current/xnmrrc /usr/share/Xnmr/config/xnmrrc
-ln -s /usr/src/Xnmr/current/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
+ln -s $PWD/h_config.h /usr/share/Xnmr/config/h_config.h
+ln -s $PWD/h_config-pb.h /usr/share/Xnmr/config/h_config-pb.h
+ln -s $PWD/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
+ln -s $PWD/pulse_hardware-pb.h /usr/share/Xnmr/config/pulse_hardware-pb.h
+ln -s $PWD/xnmrrc /usr/share/Xnmr/config/xnmrrc
+ln -s $PWD/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
 
 ###  post compile:
 #make or make -f Makefile-pb
@@ -93,18 +95,18 @@ rm /usr/local/bin/Xnmr
 rm /usr/local/bin/acq
 rm /usr/local/bin/Xnmr_preproc
 
-ln -s /usr/src/Xnmr/current/xcomp /usr/local/bin/xcomp
-ln -s /usr/src/Xnmr/current/Xnmr /usr/local/bin/Xnmr
-ln -s /usr/src/Xnmr/current/acq /usr/local/bin/acq
-ln -s /usr/src/Xnmr/current/Xnmr_preproc /usr/local/bin/Xnmr_preproc
+ln -s $PWD/xcomp /usr/local/bin/xcomp
+ln -s $PWD/Xnmr /usr/local/bin/Xnmr
+ln -s $PWD/acq /usr/local/bin/acq
+ln -s $PWD/Xnmr_preproc /usr/local/bin/Xnmr_preproc
 chown root /usr/local/bin/acq
 chmod u+s /usr/local/bin/acq
 
 rm /usr/local/lib/libxnmr.a
 rm /usr/local/lib/libxnmr.so
 
-ln -s /usr/src/Xnmr/current/libxnmr.a /usr/local/lib/libxnmr.a
-ln -s /usr/src/Xnmr/current/libxnmr.so /usr/local/lib/libxnmr.so
+ln -s $PWD/libxnmr.a /usr/local/lib/libxnmr.a
+ln -s $PWD/libxnmr.so /usr/local/lib/libxnmr.so
 /sbin/ldconfig
 
 ## Xnmr_prepoc and acq are libxnmr are all quite different depending on the Makefile
