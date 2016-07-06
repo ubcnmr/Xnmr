@@ -48,7 +48,45 @@ Oct 24, 2011
 
 */
 /*
-  files that go where:
+
+install libport:
+install gtk+ devel package, if needed
+
+install:
+
+mkdir -p /usr/share/Xnmr/config
+mkdir -p /usr/share/Xnmr/include
+
+rm /usr/share/Xnmr/filters
+rm /usr/share/Xnmr/include/p_signals.h
+rm /usr/share/Xnmr/include/param_utils.h
+rm /usr/share/Xnmr/include/shm_data.h
+rm /usr/share/Xnmr/include/pulse.h
+rm /usr/share/Xnmr/include/pulse-pb.h
+
+ln -s /usr/src/Xnmr/filters /usr/share/Xnmr/filters
+ln -s /usr/src/Xnmr/current/p_signals.h /usr/share/Xnmr/include/p_signals.h
+ln -s /usr/src/Xnmr/current/param_utils.h /usr/share/Xnmr/include/param_utils.h
+ln -s /usr/src/Xnmr/current/shm_data.h /usr/share/Xnmr/include/shm_data.h
+ln -s /usr/src/Xnmr/current/pulse.h /usr/share/Xnmr/include/pulse.h
+ln -s /usr/src/Xnmr/current/pulse-pb.h /usr/share/Xnmr/include/pulse-pb.h
+
+rm /usr/share/Xnmr/config/h_config.h
+rm /usr/share/Xnmr/config/h_config-pb.h
+rm /usr/share/Xnmr/config/pulse_hardware.h
+rm /usr/share/Xnmr/config/pulse_hardware-pb.h
+rm /usr/share/Xnmr/config/xnmrrc
+rm /usr/share/Xnmr/xnmr_buff_icon.png
+
+ln -s /usr/src/Xnmr/current/h_config.h /usr/share/Xnmr/config/h_config.h
+ln -s /usr/src/Xnmr/current/h_config-pb.h /usr/share/Xnmr/config/h_config-pb.h
+ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
+ln -s /usr/src/Xnmr/current/pulse_hardware-pb.h /usr/share/Xnmr/config/pulse_hardware-pb.h
+ln -s /usr/src/Xnmr/current/xnmrrc /usr/share/Xnmr/config/xnmrrc
+
+ln -s /usr/src/Xnmr/current/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
+
+###  post compile:
 
 rm /usr/local/bin/xcomp
 rm /usr/local/bin/Xnmr
@@ -69,26 +107,9 @@ ln -s /usr/src/Xnmr/current/libxnmr.a /usr/local/lib/libxnmr.a
 ln -s /usr/src/Xnmr/current/libxnmr.so /usr/local/lib/libxnmr.so
 /sbin/ldconfig
 
-rm /usr/share/Xnmr/include/p_signals.h
-rm /usr/share/Xnmr/include/param_utils.h
-rm /usr/share/Xnmr/include/shm_data.h
-rm /usr/share/Xnmr/include/pulse.h
+## install filter files
 
-ln -s /usr/src/Xnmr/current/p_signals.h /usr/share/Xnmr/include/p_signals.h
-ln -s /usr/src/Xnmr/current/param_utils.h /usr/share/Xnmr/include/param_utils.h
-ln -s /usr/src/Xnmr/current/shm_data.h /usr/share/Xnmr/include/shm_data.h
-ln -s /usr/src/Xnmr/current/pulse.h /usr/share/Xnmr/include/pulse.h
 
-rm /usr/share/Xnmr/config/h_config.h
-rm /usr/share/Xnmr/config/pulse_hardware.h
-rm /usr/share/Xnmr/config/xnmrrc
-rm /usr/share/Xnmr/xnmr_buff_icon.png
-
-ln -s /usr/src/Xnmr/current/h_config.h /usr/share/Xnmr/config/h_config.h
-ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
-ln -s /usr/src/Xnmr/current/xnmrrc /usr/share/Xnmr/config/xnmrrc
-
-ln -s /usr/src/Xnmr/current/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
 
   pulse_hardware.h  in /usr/share/Xnmr/config/
   h_config.h        
