@@ -49,7 +49,7 @@ Oct 24, 2011
 */
 /*
 
-install libport:
+install libport.
 install gtk+ devel package, if needed
 
 install:
@@ -83,10 +83,10 @@ ln -s /usr/src/Xnmr/current/h_config-pb.h /usr/share/Xnmr/config/h_config-pb.h
 ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
 ln -s /usr/src/Xnmr/current/pulse_hardware-pb.h /usr/share/Xnmr/config/pulse_hardware-pb.h
 ln -s /usr/src/Xnmr/current/xnmrrc /usr/share/Xnmr/config/xnmrrc
-
 ln -s /usr/src/Xnmr/current/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
 
 ###  post compile:
+#make or make -f Makefile-pb
 
 rm /usr/local/bin/xcomp
 rm /usr/local/bin/Xnmr
@@ -107,7 +107,8 @@ ln -s /usr/src/Xnmr/current/libxnmr.a /usr/local/lib/libxnmr.a
 ln -s /usr/src/Xnmr/current/libxnmr.so /usr/local/lib/libxnmr.so
 /sbin/ldconfig
 
-## install filter files
+## Xnmr_prepoc and acq are libxnmr are all quite different depending on the Makefile
+
 
 
 
