@@ -49,7 +49,7 @@ Oct 24, 2011
 */
 /*
 
-## clean out old:
+## clean out old, uninstall:
 rm /usr/share/Xnmr/filters
 
 rm /usr/share/Xnmr/include/p_signals.h
@@ -71,10 +71,10 @@ rm /usr/local/bin/Xnmr
 rm /usr/local/bin/acq
 rm /usr/local/bin/Xnmr_preproc
 
-rm /usr/local/lib/libxnmr.a
+#rm /usr/local/lib/libxnmr.a
 rm /usr/local/lib/libxnmr.so
 
-
+-------------------------
 install:
 install libport.
 install gtk+ devel package, if needed
@@ -98,8 +98,9 @@ ln -s $PWD/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
 
 ln -s $PWD/filters /usr/share/Xnmr/filters
 
-###  post compile:
+# then compile with:
 #make or make -f Makefile-pb
+###  post compile:
 
 ln -s $PWD/xcomp /usr/local/bin/xcomp
 ln -s $PWD/Xnmr /usr/local/bin/Xnmr
@@ -108,7 +109,7 @@ ln -s $PWD/Xnmr_preproc /usr/local/bin/Xnmr_preproc
 chown root /usr/local/bin/acq
 chmod u+s /usr/local/bin/acq
 
-ln -s $PWD/libxnmr.a /usr/local/lib/libxnmr.a
+#ln -s $PWD/libxnmr.a /usr/local/lib/libxnmr.a
 ln -s $PWD/libxnmr.so /usr/local/lib/libxnmr.so
 /sbin/ldconfig
 

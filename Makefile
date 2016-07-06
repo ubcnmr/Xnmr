@@ -3,7 +3,6 @@
 # UBC Physics
 
 # can use -DNOHARDWARE to allow software simulated acqs (if /dev/PP_irq0 exists)
-# For cygwin, add -DCYGWIN and change every libxnmr.so to libxnmr.dll
 
 
 GTK_VERSION=gtk+-2.0
@@ -17,7 +16,7 @@ CFLAGS = -g  -O2 -Wall `pkg-config --cflags $(GTK_VERSION)` -Wno-unused-result
 all:  libxnmr.so Xnmr acq Xnmr_preproc
 
 clean:
-	rm -f *.o acq Xnmr core libxnmr.a libxnmr.so Xnmr_preproc
+	rm -f *.o acq Xnmr core libxnmr.a libxnmr.so Xnmr_preproc bramps
 
 #libxnmr.a: pulse.o param_utils.o four1.o
 #	ar -rc libxnmr.a pulse.o param_utils.o four1.o
