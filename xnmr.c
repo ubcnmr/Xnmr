@@ -49,51 +49,57 @@ Oct 24, 2011
 */
 /*
 
-install libport.
-install gtk+ devel package, if needed
-
-install:
-
-mkdir -p /usr/share/Xnmr/config
-mkdir -p /usr/share/Xnmr/include
-
+## clean out old:
 rm /usr/share/Xnmr/filters
+
 rm /usr/share/Xnmr/include/p_signals.h
 rm /usr/share/Xnmr/include/param_utils.h
 rm /usr/share/Xnmr/include/shm_data.h
 rm /usr/share/Xnmr/include/pulse.h
 rm /usr/share/Xnmr/include/pulse-pb.h
 
-ln -s $PWD/filters /usr/share/Xnmr/filters
+rm /usr/share/Xnmr/config/h_config.h
+rm /usr/share/Xnmr/config/h_config-pb.h
+rm /usr/share/Xnmr/config/pulse_hardware.h
+rm /usr/share/Xnmr/config/pulse_hardware-pb.h
 
-ln -s $PWD/filters /usr/share/Xnmr/filters
+rm /usr/share/Xnmr/config/xnmrrc
+rm /usr/share/Xnmr/xnmr_buff_icon.png
+
+rm /usr/local/bin/xcomp
+rm /usr/local/bin/Xnmr
+rm /usr/local/bin/acq
+rm /usr/local/bin/Xnmr_preproc
+
+rm /usr/local/lib/libxnmr.a
+rm /usr/local/lib/libxnmr.so
+
+
+install:
+install libport.
+install gtk+ devel package, if needed
+
+mkdir -p /usr/share/Xnmr/config
+mkdir -p /usr/share/Xnmr/include
+
 ln -s $PWD/p_signals.h /usr/share/Xnmr/include/p_signals.h
 ln -s $PWD/param_utils.h /usr/share/Xnmr/include/param_utils.h
 ln -s $PWD/shm_data.h /usr/share/Xnmr/include/shm_data.h
 ln -s $PWD/pulse.h /usr/share/Xnmr/include/pulse.h
 ln -s $PWD/pulse-pb.h /usr/share/Xnmr/include/pulse-pb.h
 
-rm /usr/share/Xnmr/config/h_config.h
-rm /usr/share/Xnmr/config/h_config-pb.h
-rm /usr/share/Xnmr/config/pulse_hardware.h
-rm /usr/share/Xnmr/config/pulse_hardware-pb.h
-rm /usr/share/Xnmr/config/xnmrrc
-rm /usr/share/Xnmr/xnmr_buff_icon.png
-
 ln -s $PWD/h_config.h /usr/share/Xnmr/config/h_config.h
 ln -s $PWD/h_config-pb.h /usr/share/Xnmr/config/h_config-pb.h
 ln -s $PWD/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
 ln -s $PWD/pulse_hardware-pb.h /usr/share/Xnmr/config/pulse_hardware-pb.h
+
 ln -s $PWD/xnmrrc /usr/share/Xnmr/config/xnmrrc
 ln -s $PWD/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
 
+ln -s $PWD/filters /usr/share/Xnmr/filters
+
 ###  post compile:
 #make or make -f Makefile-pb
-
-rm /usr/local/bin/xcomp
-rm /usr/local/bin/Xnmr
-rm /usr/local/bin/acq
-rm /usr/local/bin/Xnmr_preproc
 
 ln -s $PWD/xcomp /usr/local/bin/xcomp
 ln -s $PWD/Xnmr /usr/local/bin/Xnmr
@@ -101,9 +107,6 @@ ln -s $PWD/acq /usr/local/bin/acq
 ln -s $PWD/Xnmr_preproc /usr/local/bin/Xnmr_preproc
 chown root /usr/local/bin/acq
 chmod u+s /usr/local/bin/acq
-
-rm /usr/local/lib/libxnmr.a
-rm /usr/local/lib/libxnmr.so
 
 ln -s $PWD/libxnmr.a /usr/local/lib/libxnmr.a
 ln -s $PWD/libxnmr.so /usr/local/lib/libxnmr.so
