@@ -14,7 +14,11 @@
 #include "xnmr_ipc.h"
 #include "panel.h"
 #include "param_utils.h"
-#include "h_config.h"
+#ifdef MSL200
+#include "h_config-pb.h"
+#else
+#include "h_config.h" // for default receiver clock.
+#endif
 #include "xnmr.h"
 
 #include <stdlib.h>
