@@ -1,17 +1,60 @@
 # Makefile for Xnmr Project
 #
 # UBC Physics
+#for mingw:
+# 1) install mingw: base, fortran, and migw32-pthreads-w32
+# 1b) set path to include C:\MINGW\bin PATH=%PATH%;c:\mingw\bin
+# 2) install gtk3 bundle.get it from:
+#http://www.tarnyko.net/dl/gtk.htm extract to c:\gtk
+# 3) need libport.a
+# 4) choose CYGWIN or MINGW below
+# 5) build with mingw32-make -f Makefile-win
+# 6) copy gtk libraries and schemas:
 
-#doesn't build acq, only Xnmr, needs gtk3
+#these in c:\Xnmr\bin:
+#libatk-1.0-0.dll
+#libcairo-2.dll
+#libcairo-gobject-2.dll
+#libexpat-1.dll
+#libffi-6.dll
+#libfontconfig-1.dll
+#libfreetype-6.dll
+#libgdk-3-0.dll
+#libgdk_pixbuf-2.0-0.dll
+#libgio-2.0-0.dll
+#libglib-2.0-0.dll
+#libgmodule-2.0-0.dll
+#libgobject-2.0-0.dll
+#libgtk-3-0.dll
+#libpango-1.0-0.dll
+#libpangocairo-1.0-0.dll
+#libpangoft2-1.0-0.dll
+#libpangowin32-1.0-0.dll
+#libpixman-1-0.dll
+#libpng15-15.dll
+#Xnmr.exe
+#these is Xnmr\share:
+#glib-2.0/gschema.dtd
+#glib-2.0/gschemas.compiled
+#glib-2.0/org.gtk.Demo.gschema.xml
+#glib-2.0/org.gtk.Settings.ColorChooser.gschema.xml
+#glib-2.0/org.gtk.Settings.FileChooser.gschema.xml
 
+#and in c:\Xnmr\xnmr_buff_icon.png 
+
+#install some pulse programs
+
+#doesn't build acq, only Xnmr
 GTK_CFL= -mms-bitfields -Ic:/Gtk/include/gtk-3.0 -Ic:/Gtk/include/cairo -Ic:/Gtk/include/pango-1.0 -Ic:/Gtk/include/atk-1.0 -Ic:/Gtk/include/cairo -Ic:/Gtk/include/pixman-1 -Ic:/Gtk/include -Ic:/Gtk/include/freetype2 -Ic:/Gtk/include -Ic:/Gtk/include/libpng15 -Ic:/Gtk/include/gdk-pixbuf-2.0 -Ic:/Gtk/include/libpng15 -Ic:/Gtk/include/glib-2.0 -Ic:/Gtk/lib/glib-2.0/include
 
-## use -DMINGW or -DCYGWIN depending on what compiler you use.
-CFLAGS = -g  -O2   -Wall   -Wno-unused-result -DMINGW $(GTK_CFL)
+CC=gcc
+#MINGW:
+CFLAGS = -g  -O2   -Wall   -Wno-unused-result -DMINGW $(GTK_CFL) -DHAVE_STRUCT_TIMESPEC
+GTK_LFLAGS = -Lc:/Gtk/lib -lgtk-3 -lgdk-3 -lgdi32 -limm32 -lshell32 -lole32 -Wl,-luuid -lpangocairo-1.0 -lpangoft2-1.0 -lfreetype -lfontconfig -lpangowin32-1.0 -lgdi32 -lpango-1.0 -lm -latk-1.0 -lcairo-gobject -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lgobject-2.0 -lglib-2.0 
 
-GTK_LFLAGS = -Lc:/Gtk/lib -lgtk-3 -lgdk-3 -lgdi32 -limm32 -lshell32 -lole32 -Wl,-luuid -lpangocairo-1.0 -lpangoft2-1.0 -lfreetype -lfontconfig -lpangowin32-1.0 -lgdi32 -lpango-1.0 -lm -latk-1.0 -lcairo-gobject -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lgobject-2.0 -lglib-2.0 -lintl
-
-#O3 causes serious problems with rtai!
+#CYGWIN
+#CFLAGS = -g  -O2   -Wall   -Wno-unused-result -DCYGWIN $(GTK_CFL)
+#GTK_LFLAGS = -Lc:/Gtk/lib -lgtk-3 -lgdk-3 -lgdi32 -limm32 -lshell32 -lole32 -Wl,-luuid -lpangocairo-1.0 -lpangoft2-1.0 -lfreetype -lfontconfig -lpangowin32-1.0 -lgdi32 -lpango-1.0 -lm -latk-1.0 -lcairo-gobject -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lgobject-2.0 -lglib-2.0 -lintl
 
 all:   Xnmr.exe
 
@@ -52,23 +95,3 @@ param_utils.o: param_utils.h param_utils.c shm_data.h
 
 
 
-
-##libraries needed in windows:
-#share/glib-2.0/schemsa/* 
-#gschema.dtd
-#gschemas.compiled
-#org.gtk.Demo.gschema.xml
-#org.gtk.Settings.ColorChooser.gschema.xml
-#org.gtk.Settings.FileChooser.gschema.xml
-
-#libraries:
-#libatk-1.0-0.dll         libgio-2.0-0.dll         libpangoft2-1.0-0.dll
-#libcairo-2.dll           libglib-2.0-0.dll        libpangowin32-1.0-0.dll
-#libcairo-gobject-2.dll   libgmodule-2.0-0.dll     libpixman-1-0.dll
-#libffi-6.dll             libgobject-2.0-0.dll     libpng15-15.dll
-#libfontconfig-1.dll      libgtk-3-0.dll           libquadmath-0.dll
-#libfreetype-6.dll        libiconv-2.dll           libxml2-2.dll
-#libgcc_s_dw2-1.dll       libintl-8.dll            pthreadGC2.dll
-#libgdk-3-0.dll           liblzma-5.dll            
-#libgdk_pixbuf-2.0-0.dll  libpango-1.0-0.dll       
-#libgfortran-3.dll        libpangocairo-1.0-0.dll  zlib1.dll
