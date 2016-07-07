@@ -1,49 +1,6 @@
 # Makefile for Xnmr Project
 #
 # UBC Physics
-#for mingw:
-# 1) install mingw: base, fortran, and migw32-pthreads-w32
-# 1b) set path to include C:\MINGW\bin PATH=%PATH%;c:\mingw\bin
-# 2) install gtk3 bundle.get it from:
-#http://www.tarnyko.net/dl/gtk.htm extract to c:\gtk
-# 3) need libport.a
-# 4) choose CYGWIN or MINGW below
-# 5) build with mingw32-make -f Makefile-win
-# 6) copy gtk libraries and schemas:
-
-#these in c:\Xnmr\bin:
-#libatk-1.0-0.dll
-#libcairo-2.dll
-#libcairo-gobject-2.dll
-#libexpat-1.dll
-#libffi-6.dll
-#libfontconfig-1.dll
-#libfreetype-6.dll
-#libgdk-3-0.dll
-#libgdk_pixbuf-2.0-0.dll
-#libgio-2.0-0.dll
-#libglib-2.0-0.dll
-#libgmodule-2.0-0.dll
-#libgobject-2.0-0.dll
-#libgtk-3-0.dll
-#libpango-1.0-0.dll
-#libpangocairo-1.0-0.dll
-#libpangoft2-1.0-0.dll
-#libpangowin32-1.0-0.dll
-#libpixman-1-0.dll
-#libpng15-15.dll
-#Xnmr.exe
-#these is Xnmr\share:
-#glib-2.0/gschema.dtd
-#glib-2.0/gschemas.compiled
-#glib-2.0/org.gtk.Demo.gschema.xml
-#glib-2.0/org.gtk.Settings.ColorChooser.gschema.xml
-#glib-2.0/org.gtk.Settings.FileChooser.gschema.xml
-
-#and in c:\Xnmr\xnmr_buff_icon.png 
-
-#install some pulse programs
-
 #doesn't build acq, only Xnmr
 GTK_CFL= -mms-bitfields -Ic:/Gtk/include/gtk-3.0 -Ic:/Gtk/include/cairo -Ic:/Gtk/include/pango-1.0 -Ic:/Gtk/include/atk-1.0 -Ic:/Gtk/include/cairo -Ic:/Gtk/include/pixman-1 -Ic:/Gtk/include -Ic:/Gtk/include/freetype2 -Ic:/Gtk/include -Ic:/Gtk/include/libpng15 -Ic:/Gtk/include/gdk-pixbuf-2.0 -Ic:/Gtk/include/libpng15 -Ic:/Gtk/include/glib-2.0 -Ic:/Gtk/lib/glib-2.0/include
 
