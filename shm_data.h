@@ -23,8 +23,11 @@
 // this is for shared memory checking to make sure versions match.
 // this will ensure and acq and Xnmr get along.  
 
-#define XNMR_ACQ_VERSION "0.99.2 FEB 20, 2003"
-
+#ifdef MSL200
+#define XNMR_ACQ_VERSION "0.99.4pb JUNE 2007"
+#else
+#define XNMR_ACQ_VERSION "0.99.4 JUNE 2007"
+#endif
 /*
  * memory related defs
  */
@@ -33,7 +36,11 @@
 #define PARAMETER_LEN 16384
 
 // max data points upped to 8192 for AD dsp board.
+#ifdef MSL200
+#define MAX_DATA_POINTS 131072
+#else
 #define MAX_DATA_POINTS 8192
+#endif
 #define MIN_DATA_POINTS 128
 
 /*
@@ -89,10 +96,13 @@ struct data_shm_t {
   char pulse_exec_path[ PATH_LENGTH ];          //The path to the pulse program
   char save_data_path[ PATH_LENGTH ];
   long long data_image[ MAX_DATA_POINTS *2 ];       //Data is stored in sequential xy pairs
-  long long time_remaining; // time in pulse program remaining in 20MHz clock tics
+#ifdef MSL200
+  double time_remaining; // time in pulse program remaining.
+#else
+  long long time_remaining;
+  char force_synth;
+#endif
   char ch1,ch2; // = A, B or C
-  char force_synth; // flag to pulse utility routines 
-  //that the current scan should be treated as a first scan - used by the synth set routines.
 
 };
 
