@@ -33,7 +33,11 @@
 #include <sys/msg.h>
 
 #include "shm_data.h"
+#ifdef MSL200
+#include "shm_prog-pb.h"
+#else
 #include "shm_prog.h"
+#endif
 
 int main()
 

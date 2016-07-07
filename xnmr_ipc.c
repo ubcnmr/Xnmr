@@ -16,8 +16,11 @@
 #include "process_f.h"
 #include "param_f.h"
 #include "xnmr.h"
+#ifdef MSL200
+#include "h_config-pb.h" // for CLOCK_SPEED
+#else
 #include "h_config.h"
-
+#endif
 #include <gtk/gtk.h>
 #include <signal.h>
 #ifndef MINGW

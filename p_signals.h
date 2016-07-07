@@ -2,7 +2,7 @@
  *
  * This file defines signals for Pulse Program software
  *
- * The signals are organized by their reciever, not their sender
+ * The signals are organized by their receiver, not their sender
  *
  * Message meanings are carried on the message type field, not in the message text
  */
