@@ -6515,7 +6515,7 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
 
   // if we're coming in from a press event in the window:
   if ((void *) buff == (void *) buffp[sbnum]->win.darea){
-    int i,xpt,record,i_left,i_right; //,i_max;
+    int i,xpt,record,i_left,i_right,i_max;
     float max,m,b,width,x_left,x_right;
 
     event = (GdkEventButton *) action;
@@ -6544,7 +6544,7 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
       
       xpt = pix_to_x(buffp[sbnum],event->x);
       //    fprintf(stderr,"got point %i\n",xpt);
-      //      i_max = xpt;
+      i_max = xpt;
       record = gtk_combo_box_get_active(GTK_COMBO_BOX(fit_data.s_record));
       
       max = buffp[sbnum]->data[xpt*2 + buffp[sbnum]->npts*2*record];
@@ -6553,19 +6553,18 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
 	for (i=xpt+1;i<buffp[sbnum]->npts;i++){
 	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->npts*2*record] > max){
 	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record];
-	    //	    i_max = i;
+	    i_max = i;
 	  }
-	  else i = buffp[sbnum]->npts;
+	  else i = buffp[sbnum]->npts; //continue?
 	}
       if (xpt > 0)
 	for (i=xpt-1;i>=0;i--){
 	  if (buffp[sbnum]->data[2*i + buffp[sbnum]->npts*2*record] > max){
 	    max = buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record];
-	    //	    i_max = i;
+	    i_max = i;
 	  }
-	  else i = -1;
+	  else i = -1; //continue
 	}
-      
       //so we should have the max:
       //    fprintf(stderr,"found max of %f at %i\n",max,i_max);
       
@@ -6573,15 +6572,18 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
       // look to the right till we get below half max
       i_left=xpt;
       i_right=xpt;
+      // want to avoid situation of both left and right on same side of max.
+      if (i_left > i_max) i_left = i_max;
+      if (i_right < i_max) i_right = i_max;
       if (xpt < buffp[sbnum]->npts-1)
-	for(i=xpt+1;i<buffp[sbnum]->npts;i++){
+	for(i=i_right;i<buffp[sbnum]->npts;i++){
 	  if (buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record] < max/2.){
 	    i_right = i;
 	    i = buffp[sbnum]->npts;
 	  }
 	}
       if (xpt > 0)
-	for (i=xpt-1;i>=0;i--){
+	for (i=i_left;i>=0;i--){
 	  if (buffp[sbnum]->data[2*i+buffp[sbnum]->npts*2*record] < max/2.){
 	    i_left = i;
 	    i = -1;
@@ -6589,15 +6591,17 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
 	}
       //    fprintf(stderr,"left and right limits: %i %i\n",i_left,i_right);
       // so we've got a rough width, let's do a little better
+      //      fprintf(stderr,"raw left and right points: %i %i\n",i_left,i_right);
       width = 0;
       x_left = xpt;
       x_right = xpt;
       if (i_left != xpt){
+	//only interpolate if we actually passed through the half way mark.
 	m = (buffp[sbnum]->data[2*(i_left+1)+buffp[sbnum]->npts*2*record]-
 	     buffp[sbnum]->data[2*i_left+buffp[sbnum]->npts*2*record]);
 	b= buffp[sbnum]->data[2*i_left+buffp[sbnum]->npts*2*record]-m*i_left;
 	x_left = (max/2.-b)/m;
-	//      fprintf(stderr,"using %f for left edge\n",x_left);
+	//	      fprintf(stderr,"using %f for left edge\n",x_left);
 	width += (xpt-x_left)
 	  * 1./buffp[sbnum]->param_set.dwell*1e6/buffp[sbnum]->npts;
       }
@@ -6607,12 +6611,12 @@ void fit_add_components(dbuff *buff, GdkEventButton  *action, GtkWidget *widget)
 	     buffp[sbnum]->data[2*(i_right-1)+buffp[sbnum]->npts*2*record]);
 	b= buffp[sbnum]->data[2*i_right+buffp[sbnum]->npts*2*record]-m*i_right;
 	x_right = (max/2.-b)/m;
-	//      fprintf(stderr,"using %f for right edge\n",x_right);
+	//	      fprintf(stderr,"using %f for right edge\n",x_right);
 	
 	width += (x_right-xpt)*1./buffp[sbnum]->param_set.dwell*1e6/buffp[sbnum]->npts;
 	
       }
-      //    fprintf(stderr,"so width is: %f\n",width);
+      //          fprintf(stderr,"so width is: %f\n",width);
       // stick half in each of lorentz and gaus
       
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(fit_data.gauss_wid[fit_data.num_components-1]),width);
