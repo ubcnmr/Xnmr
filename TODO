@@ -1,5 +1,9 @@
 still to do:
 
+In new merged parallel port / pulseblaster version, need pulseblaster pulse programs to include
+pulse-pb.h rather than pulse.h
+
+
 BUGS to find:
 
 
@@ -68,9 +72,10 @@ still to do in the far future (maybe?):
 
 
 done:
-- somewhere is socket handling code, there is a memory overrun or something. When auto shimming on the 200,
+- somewhere in socket handling code, there is a memory overrun or something. When auto shimming on the 200,
 eventually, get a can't find filter file message that makes no sense!
 This was actually a bug in libspinapi! It leaked file descriptors!
+
 - some sort of flag needs to be drawn in the acq buffer.
 - fitting!
 - queueing experiments, sigh...
