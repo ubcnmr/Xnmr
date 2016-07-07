@@ -4,7 +4,7 @@ Rules for pulse programming.
 
 start with:
 
-#include "pulse.h"
+#include "pulse.h" or pulse-pb.h
 
 have:
 main(){
@@ -49,17 +49,7 @@ amplitude or phase setting event is a minimum of 2 counter cycles
 long.
 
 
-
-Assign channels - logical channels in pulse program are 1,2,3
-can be assigned to hardware channels A, B, and C with statements like:
-#define CHANNEL1_B
-
-or
-
-#define CHANNEL3_C
-
-that go in BEFORE pulse.h is included.
-
+logical channels selected with ch A, B, C (hardware)  1,2,3 (logical in program) 
 These channels affect the rf gate, amplitude, phase and blanking, but not the synthesizers.
 
 
@@ -100,4 +90,59 @@ Xnmr figures out at pulse program start time which rf channel this takes the
 place of, by looking at which rf channel is not selected for use with the 
 1A, 1B, 1C, 2A, 2B, 2C radio buttons.
 
+use SYNC_DSP somewhere shortly before acquisition starts to hit the sync
+on the decimation stages in the receiver.
 
+
+Differences with new spectrometer: MSL200
+
+documentation of LOOP JSR, etc? in pulse-pb.c
+BRANCH [label]
+jumps to code marked by {LABEL,label}
+LOOP [# times] {LABEL,label}
+starts a hardware loop. Need to assign a name for the END_LOOP to
+reference
+
+END_LOOP[label]
+End of hardware loop. 
+
+JSR[label]
+
+RTS
+
+STOP
+WAIT
+
+Events with labels that are jumped to by a BRANCH or JSR should not
+request synth events (FREQ, PHASE, AMP) since those events get broken
+up and placed in the previous event, which we can't do for something
+that is the target of a JSR or BRANCH. The same is true for LOOP
+events - the synth setup will only happen on the first time through
+the loop.
+
+
+phase/freq/amp events get updated right at the start of the specified
+event (I think).
+
+SYNC_DSP is relaced with insert_dsp_sync();
+
+
+- AMP and PHASE of channel supplying the LO must be set to sane values
+(eg 1.0 and 0.0) when acquiring data. Sometimes its best to set both
+channels to the same frequency and use the LO from the other one...
+
+- Have required two interrupt events - one after data is finished acquiring,
+second when program is complete. With new arduino-Due based acquisition
+readout, the first of these is not needed. For compatability, it is still
+expected. Pulse programs can call: set_receiver_model_stream(), and then they
+should omit the first interrupt event. CAVEAT. At the moment (Sept 2015) this
+seems to add extra noise - needs to be investigated.
+
+- noisy mode revamped and working! Pulse programs can call
+pprog_is_noisy().  When that's done, the program should generate no
+interrupts. In this mode, the program should generate
+block_size+dummy_scans sets of data (or num_acqs+dummy_scans if
+block_size is 0). dummy_scans get run at the start of each block.
+newnoisy.x is a decent example. Works up to 4k sequence lengths!
+Could maybe get longer. The AD9984 synths support single line phase or
+frequency switching.  Could use it!

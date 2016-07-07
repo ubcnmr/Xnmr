@@ -33,99 +33,12 @@ to pkg-config --cflags gtk+-2.0 and --libs gthread-2.0 gtk+-2.0
 7) changed gtk_accel_group_attach to gtk_window_add_accel_group
 
 
-Dependencies: 
-- gtk+-2.6 at least.
-- four1 and spline routines from numerical recipes (included in here)
-- the fitting package uses the AT&T PORT routine n2f.  If you don't have it,
-  comment out the calls to n2f and ivset in buff.c and remove -lf2c and -lport in the makefile.
-  OR, get the port library from AT&T (http://www.bell-labs.com/project/PORT/)
-  To compile it on gentoo linux, change the makefile so F77=gcc, also may need
-  to add flags -lf2c -lm.
-
 
 Oct 24, 2011
 - GtkFunction ->GSourceFunc
 
 */
 /*
-  files that go where:
-
-rm /usr/local/bin/xcomp
-rm /usr/local/bin/Xnmr
-rm /usr/local/bin/acq
-rm /usr/local/bin/Xnmr_preproc
-
-ln -s /usr/src/Xnmr/current/xcomp /usr/local/bin/xcomp
-ln -s /usr/src/Xnmr/current/Xnmr /usr/local/bin/Xnmr
-ln -s /usr/src/Xnmr/current/acq /usr/local/bin/acq
-ln -s /usr/src/Xnmr/current/Xnmr_preproc /usr/local/bin/Xnmr_preproc
-chown root /usr/local/bin/acq
-chmod u+s /usr/local/bin/acq
-
-rm /usr/local/lib/libxnmr.a
-rm /usr/local/lib/libxnmr.so
-
-ln -s /usr/src/Xnmr/current/libxnmr.a /usr/local/lib/libxnmr.a
-ln -s /usr/src/Xnmr/current/libxnmr.so /usr/local/lib/libxnmr.so
-/sbin/ldconfig
-
-rm /usr/share/Xnmr/include/p_signals.h
-rm /usr/share/Xnmr/include/param_utils.h
-rm /usr/share/Xnmr/include/shm_data.h
-rm /usr/share/Xnmr/include/pulse.h
-
-ln -s /usr/src/Xnmr/current/p_signals.h /usr/share/Xnmr/include/p_signals.h
-ln -s /usr/src/Xnmr/current/param_utils.h /usr/share/Xnmr/include/param_utils.h
-ln -s /usr/src/Xnmr/current/shm_data.h /usr/share/Xnmr/include/shm_data.h
-ln -s /usr/src/Xnmr/current/pulse.h /usr/share/Xnmr/include/pulse.h
-
-rm /usr/share/Xnmr/config/h_config.h
-rm /usr/share/Xnmr/config/pulse_hardware.h
-rm /usr/share/Xnmr/config/xnmrrc
-rm /usr/share/Xnmr/xnmr_buff_icon.png
-
-ln -s /usr/src/Xnmr/current/h_config.h /usr/share/Xnmr/config/h_config.h
-ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/pulse_hardware.h
-ln -s /usr/src/Xnmr/current/xnmrrc /usr/share/Xnmr/config/xnmrrc
-
-ln -s /usr/src/Xnmr/current/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
-
-  pulse_hardware.h  in /usr/share/Xnmr/config/
-  h_config.h        
-  xnmrrc
-
-  libxnmr.a         in /usr/local/lib/
-
-  p_signals.h       in /usr/share/Xnmr/include/
-  param_utils.h
-  pulse.h
-  shm_data.h
-
-  xcomp             in /usr/local/bin/
-  Xnmr
-  acq
-
-
-  pulse programs    in /usr/share/Xnmr/prog/ or ~/Xnmr/prog/
-
-
-Other software issues:
-
-1) PP_irq (our kernel module that catches parallel port interrupts and
-gives them to user-space) must be installed.  Best to compile it and
-drop it into /lib/modules/2.x.y/misc/PP_irq.o then load it with
-'insmod PP_irq irq=x' (this is currently done in /etc/rc.d/rc.local).
-
-2) acq creates a file called /var/run/Xnmr_acq_is_running (this is
-probably insecure...) when it is actually running an experiment.  This
-is so that scripts (cron jobs!)  that might take a lot of cpu time
-won't actually run.  To make it work, scripts that cron starts need to
-be modified.  For example, in /etc/cron.weekly, makewhatis.cron starts
-with: [ -e /var/run/Xnmr_acq_is_running ] && exit 0
-which bails out if the file exists.
-
-3) 
-
 
 
 April 23, 2013 - start work for migrating to GTK3.
