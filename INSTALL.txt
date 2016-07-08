@@ -1,4 +1,4 @@
-For build instructions for Windows, see Makefile-win
+For build instructions for Windows, see below.
 
 Dependencies: 
 - gtk+-2.6 at least.
@@ -6,8 +6,8 @@ Dependencies:
 - the fitting package uses the AT&T PORT routine n2f.  If you don't have it,
   comment out the calls to n2f and ivset in buff.c and remove -lf2c and -lport in the makefile.
   OR, get the port library from AT&T (http://www.bell-labs.com/project/PORT/)
-  To compile it on gentoo linux, change the makefile so F77=gcc, also may need
-  to add flags -lf2c -lm.
+  To compile it on gentoo linux, change the makefile so F77=gfortran,
+  [ also may need  to add flags -lf2c -lm. -obsolete?]
 
 
 ## clean out old, uninstall:
@@ -37,7 +37,7 @@ rm /usr/local/lib/libxnmr.so
 
 -------------------------
 install:
-install libport.
+install libport.so
 install gtk+ devel package, if needed
 
 mkdir -p /usr/share/Xnmr/config
@@ -120,7 +120,7 @@ WINDOWS
 for mingw:
  1) install mingw: base, fortran, and migw32-pthreads-w32
  1b) set path to include C:\MINGW\bin PATH=%PATH%;c:\mingw\bin
- 2) install gtk3 bundle.get it from:
+ 2) install gtk3 bundle. Using a gtk+3.6 (which is quite old) Get it from:
 http://www.tarnyko.net/dl/gtk.htm extract to c:\gtk
  3) need libport.a
  4) choose CYGWIN or MINGW below
@@ -162,3 +162,8 @@ and finally: c:\Xnmr\xnmr_buff_icon.png
 Also good to put some pulse programs in c:\Xnmr\prog
 
 
+-----------------------------
+to switch pulse program from pulse.h to pulse-pb.h, do:
+sed -i.backup -- 's/pulse.h/pulse-pb.h/' *.x
+
+After checking that everything is ok, then can rm *.x.backup
