@@ -1005,7 +1005,8 @@ void draw_raster(dbuff *buff)
 
 {
 
-  int i1,i2,j1,j2,ci,k;
+  int i1,i2,j1,j2,ci;
+  long long k; // if the number of points gets big enough, we overflow in calculating point numbers below otherwise.
   int j,i,npts1,yp1,yp2,xp1,xp2,npts2;
   float max,min,da;
   
@@ -1241,7 +1242,8 @@ void draw_row_trace(dbuff *buff, float extraxoff,float extrayoff
   }
   else{
     //    printf("too many points, use alternate routine\n");
-    int k,j,is,ie,ymax,ymin,yfirst;
+    int j,is,ie,ymax,ymin,yfirst;
+    long long k; // if the number of points gets big enough, we overflow in calculating point numbers below otherwise.
     for (k=1;k<=buff->win.sizex;k++){ // step through the x pixels
       // find the data points that correspond to this pixel:
       is = (k-1)*(i2-i1)/(buff->win.sizex-1)+i1;
@@ -1358,7 +1360,7 @@ void draw_oned2(dbuff *buff,float extraxoff,float extrayoff)
 {
 
   // pass it in the data for phasing purposes
-
+  // for drawing columns of a 2d dataset.
   int i,i1,i2,x,x2,y,y2,exint,eyint,recadd;
   float *data;
   int ndpoints,true_complex;
@@ -3950,7 +3952,7 @@ gint do_load( dbuff* buff, char* path, int fid )
   }
   //  printf("buff-npts is: %i\n",buff->npts);
   i=fread( buff->data, sizeof( float ), buff->npts*buff->npts2*2, fstream );
-
+  printf ("read %i floats is %i points\nasked for %i bytes\n",i,i/8,buff->npts*buff->npts2*2);
   
   //  fprintf(stderr,"read %i points\n",i);
   fclose( fstream );
@@ -4765,7 +4767,7 @@ void file_import_text(GtkAction *action,dbuff *buff){
   FILE *infile;
   int i,counter;
   char linebuff[200],eof;
-  float num1,num2;
+  float num1; // ,num2;
 
   if (allowed_to_change(buff->buffnum) == FALSE){
     popup_msg("Can't open while Acquisition is running or queued\n",TRUE);

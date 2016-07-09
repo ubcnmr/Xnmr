@@ -120,6 +120,8 @@ that is the target of a JSR or BRANCH. The same is true for LOOP
 events - the synth setup will only happen on the first time through
 the loop.
 
+STOP doesn't seem to work the way you'd like it to. It seems to only
+work if its the last event.  If there are events later, it doesn't stop!
 
 phase/freq/amp events get updated right at the start of the specified
 event (I think).

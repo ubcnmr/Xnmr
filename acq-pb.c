@@ -651,7 +651,8 @@ void pprog_ready_timeout()
 int run()
 
 {
-  int buffer[ MAX_DATA_POINTS*2 ];
+  //  int buffer[ MAX_DATA_POINTS*2 ];
+  static int *buffer = NULL;
   int i;
   int j,nblocks;
   pid_t pid;
@@ -683,6 +684,8 @@ int run()
   struct timeval start_time,end_time;
   struct timezone tz;
   double ppt;
+  if (buffer == NULL)
+    buffer = malloc(MAX_DATA_POINTS*2*sizeof(int));
   gettimeofday(&start_time,&tz);
 
   if (block_buffer != NULL){

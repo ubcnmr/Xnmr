@@ -1827,7 +1827,7 @@ gint do_cross_correlate_frank( GtkWidget *widget, double *bits ){
   dbuff *buff;
   float *new_data;
   float *mreg,pha;
-  int num_seq;
+  //  int num_seq;
   int xsize; // the size of the data set we'll be cross correlating.
 
   if( widget == NULL ) 
@@ -1845,7 +1845,7 @@ gint do_cross_correlate_frank( GtkWidget *widget, double *bits ){
     popup_msg("do_cross_correlate: too few points\n",TRUE);
     return 0;
   }
-  num_seq = (int) buff->npts/ (*bits * *bits); // how many sequences we actually will use in the correlation.
+  //  num_seq = (int) buff->npts/ (*bits * *bits); // how many sequences we actually will use in the correlation.
 
   //  xsize = (int)(*bits* *bits)*num_seq;  // how many points we'll use
   xsize = (int)(*bits* *bits);  // length of the sequence

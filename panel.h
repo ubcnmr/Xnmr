@@ -14,7 +14,7 @@
 #include <gtk/gtk.h>
 #include "param_f.h"
 
-#define MAX_DATA_NPTS 1048576
+#define MAX_DATA_NPTS 8388608
 /*
  *  Global Variables
  */

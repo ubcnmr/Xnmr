@@ -37,7 +37,7 @@
 
 // max data points upped to 8192 for AD dsp board.
 #ifdef MSL200
-#define MAX_DATA_POINTS 131072
+#define MAX_DATA_POINTS 8388608
 #else
 #define MAX_DATA_POINTS 8192
 #endif
