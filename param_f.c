@@ -885,7 +885,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
     dwell_adj = (GtkAdjustment *) gtk_adjustment_new(1,0.5,1000000,1,10,0 ); 
     sw_adj = (GtkAdjustment *) gtk_adjustment_new(1000000,1,2000000,1,10,0 ); 
     npts_adj = (GtkAdjustment *) gtk_adjustment_new(2048,1,MAX_DATA_NPTS,1,1,0); 
-  
+
     dwell_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( dwell_adj ), 0.5, 2 ); 
     sw_spin_button = gtk_spin_button_new( GTK_ADJUSTMENT( sw_adj ), 0.5, 0 ); 
     npts_spin_button = gtk_spin_button_new(GTK_ADJUSTMENT(npts_adj),0.5,0); 
@@ -898,7 +898,7 @@ gint update_paths( GtkWidget* widget, gpointer data )
 
     g_signal_connect (G_OBJECT (npts_adj), "value_changed", 
   		      G_CALLBACK (update_acqn), NULL ); 
- 
+
     gtk_spin_button_set_update_policy( GTK_SPIN_BUTTON( dwell_spin_button ), GTK_UPDATE_IF_VALID ); 
     gtk_table_attach_defaults(GTK_TABLE(param_table),dwell_spin_button,3,4,2,3); 
 

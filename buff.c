@@ -3952,7 +3952,6 @@ gint do_load( dbuff* buff, char* path, int fid )
   }
   //  printf("buff-npts is: %i\n",buff->npts);
   i=fread( buff->data, sizeof( float ), buff->npts*buff->npts2*2, fstream );
-  printf ("read %i floats is %i points\nasked for %i bytes\n",i,i/8,buff->npts*buff->npts2*2);
   
   //  fprintf(stderr,"read %i points\n",i);
   fclose( fstream );
