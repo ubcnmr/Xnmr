@@ -4764,10 +4764,10 @@ void file_export_image(GtkAction *action,dbuff *buff)
 void file_import_text(GtkAction *action,dbuff *buff){
   GtkWidget *filew;
   FILE *infile;
-  int i,counter;
+  int i,counter,num_count=0;
   char linebuff[200],eof;
-  float num1; // ,num2;
-
+  float num1,num2,num3;
+  
   if (allowed_to_change(buff->buffnum) == FALSE){
     popup_msg("Can't open while Acquisition is running or queued\n",TRUE);
     return;
@@ -4805,7 +4805,7 @@ void file_import_text(GtkAction *action,dbuff *buff){
       if (infile == NULL)
 	popup_msg("Couldn't open file",TRUE);
       else{
-	  counter = 0;
+	counter = 0; // the number of lines with numbers on them
 	do{
 	  linebuff[0]=0;
 	  // throw away lines that start with #
@@ -4814,25 +4814,55 @@ void file_import_text(GtkAction *action,dbuff *buff){
 	  }while(linebuff[0] == '#');
 	  //	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
 	  //	  if (eof == 2) counter += 1;
-	  eof=sscanf(linebuff,"%f",&num1);
-	  if (eof == 1) counter += 1;
-	}while (eof == 1);
+	  eof=sscanf(linebuff,"%f %f %f",&num1,&num2,&num3);
+	  if (eof > 0) {
+	    counter += 1;
+	    num_count += eof;
+	  }
+	}while (eof > 0);
 
-	printf("will try to load in: %i lines, real part only.\n",counter);
+	// if num_count = 2*counter, read real, imag
+	// if num_count = 3*counter, read dummy, real, imag
+	// otherwise, read real only.
 	rewind(infile);
 	buff_resize(buff,counter,1);
-	for(i=0;i<counter;i++){
-	  do{
-	    fgets(linebuff,200,infile);
-	  }while(linebuff[0] == '#');
-	  // two column data (time, val)
-	  //	  eof=sscanf(linebuff,"%f %f",&num1,&num2);
-	  // buff->data[2*i] = num2;
-	  // single column data: val only.
-	  eof=sscanf(linebuff,"%f",&num1);
-	  buff->data[2*i] = num1;
-	  buff->data[2*i+1] = 0.;
+
+	if (num_count == 2*counter){
+	  printf("assuming two columns are real, imag\n");
+	  for(i=0;i<counter;i++){
+	    do{
+	      fgets(linebuff,200,infile);
+	    }while(linebuff[0] == '#');
+	    eof=sscanf(linebuff,"%f %f",&num1,&num2);
+	    buff->data[2*i] = num1;
+	    buff->data[2*i+1] = num2;
+	  }
 	}
+	else if (num_count == 3*counter){
+	  printf("assuming three columns are time, real, imag\n");
+	  for(i=0;i<counter;i++){
+	    do{
+	      fgets(linebuff,200,infile);
+	    }while(linebuff[0] == '#');
+	    eof=sscanf(linebuff,"%f %f %f",&num3,&num1,&num2);
+	    buff->data[2*i] = num1;
+	    buff->data[2*i+1] = num2;
+	  }
+	}
+	else{
+	  printf("taking first column as reals only\n");
+	  for(i=0;i<counter;i++){
+	    do{
+	      fgets(linebuff,200,infile);
+	    }while(linebuff[0] == '#');
+	    eof=sscanf(linebuff,"%f",&num1);
+	    buff->data[2*i] = num1;
+	    buff->data[2*i+1] = 0.;
+	  }
+	}
+
+
+	
 	update_npts(counter);
 	update_npts2(1);
 	draw_canvas(buff);
