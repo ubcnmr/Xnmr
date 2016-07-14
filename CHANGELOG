@@ -1,4 +1,12 @@
+July 2016
+	Merge the pulseblaster and "mainline" versions so you build
+	regular with make, and pulseblaster version with make -f Makefile-pb
+	pulse programs in pb version now include pulse-pb.h
 
+	History of pulseblaster version was sort of hidden in this (woops)
+	but can be seen by checking out pulseblaster-arduino branch.
+	
+	
 April 30, 2014.
 	Imported project from cvs into git repository. 
 	Imported with git cvsimport -r Oldbranches -d /usr2/src/cvsroot -C /usr/src/GIT XNMR Xnmr
