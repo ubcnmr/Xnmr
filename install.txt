@@ -27,8 +27,11 @@ ln -s /usr/src/Xnmr/current/p_signals.h /usr/share/Xnmr/include/
 ln -s /usr/src/Xnmr/current/param_utils.h /usr/share/Xnmr/include/
 ln -s /usr/src/Xnmr/current/shm_data.h /usr/share/Xnmr/include/
 ln -s /usr/src/Xnmr/current/pulse.h /usr/share/Xnmr/include/
+ln -s /usr/src/Xnmr/current/pulse-pb.h /usr/share/Xnmr/include/
 ln -s /usr/src/Xnmr/current/h_config.h /usr/share/Xnmr/config/
+ln -s /usr/src/Xnmr/current/h_config-pb.h /usr/share/Xnmr/config/
 ln -s /usr/src/Xnmr/current/pulse_hardware.h /usr/share/Xnmr/config/
+ln -s /usr/src/Xnmr/current/pulse_hardware-pb.h /usr/share/Xnmr/config/
 ln -s /usr/src/Xnmr/current/xnmrrc /usr/share/Xnmr/config/
 
 4) at the top of acq.c, for an installation that will never run hardware, make sure that:

@@ -341,15 +341,19 @@ dbuff *create_buff(int num){
     buff->win.but1a= gtk_radio_button_new_with_label(NULL,"1A");
     buff->win.group1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1a));
     buff->win.but1b= gtk_radio_button_new_with_label(buff->win.group1,"1B");
+#ifndef MSL200
     buff->win.group1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1b));
     buff->win.but1c= gtk_radio_button_new_with_label(buff->win.group1,"1C");
     //    buff->win.group1 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but1c));
+#endif
 
     buff->win.but2a= gtk_radio_button_new_with_label(NULL,"2A");
     buff->win.group2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2a));
     buff->win.but2b= gtk_radio_button_new_with_label(buff->win.group2,"2B");
+#ifndef MSL200
     buff->win.group2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2b));
     buff->win.but2c= gtk_radio_button_new_with_label(buff->win.group2,"2C");
+#endif
     //    buff->win.group2 = gtk_radio_button_get_group(GTK_RADIO_BUTTON(buff->win.but2c));
 
 
@@ -3455,9 +3459,9 @@ gint complex_check_routine(GtkWidget *widget,dbuff *buff){
       gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck)))
     
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.hypercheck),0);
-    if(buff->disp.dispstyle==SLICE_COL){
-      draw_canvas(buff);
-    }
+  if(buff->disp.dispstyle==SLICE_COL){
+    draw_canvas(buff);
+  }
   return TRUE;
 
 }
@@ -4592,89 +4596,89 @@ void file_export_binary(GtkAction *action,dbuff *buff)
     npts2 /= 2;
     //    if (npts2 %2 == 1) npts2 -=1;
 
-    i1=(int) (buff->disp.xx1 * (npts-1) +.5);
-    i2=(int) (buff->disp.xx2 * (npts-1) +.5);
+  i1=(int) (buff->disp.xx1 * (npts-1) +.5);
+  i2=(int) (buff->disp.xx2 * (npts-1) +.5);
     
-    j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
-    j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
+  j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
+  j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
     
-    if (buff->is_hyper){
-      j1 *= 2;
-      j2 *= 2;
-    }
+  if (buff->is_hyper){
+    j1 *= 2;
+    j2 *= 2;
+  }
     //    if (buff->is_hyper && j1 %2 == 1) j1 -= 1;
     //    if(buff->is_hyper && j2 %2 ==1) j2-=1;
     
     //get dwell in second dimension
     
-    hd = pfetch_float(&buff->param_set,"dwell2",&dwell2,0);
-    if (hd == 1)
-      sw2 =1./dwell2;
-    else
-      hd=  pfetch_float(&buff->param_set,"sw2",&sw2,0);
-    if (hd == 1)
-      dwell2=1./sw2;
-
-
-    ny = (j2-j1)/(1+buff->is_hyper)+1;
-
-    lbuff = g_malloc(sizeof(float)*(ny+1)); 
-
-    // ok the first line is: number of points along y, then the y values
-     lbuff[0] = (float) ny;
-
-
-
-    // now load up the y values.  We have four cases: with and without FT, and with and without dwell2:
-    m=1;
-    if (hd == 0){ // no dwell2, freq domain and time domain are the same, just point number
-	for(j=j1;j<=j2;j+= 1+buff->is_hyper){
-	  lbuff[m] = (float) j; // just the point number
-	  m+=1;
-	}
+  hd = pfetch_float(&buff->param_set,"dwell2",&dwell2,0);
+  if (hd == 1)
+    sw2 =1./dwell2;
+  else
+    hd=  pfetch_float(&buff->param_set,"sw2",&sw2,0);
+  if (hd == 1)
+    dwell2=1./sw2;
+  
+  
+  ny = (j2-j1)/(1+buff->is_hyper)+1;
+  
+  lbuff = g_malloc(sizeof(float)*(ny+1)); 
+  
+  // ok the first line is: number of points along y, then the y values
+  lbuff[0] = (float) ny;
+  
+  
+  
+  // now load up the y values.  We have four cases: with and without FT, and with and without dwell2:
+  m=1;
+  if (hd == 0){ // no dwell2, freq domain and time domain are the same, just point number
+    for(j=j1;j<=j2;j+= 1+buff->is_hyper){
+      lbuff[m] = (float) j; // just the point number
+      m+=1;
     }
-    else{ // we have a dwell2
-      if (buff->flags & FT_FLAG2){ // freq domain
-	for(j=j1;j<=j2;j+=1+buff->is_hyper){
-	  lbuff[m] = -(((float)j)*sw2/buff->npts2-(float)sw2/2.);
-	  m+=1;
-	}
-      }
-	      
-      else{ //time domain
-	for(j=j1;j<=j2;j+=1+buff->is_hyper){
-	  lbuff[m] = ((float)j)*dwell2/(1+buff->is_hyper);
-	  m+=1;
-	}
-      }
-    }  
-
-    //write out the first line:
-    fwrite(lbuff,sizeof(float),ny+1,fstream);
-      
-    // now do the data:
-    
-    for (i=i1;i<=i2;i+=1){
-      
-      if (buff->flags & FT_FLAG)
-	lbuff[0]=-1./buff->param_set.dwell*1e6*((float)i-(float)npts/2.)/(float)npts;
-      else
-	lbuff[0]=(float)buff->param_set.dwell*i/1e6;
-      m=1;
+  }
+  else{ // we have a dwell2
+    if (buff->flags & FT_FLAG2){ // freq domain
       for(j=j1;j<=j2;j+=1+buff->is_hyper){
-	lbuff[m] = buff->data[j*2*npts+2*i];
+	lbuff[m] = -(((float)j)*sw2/buff->npts2-(float)sw2/2.);
 	m+=1;
       }
-      fwrite(lbuff,sizeof(float),ny+1,fstream);
     }
     
+    else{ //time domain
+      for(j=j1;j<=j2;j+=1+buff->is_hyper){
+	lbuff[m] = ((float)j)*dwell2/(1+buff->is_hyper);
+	m+=1;
+      }
+    }
+  }  
+  
+  //write out the first line:
+  fwrite(lbuff,sizeof(float),ny+1,fstream);
+  
+  // now do the data:
+  
+  for (i=i1;i<=i2;i+=1){
     
+    if (buff->flags & FT_FLAG)
+      lbuff[0]=-1./buff->param_set.dwell*1e6*((float)i-(float)npts/2.)/(float)npts;
+    else
+      lbuff[0]=(float)buff->param_set.dwell*i/1e6;
+    m=1;
+    for(j=j1;j<=j2;j+=1+buff->is_hyper){
+      lbuff[m] = buff->data[j*2*npts+2*i];
+      m+=1;
+    }
+    fwrite(lbuff,sizeof(float),ny+1,fstream);
+  }
+  
     
-    g_free(lbuff);
-
-    fclose(fstream);
-    return;
-
+  
+  g_free(lbuff);
+  
+  fclose(fstream);
+  return;
+  
 
 }
 
@@ -4719,45 +4723,45 @@ void file_export_image(GtkAction *action,dbuff *buff)
     npts2 /= 2;
     //    if (npts2 %2 == 1) npts2 -=1;
 
-    i1=(int) (buff->disp.xx1 * (npts-1) +.5);
-    i2=(int) (buff->disp.xx2 * (npts-1) +.5);
-    
-    j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
-    j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
-    
-    if (buff->is_hyper){
-      j1 *= 2;
-      j2 *= 2;
+  i1=(int) (buff->disp.xx1 * (npts-1) +.5);
+  i2=(int) (buff->disp.xx2 * (npts-1) +.5);
+  
+  j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
+  j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
+  
+  if (buff->is_hyper){
+    j1 *= 2;
+    j2 *= 2;
+  }
+  
+  ny = (j2-j1)/(1+buff->is_hyper)+1;
+  
+  max = buff->data[j1*2*npts+2*i1];
+  min = max;
+  if (max == min) max=min+1.;
+  
+  for(j=j1;j<=j2;j+=1+buff->is_hyper){
+    for (i=i1;i<=i2;i++){
+      if (buff->data[2*j*npts+2*i] > max) max = buff->data[2*j*npts+2*i];
+      if (buff->data[2*j*npts+2*i] < min) min = buff->data[2*j*npts+2*i];
     }
-
-    ny = (j2-j1)/(1+buff->is_hyper)+1;
-    
-    max = buff->data[j1*2*npts+2*i1];
-    min = max;
-    if (max == min) max=min+1.;
-
-    for(j=j1;j<=j2;j+=1+buff->is_hyper){
-      for (i=i1;i<=i2;i++){
-	if (buff->data[2*j*npts+2*i] > max) max = buff->data[2*j*npts+2*i];
-	if (buff->data[2*j*npts+2*i] < min) min = buff->data[2*j*npts+2*i];
-      }
-    }
-    
-    // generate a pgm file.
-    fprintf(fstream,"P5\n");
-    fprintf(fstream,"#phased, 255 = max: %f 0 = min: %f\n",max,min);
-    fprintf(fstream,"%i %i\n",i2-i1+1,ny);
-    fprintf(fstream,"255\n");
-    for(j=j1;j<=j2;j+=1+buff->is_hyper){
-      for (i=i1;i<=i2;i++)
-	fputc((char) ((buff->data[2*j*npts+2*i]-min)/(max-min)*255.99999),fstream);
-      //	fprintf(fstream,"%i ",(int) ((buff->data[j*2*npts+2*i]-min)/(max-min)*255.99999));
-      //      fprintf(fstream,"\n");
-    }      
-
-    fclose(fstream);
-    return;
-
+  }
+  
+  // generate a pgm file.
+  fprintf(fstream,"P5\n");
+  fprintf(fstream,"#phased, 255 = max: %f 0 = min: %f\n",max,min);
+  fprintf(fstream,"%i %i\n",i2-i1+1,ny);
+  fprintf(fstream,"255\n");
+  for(j=j1;j<=j2;j+=1+buff->is_hyper){
+    for (i=i1;i<=i2;i++)
+      fputc((char) ((buff->data[2*j*npts+2*i]-min)/(max-min)*255.99999),fstream);
+    //	fprintf(fstream,"%i ",(int) ((buff->data[j*2*npts+2*i]-min)/(max-min)*255.99999));
+    //      fprintf(fstream,"\n");
+  }      
+  
+  fclose(fstream);
+  return;
+  
 
 }
 
@@ -4933,51 +4937,48 @@ void file_export_magnitude_image(GtkAction *action,dbuff *buff)
     npts2 /= 2;
     //    if (npts2 %2 == 1) npts2 -=1;
 
-    i1=(int) (buff->disp.xx1 * (npts-1) +.5);
-    i2=(int) (buff->disp.xx2 * (npts-1) +.5);
-    
-    j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
-    j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
-    
-    if (buff->is_hyper){
-      j1 *= 2;
-      j2 *= 2;
-    }
-
-    ny = (j2-j1)/(1+buff->is_hyper)+1;
-    
-    max = sqrt(buff->data[j1*2*npts+2*i1]*buff->data[j1*2*npts+2*i1]+
+  i1=(int) (buff->disp.xx1 * (npts-1) +.5);
+  i2=(int) (buff->disp.xx2 * (npts-1) +.5);
+  
+  j1=(int) (buff->disp.yy1 * (npts2-1)+.5);
+  j2=(int) (buff->disp.yy2 * (npts2-1)+.5);
+  
+  if (buff->is_hyper){
+    j1 *= 2;
+    j2 *= 2;
+  }
+  
+  ny = (j2-j1)/(1+buff->is_hyper)+1;
+  
+  max = sqrt(buff->data[j1*2*npts+2*i1]*buff->data[j1*2*npts+2*i1]+
 	       buff->data[j1*2*npts+2*i1+1]*buff->data[j1*2*npts+2*i1+1]);
-
-    for(j=j1;j<=j2;j+=1+buff->is_hyper){
-      for (i=i1;i<=i2;i++){
-	if (sqrt(buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i]+
-		 buff->data[2*j*npts+2*i+1]*buff->data[2*j*npts+2*i+1]) > max) 
-	  max = sqrt(buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i] +
-		  buff->data[2*j*npts+2*i+1]*buff->data[2*j*npts+2*i+1]   );
-      }
+  
+  for(j=j1;j<=j2;j+=1+buff->is_hyper){
+    for (i=i1;i<=i2;i++){
+      if (sqrt(buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i]+
+	       buff->data[2*j*npts+2*i+1]*buff->data[2*j*npts+2*i+1]) > max) 
+	max = sqrt(buff->data[2*j*npts+2*i]*buff->data[2*j*npts+2*i] +
+		   buff->data[2*j*npts+2*i+1]*buff->data[2*j*npts+2*i+1]   );
     }
-
-    //    max=sqrt(max);
-    // generate a pgm file.
-    fprintf(fstream,"P5\n");
-    fprintf(fstream,"#magnitude mode, 255 is max: %f \n",max);
-    fprintf(fstream,"%i %i\n",i2-i1+1,ny);
-    fprintf(fstream,"255\n");
-    for(j=j1;j<=j2;j+=1+buff->is_hyper){
-      for (i=i1;i<=i2;i++)
-	fputc((char) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i]+
-			   buff->data[j*2*npts+2*i+1]*buff->data[2*j*npts+2*i+1])/max*255.99999),fstream);
-	//	fprintf(fstream,"%i ",(int) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i])/max*255.99999));
-      //  fprintf(fstream,"\n");
-    }      
-
-    fclose(fstream);
-    return;
-
-
-    return;
-
+  }
+  
+  //    max=sqrt(max);
+  // generate a pgm file.
+  fprintf(fstream,"P5\n");
+  fprintf(fstream,"#magnitude mode, 255 is max: %f \n",max);
+  fprintf(fstream,"%i %i\n",i2-i1+1,ny);
+  fprintf(fstream,"255\n");
+  for(j=j1;j<=j2;j+=1+buff->is_hyper){
+    for (i=i1;i<=i2;i++)
+      fputc((char) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i]+
+			 buff->data[j*2*npts+2*i+1]*buff->data[2*j*npts+2*i+1])/max*255.99999),fstream);
+    //	fprintf(fstream,"%i ",(int) (sqrt(buff->data[j*2*npts+2*i]*buff->data[2*j*npts+2*i])/max*255.99999));
+    //  fprintf(fstream,"\n");
+  }      
+  
+  fclose(fstream);
+  return;
+  
 
 }
 
@@ -7046,8 +7047,8 @@ void fitting_buttons(GtkWidget *widget, gpointer data ){
 
 	if (out_len > 0)
 	  out_len += snprintf(&out_string[out_len],max_len-out_len,"\nGoodness of fit: Sqrt(Chi^2/N): %f (compare to noise)\n",chi2);
-	  popup_msg(out_string,FALSE);
-	  fprintf(stderr,"%s\n",out_string);
+	popup_msg(out_string,FALSE);
+	fprintf(stderr,"%s\n",out_string);
       }
 
       // calc the final spectrum
