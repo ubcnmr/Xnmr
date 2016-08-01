@@ -795,7 +795,9 @@ dbuff *create_buff(int num){
 
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1a,FALSE,FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1b,FALSE,FALSE,0);
+#ifnedef MSL200
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1c,FALSE,FALSE,0);
+#endif
     gtk_box_pack_start(GTK_BOX(hbox5),vbox2,FALSE,FALSE,0);
     
 
@@ -804,7 +806,9 @@ dbuff *create_buff(int num){
     
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but2a,FALSE,FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but2b,FALSE,FALSE,0);
+#ifndef MSL200
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but2c,FALSE,FALSE,0);
+#endif
     gtk_box_pack_start(GTK_BOX(hbox5),vbox2,FALSE,FALSE,0);
 
     gtk_box_pack_start(GTK_BOX(vbox1),hbox5,FALSE,FALSE,0);
@@ -842,10 +846,12 @@ dbuff *create_buff(int num){
 
     g_signal_connect(G_OBJECT( buff->win.but1a ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
     g_signal_connect(G_OBJECT( buff->win.but1b ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
+#ifndef MSL200
     g_signal_connect(G_OBJECT( buff->win.but1c ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
+    g_signal_connect(G_OBJECT( buff->win.but2c ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
+#endif
     g_signal_connect(G_OBJECT( buff->win.but2a ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
     g_signal_connect(G_OBJECT( buff->win.but2b ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
-    g_signal_connect(G_OBJECT( buff->win.but2c ), "toggled", G_CALLBACK( channel_button_change ),  (void*) buff);
 
 
     gtk_box_pack_start(GTK_BOX(hbox1),vbox1,FALSE,FALSE,0);
@@ -5573,18 +5579,24 @@ void set_ch1(dbuff *buff,char ch1){
   
   if (ch1 == 'A') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but1a),TRUE);
   else if (ch1 == 'B') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but1b),TRUE);
+#ifndef MSL200
   else if (ch1 == 'C') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but1c),TRUE);
+#endif
 }
 void set_ch2(dbuff *buff,char ch2){
   if (ch2 == 'A') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but2a),TRUE);
   else if (ch2 == 'B') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but2b),TRUE);
+#ifndef MSL200
   else if (ch2 == 'C') gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(buff->win.but2c),TRUE);
+#endif
 }
 
 char get_ch1(dbuff *buff){
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but1a))) return 'A';
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but1b))) return 'B';
+#ifndef MSL200
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but1c))) return 'C';
+#endif
 
   fprintf(stderr,"in get_ch1, couldn't find a channel!!!\n");
   exit(0);
@@ -5594,11 +5606,13 @@ char get_ch1(dbuff *buff){
 char get_ch2(dbuff *buff){
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2a))) return 'A';
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2b))) return 'B';
+#ifndef MSL200
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2c))) return 'C';
+#endif
 
   fprintf(stderr,"in get_ch2, couldn't find a channel!!!\n");
   exit(0);
-  return 'C';
+  return 'B';
 
 }
 void bug_found(){

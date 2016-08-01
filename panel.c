@@ -55,10 +55,14 @@ int  setup_channels(){
   buff = buffp[current];
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but1a))) data_shm->ch1 = 'A';
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but1b))) data_shm->ch1 = 'B';
+#ifndef MSL200
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but1c))) data_shm->ch1 = 'C';
+#endif
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2a))) data_shm->ch2 = 'A';
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2b))) data_shm->ch2 = 'B';
+#ifndef MSL200
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(buff->win.but2c))) data_shm->ch2 = 'C';
+#endif
   //  fprintf(stderr,"setup channels: ch1 %c, ch2: %c\n",data_shm->ch1,data_shm->ch2);
   if (data_shm->ch1 == data_shm->ch2){ 
     popup_msg("Channels 1 & 2 set to same hardware!\nNot proceeding.",TRUE);
