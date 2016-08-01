@@ -795,7 +795,7 @@ dbuff *create_buff(int num){
 
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1a,FALSE,FALSE,0);
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1b,FALSE,FALSE,0);
-#ifnedef MSL200
+#ifndef MSL200
     gtk_box_pack_start(GTK_BOX(vbox2),buff->win.but1c,FALSE,FALSE,0);
 #endif
     gtk_box_pack_start(GTK_BOX(hbox5),vbox2,FALSE,FALSE,0);
