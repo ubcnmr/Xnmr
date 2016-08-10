@@ -31,7 +31,7 @@ bramps: bramps.c
 	$(CC) $(CFLAGS) -o bramps bramps.c `pkg-config --libs gtk+-2.0`
 
 #  added -L/usr/realtime/lib and -lpthread for rtai to link and -I/usr/realtime/include/ for compile
-acq: acq-pb.o pulse_hardware-pb.o  dsp-pb.o adepp-pb.o
+acq: acq-pb.o pulse_hardware-pb.o  dsp-pb.o adepp-pb.o libxnmr.so
 	$(CC) -L. -o acq acq-pb.o pulse_hardware-pb.o dsp-pb.o adepp-pb.o -lm -lpthread  -lxnmr -lspinapi -lusb -ldl
 	@echo ""
 	@echo "Don't forget to make acq suid!!!"

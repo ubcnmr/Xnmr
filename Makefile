@@ -28,7 +28,7 @@ Xnmr_preproc: Xnmr_preproc.c
 	$(CC) $(CFLAGS)  -o Xnmr_preproc Xnmr_preproc.c
 
 #  added -L/usr/realtime/lib and -lpthread for rtai to link and -I/usr/realtime/include/ for compile
-acq: acq.o pulse_hardware.o  dsp.o adepp.o ad9850.o 
+acq: acq.o pulse_hardware.o  dsp.o adepp.o ad9850.o libxnmr.so
 	$(CC) -L. -o acq acq.o pulse_hardware.o dsp.o adepp.o ad9850.o -lm -lpthread  -lxnmr
 	@echo ""
 	@echo "Don't forget to make acq suid!!!"
