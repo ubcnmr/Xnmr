@@ -1,7 +1,6 @@
 still to do:
-
-In new merged parallel port / pulseblaster version, need pulseblaster pulse programs to include
-pulse-pb.h rather than pulse.h
+Should use acq_npts when reading data.fid and use npts when reading data ?
+would allow data to have different number of points
 
 
 BUGS to find:
