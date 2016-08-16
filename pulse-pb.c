@@ -558,12 +558,17 @@ int event_pb( double time, int opcode,int opinst,unsigned char num, ... )
 
    // shortest event is 90ns, longest (without being a long event is 2^32-4 (/2 ?)* 10ns = 42.949 s (/2 ?)
 
-
-
-   if( time <= 0  ) {
-     fprintf(stderr,"event: time < 0, ignored\n");
-     fprintf(stderr,"time was: %lg\n",time);
-     return 0; 
+   if (!isnormal(time)){
+     if (time != 0.){
+       fprintf(stderr,"TIME IS NOT A NUMBER!\n");
+       prog_shm->event_error = 1;
+       return -1;
+     }
+     else{
+       fprintf(stderr,"event: time < 0, ignored\n");
+       fprintf(stderr,"time was: %lg\n",time);
+       return 0; 
+     }
    }
    if (time < 90e-9){
      fprintf(stderr,"event time >0 but less than 90ns, increased to 90ns\n");
