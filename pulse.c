@@ -720,13 +720,23 @@ int is_a_float_device(int device_id)
 
    counts = (long long int) ( ( time *  CLOCK_SPEED ) -  0.5 ); 
 
-
-
-   if( time <= 0 || counts <0 ) {
+   if( counts <0 ) {
      //     if (time < 0)
      fprintf(stderr,"event: time < 0, ignored\n");
      fprintf(stderr,"time was: %lg, counts: %lli\n",time,counts);
      return 0; 
+   }
+   if (!isnormal(time)){
+     if (time != 0.){
+       fprintf(stderr,"TIME IS NOT A NUMBER!\n");
+       prog_shm->event_error = 1;
+       return -1;
+     }
+     else{
+       fprintf(stderr,"event: time < 0, ignored\n");
+       fprintf(stderr,"time was: %lg\n",time);
+       return 0; 
+     }
    }
 
    va_start( args, num ); 
