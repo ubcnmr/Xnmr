@@ -11,7 +11,7 @@ Dependencies:
 
 
 ## clean out old, uninstall:
-rm /usr/share/Xnmr/filters
+rm -r /usr/share/Xnmr/filters
 
 rm /usr/share/Xnmr/include/p_signals.h
 rm /usr/share/Xnmr/include/param_utils.h
@@ -60,7 +60,7 @@ ln -s $PWD/xnmr_buff_icon.png /usr/share/Xnmr/xnmr_buff_icon.png
 ln -s $PWD/filters /usr/share/Xnmr/filters
 
 # then compile with:
-#make or make -f Makefile-pb
+#make -f Makefile-pp or make -f Makefile-pb
 ###  post compile:
 
 ln -s $PWD/xcomp /usr/local/bin/xcomp

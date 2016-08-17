@@ -1,6 +1,5 @@
 still to do:
-Should use acq_npts when reading data.fid and use npts when reading data ?
-would allow data to have different number of points
+
 
 
 BUGS to find:
