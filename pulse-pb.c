@@ -422,7 +422,15 @@ int ready( char phase ) {
     fid = fopen( "pprog.txt", "w" ); 
     fprintf(fid,"event, opcode, opinst, time, output bits, next board\n");
     for( event=0; event<prog_shm->no_events; event++ ) { 
-      for( board=0; board<NUM_BOARDS; board++ ) { 
+      for( board=0; board<NUM_BOARDS; board++ ) {
+	
+	// calculate clock ticks as in spinapi.c pb_inst_pbonly64
+	unsigned int delay;
+	double pb_clock=0.1; // 0.1 GHz
+	delay = (unsigned int) floor(0.5+( prog_shm->times[board][event]*1e9 *pb_clock) -3.0);
+	if (((delay & 0xFF) == 0xFF) && (delay > 0xFF))
+	  printf("PB FIRMWARE FIX TRIGGERED on event %i, requested time: %lf ns\n",event,prog_hsm->times[board][event]*1e9);
+							     
 	fprintf(fid,"%3i %i %2i %.9f ",event,prog_shm->opcodes[board][event],prog_shm->opinst[board][event],prog_shm->times[board][event]);
 	for( bit=0; bit<24; bit++ ) { 
 	  fprintf( fid, "%d", (prog_shm->outputs[ board ][ event ] >> bit) %2 ); 

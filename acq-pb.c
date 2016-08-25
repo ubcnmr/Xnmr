@@ -1663,9 +1663,10 @@ int run()
 	printf("NOISY: display should update every %f s, or %lli points\n",pts_request*data_shm->dwell*1e-6,pts_request);
 	//	i = dsp_request_data(pts_request,lreceiver_model);
 	fprintf(stderr,"about to request %lli pts\n",total_pts);
+#ifndef NORECEIVER
 	i = dsp_request_data(total_pts,lreceiver_model);
 	if (i == -1) done = ERROR_DONE;
-
+#endif
 	// in noisy mode we start the receiver before the pulse program! Otherwise we might miss points.
 	//start pulse programmer
 	if( done >= 0 ) {
@@ -1821,8 +1822,10 @@ int run()
 	  if (i == 0) printf("hardware wasn't still running\n");
 	  gettimeofday(&start_time,&tz);
 	  //}
+#ifndef NORECEIVER
 	  dsp_reset_fifo();
 	  printf("ACQ: hit reset fifo\n");
+#endif
 
       } //End of 1d while loop
       //      fprintf(stderr,"just out of acq's 1d loop\n");
