@@ -110,8 +110,9 @@ int init_pulse_hardware( int interrupt_port )
       printf("error initializing board: %s\n",errs);
       return -1;
     }
+    pb_bypass_FF_fix(1); // disable the FF bypass bug, I don't think our
+    // boards need it.
   }
-  
 
   // enable interrupt reporting on parallel port.
   // this is done on the dsp port init.
